@@ -60,7 +60,7 @@ View PreviewApp() {
             Text("Ripple card", TextRole::Label).With(
                 Frame{.width = 240.0F, .height = 96.0F},
                 Background{theme.colors.surface_container_high},
-                Ripple{RippleStyle{.color = Color::Rgb(255, 255, 255, 0.22F)}}),
+                Ripple{RippleStyle{.color = Color::Rgb(255, 255, 255, 0.22F), .corner_radii = 14.0F}}),
             {.hovered_scale = 1.0F, .pressed_scale = 1.0F})
             .With(Frame{.width = 240.0F, .height = 96.0F}, CornerRadius(14.0F))
             .Key("ripple-demo"),
