@@ -3,6 +3,7 @@
 #include <huxerui/animation.h>
 #include <huxerui/color.h>
 #include <huxerui/event.h>
+#include <huxerui/geometry.h>
 #include <huxerui/view.h>
 
 namespace huxerui::interaction {
@@ -15,14 +16,17 @@ struct RippleStyle {
   double duration = 0.45;
   /// Multiplier applied to the color alpha at the ripple's peak. Must be finite and in [0, 1].
   float maximum_opacity = 1.0F;
+  /// Clip corner radii applied to the ripple's paint clip. Set these to match the host surface's rounding;
+  /// the zero default clips to the rectangular node bounds.
+  CornerRadii corner_radii = {};
   bool operator==(const RippleStyle&) const = default;
 };
 
 /// A retained modifier that paints an expanding, fading circle from each primary press position.
 ///
 /// Apply through View::With(). The modifier observes pointer sequences without consuming them, so sibling gesture
-/// recognizers and OnClick continue to work. Circles are clipped to the node bounds and the node's resolved corner
-/// radii; an active ripple is resolved immediately when its pointer sequence is canceled. Reduced motion resolves
+/// recognizers and OnClick continue to work. Circles are clipped to the node bounds and RippleStyle::corner_radii;
+/// an active ripple is resolved immediately when its pointer sequence is canceled. Reduced motion resolves
 /// an active ripple immediately to its settled, fully faded state.
 ///
 /// The modifier paints only; it does not change layout, clipping, hit testing beyond making the node an input

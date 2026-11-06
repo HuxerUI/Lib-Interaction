@@ -72,7 +72,7 @@ public:
     Color color = style_.color;
     color.alpha *= style_.maximum_opacity * (1.0F - progress);
     if(color.alpha <= 0.0F) return;
-    context.PushClip(bounds, node.ResolvedCornerRadii());
+    context.PushClip(bounds, style_.corner_radii);
     context.DrawCircle(origin_, MaximumRadius(origin_, bounds) * progress, color);
     context.PopClip();
   }

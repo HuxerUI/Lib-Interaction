@@ -50,7 +50,7 @@ View Gallery() {
 
 ## 构建与测试
 
-需要 CMake 3.20+ 与 C++20。控件依赖 HuxerUI 源码或 SDK；已验证的框架版本为 `42dc57f10d2713f40272be393bafb6200005ca83`。
+需要 CMake 3.20+ 与 C++20。控件依赖 HuxerUI 源码或 SDK；已验证的框架版本为 `56eb5ab225997cffc83ce8f2736d1fd52c530b70`。
 
 ```sh
 cmake -S . -B build -DHUXERUI_HOME=/path/to/HuxerUI \

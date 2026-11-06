@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: HuxerUI/HuxerUI
-          ref: 42dc57f10d2713f40272be393bafb6200005ca83
+          ref: 56eb5ab225997cffc83ce8f2736d1fd52c530b70
           path: .cache/HuxerUI
       - name: Configure native components and preview
         run: cmake -S . -B build -DHUXERUI_HOME="${{ github.workspace }}/.cache/HuxerUI" -DHUXERUI_INTERACTION_BUILD_TESTS=ON -DHUXERUI_BUILD_TESTING_LIBRARY=ON -DHUXERUI_INTERACTION_BUILD_EXAMPLES=ON

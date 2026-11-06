@@ -8,7 +8,7 @@ Decisions made while scaffolding Lib-Interaction that deserve review. Each item 
 
 2. **Library target and namespace: `huxerui_interaction` / `HuxerUI::Interaction` / `huxerui::interaction`.** Follows the `HuxerUI::QRCode` + `huxerui::qrcode` pattern. If "Interaction" is expected to grow into a broader grab bag, consider splitting into `HuxerUI::Motion` (pure animation helpers) and `HuxerUI::Interaction` (input-driven) before the API surface grows.
 
-3. **CI pins HuxerUI revision `42dc57f10d2713f40272be393bafb6200005ca83`** — the local HuxerUI checkout used to verify this scaffold (yesterday's merge of the text field caret fix). Lib-QRCode pins an older revision (`cadb1696`). Decide whether all Lib repos should track one shared verified revision.
+3. **CI pins HuxerUI revision `56eb5ab225997cffc83ce8f2736d1fd52c530b70`** — the current `HuxerUI/HuxerUI` main head on GitHub at scaffold time. The first CI attempt pinned the local checkout's HEAD (`42dc57f`), which failed with `upload-pack: not our ref`: the local HuxerUI clone tracks the `FarnaHerry/HuxerUI` fork and contains unpushed merge commits, so only upstream-reachable revisions work for CI. The local build was repeated against the pinned upstream revision before publishing. Decide whether all Lib repos should track one shared verified revision, and whether the fork's local commits should be pushed to the upstream org repo.
 
 4. **No standalone core mode.** Lib-QRCode can build without HuxerUI because it has a pure codec; every Lib-Interaction widget is view-bound, so the CMake project has no `BUILD_VIEW=OFF` path and CI has a single native job. Confirm this is acceptable, or name a HuxerUI-free piece (e.g., spring math) worth extracting.
 
@@ -22,7 +22,7 @@ Decisions made while scaffolding Lib-Interaction that deserve review. Each item 
 
 8. **`HitTest` on the Ripple extension returns true inside node bounds.** This makes any rippled node an input target, which is required to observe presses on otherwise inert views. Verify this does not surprise layouts that rely on inert nodes being click-transparent (e.g., an overlay decoration over an interactive sibling). An opt-out flag in `RippleStyle` (e.g., `observe_only = false` meaning no HitTest override) is a possible follow-up.
 
-9. **Ripple paint uses `PaintAboveContent` with `PushClip(bounds, ResolvedCornerRadii())`.** If a node has large padding, the ripple covers the padding area too (bounds, not content bounds). Confirm the intended surface: bounds (current) vs `ContentBounds()`.
+9. **Ripple paint uses `PaintAboveContent` with `PushClip(bounds, RippleStyle::corner_radii)`.** If a node has large padding, the ripple covers the padding area too (bounds, not content bounds). Confirm the intended surface: bounds (current) vs `ContentBounds()`. The corner radii are style-controlled because the pinned upstream revision exposes no node corner-radii accessor; the local HuxerUI fork has `ViewNode::ResolvedCornerRadii()`, so once that lands upstream the default could resolve the host surface's rounding automatically.
 
 10. **`Pulsing` uses unbounded reverse playback of declarative targets.** This depends on the documented behavior that infinite reverse iterations alternate between the start and target values indefinitely. Worth a visual check that the oscillation does not stall after the first cycle on any backend, and that reduced motion pins it to the target (not the start) value.
 

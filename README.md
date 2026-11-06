@@ -52,7 +52,7 @@ Press tracking follows pointer down, up, and cancel events for the primary butto
 
 ## Build and test
 
-Requires CMake 3.20+ and C++20. The widgets use the HuxerUI source or SDK; the verified framework revision is `42dc57f10d2713f40272be393bafb6200005ca83`.
+Requires CMake 3.20+ and C++20. The widgets use the HuxerUI source or SDK; the verified framework revision is `56eb5ab225997cffc83ce8f2736d1fd52c530b70`.
 
 ```sh
 cmake -S . -B build -DHUXERUI_HOME=/path/to/HuxerUI \

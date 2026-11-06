@@ -41,7 +41,7 @@ Pointer tracking accepts down, up, and cancel phases for the primary button. The
 - Returns `true` from `HitTest` within node bounds so the node participates in pointer routing.
 - Starts a ripple on primary-button down at the node-local position and returns `PointerResult::Observe`, leaving click and gesture handling untouched.
 - Advances one `MotionController` per frame, invalidating only the foreground paint sequence when the value changes.
-- Paints an expanding, fading circle clipped to the node bounds and resolved corner radii. Radius covers the distance to the farthest corner; the alpha envelope is `color.alpha * maximum_opacity * (1 - progress)`.
+- Paints an expanding, fading circle clipped to the node bounds and the style's corner radii. Radius covers the distance to the farthest corner; the alpha envelope is `color.alpha * maximum_opacity * (1 - progress)`.
 - Resolves immediately on cancel and under reduced motion.
 
 ## Validation and error policy
