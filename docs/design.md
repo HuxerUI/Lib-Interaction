@@ -54,6 +54,7 @@ Following the interface conventions of the other Lib projects, invalid caller co
 - Widgets impose no intrinsic layout size; callers supply bounds through a parent or `Frame`.
 - Options structs describe one responsibility, document ranges and defaults in the header, and validate on entry.
 - The library never requires composable code generation; composition-bound work runs inside explicit `Scope` factories.
+- `huxerui_add_library` still routes library sources through the composable-source scan, so widget sources must remain valid transformer input: unmarked files pass through unchanged, but lambdas inside them must respect the framework's rvalue-qualified fluent API (`With`/`On`/`Key`/`OnClick` consume `View&&`, so chain them on mutable locals, not on const captures).
 - Accessibility labels remain the caller's responsibility through `Semantics`, matching the other Lib projects.
 
 ## Roadmap candidates
