@@ -2,14 +2,18 @@
 
 [简体中文](README.zh-CN.md)
 
-Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI): pressable surfaces, hover lifts, continuous pulses, and press ripples, composed from the framework's retained motion primitives.
+Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI): pressable surfaces, hover lifts, continuous pulses, press ripples, drag-and-spring motion, shake sequences, pointer-following spotlights, and interaction tints — all composed from the framework's retained motion primitives.
 
 - C++20; namespace `huxerui::interaction`, CMake target `HuxerUI::Interaction` (`huxerui_interaction`).
 - `Pressable` animates hover and press scale around one pivot and forwards activation through OnClick.
 - `HoverLift` drifts and grows content while a hover-capable pointer targets it.
 - `Pulsing` oscillates scale or opacity with unbounded reverse repetition and no application state.
 - `Ripple` is a retained modifier painting an expanding, fading circle from each primary press without consuming clicks.
-- All motion flows through the HuxerUI animation system (`AnimateTo`, `MotionController`), so reduced motion, frame scheduling, and background throttling follow the framework policy.
+- `Spotlight` is a retained modifier painting a pointer-following radial glow behind the content.
+- `HoverHighlight` is a retained modifier painting an interaction-driven tint driven by `InteractionState`.
+- `DragSpring` follows a drag gesture and springs the content back to rest on release.
+- `UseShake` / `Shaken` play decaying shake sequences from event handlers through a copyable trigger handle.
+- All motion flows through the HuxerUI animation system (`AnimateTo`, `MotionController`, `TaskScope::Delay`), so reduced motion, frame scheduling, and background throttling follow the framework policy.
 
 The widgets use no platform-specific APIs. Windows builds and tests are verified locally; CI covers native widget and preview tests on Windows. Other HuxerUI backends require their normal SDK/toolchain and have not been verified here.
 
@@ -31,6 +35,7 @@ using namespace huxerui::interaction;
 
 View Gallery() {
   auto clicks = UseState(0);
+  auto shake = UseShake();
   return Column {
     Pressable(Card(),
               {.animation = SpringSpec{.stiffness = 320.0F, .damping_ratio = 0.7F}},
@@ -40,15 +45,19 @@ View Gallery() {
     Pulsing(StatusDot(), {.scale_amplitude = 0.08F, .animate_opacity = true, .minimum_opacity = 0.4F})
         .With(Frame{.width = 12.0F, .height = 12.0F}),
     Card().With(Ripple{RippleStyle{.color = Color::Rgb(255, 255, 255, 0.14F)}}),
+    Card().With(Spotlight{SpotlightStyle{.diameter = 200.0F}}),
+    DragSpring(Chip(), {.axis = Axis::Horizontal}).With(Frame{.width = 320.0F, .height = 56.0F}),
+    Shaken(FormError(), shake),
+    Button("Retry").OnClick([shake] { shake.Trigger(); }),
   }.With(Spacing(16.0F));
 }
 ```
 
 `Pressable` and `HoverLift` are composition widgets: each call creates an independent state scope, and recomposition with equal arguments preserves the mounted state by scope position. They impose no intrinsic frame; supply bounded layout through a parent or `.With(Frame{...})`. `Pulsing` is stateless declarative motion. `Ripple` is a modifier applied through `View::With()`; it paints above content, clips to the node bounds and resolved corner radii, and observes pointer sequences with `PointerResult::Observe` so sibling gestures and OnClick continue to work.
 
-Invalid configuration throws `std::invalid_argument` at the call site: non-finite or non-positive scales, non-finite lifts, negative amplitudes, opacities outside [0, 1], non-positive durations, a `Pulsing` style with no participating channel, or a `Ripple` with an invalid duration or opacity multiplier.
+Invalid configuration throws `std::invalid_argument` at the call site: non-finite or non-positive scales, non-finite lifts, negative amplitudes, opacities outside [0, 1], non-positive durations, a `Pulsing` style with no participating channel, a `Ripple` with an invalid duration or opacity multiplier, a `Spotlight` with a non-positive diameter or negative fade, or a `Shake` with non-positive amplitude, fewer than one wobble, or non-positive duration.
 
-Press tracking follows pointer down, up, and cancel events for the primary button. Keyboard activation, focus-visible press feedback, and disabled-state recovery are not provided in this version; combine `OnClick` and `Enabled` at the call site. See [docs/design.md](docs/design.md) for the component catalog and motion conventions, and [docs/open-questions.md](docs/open-questions.md) for reviewed design decisions.
+Press tracking follows pointer down, up, and cancel events for the primary button. Keyboard activation, focus-visible press feedback, and disabled-state recovery are not provided in this version; combine `OnClick` and `Enabled` at the call site. `ShakeTrigger::Trigger()` must be called from event handlers or tasks, never during composition. See [docs/design.md](docs/design.md) for the component catalog and motion conventions, and [docs/open-questions.md](docs/open-questions.md) for reviewed design decisions.
 
 ## Build and test
 

@@ -22,8 +22,15 @@ void CheckValidation() {
   (void)HoverLift(Text("ok"), {.lift = {6.0F, -6.0F}, .hovered_scale = 1.0F});
   (void)Pulsing(Text("ok"));
   (void)Pulsing(Text("ok"), {.scale_amplitude = 0.0F, .minimum_opacity = 0.0F, .animate_opacity = true});
+  (void)DragSpring(Text("ok"));
+  (void)DragSpring(Text("ok"), {.axis = Axis::Horizontal});
   (void)Text("ok").With(Ripple{});
   (void)Text("ok").With(Ripple{RippleStyle{.color = Color::Rgb(255, 255, 255, 0.1F), .duration = 0.2}});
+  (void)Text("ok").With(Spotlight{});
+  (void)Text("ok").With(Spotlight{SpotlightStyle{.diameter = 160.0F, .fade = 0.0}});
+  (void)Text("ok").With(HoverHighlight{});
+  (void)Text("ok").With(HoverHighlight{HoverHighlightStyle{.corner_radii = 10.0F}});
+  (void)Shaken(Text("ok"), ShakeTrigger{});
 
   // Pressable scale validation.
   Throws<std::invalid_argument>([] { (void)Pressable(Text("x"), {.hovered_scale = 0.0F}); });
@@ -45,12 +52,21 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] { (void)Text("x").With(Ripple{RippleStyle{.duration = 0.0}}); });
   Throws<std::invalid_argument>([] { (void)Text("x").With(Ripple{RippleStyle{.duration = -0.4}}); });
   Throws<std::invalid_argument>([] { (void)Text("x").With(Ripple{RippleStyle{.maximum_opacity = 1.5F}}); });
+  // Spotlight validation.
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Spotlight{SpotlightStyle{.diameter = 0.0F}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Spotlight{SpotlightStyle{.diameter = -8.0F}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Spotlight{SpotlightStyle{.fade = -0.1}}); });
+  // Shake validation through the composition hook.
+  Throws<std::invalid_argument>([] { (void)UseShake({.amplitude = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)UseShake({.wobbles = 0}); });
+  Throws<std::invalid_argument>([] { (void)UseShake({.duration = 0.0}); });
 }
 
 #ifdef INTERACTION_HAS_UI_TESTING
 
 View InteractionGallery() {
   auto clicks = UseState(0);
+  auto shake = UseShake();
   return Column {
     Row {
       Pressable(Text("Pressable card").With(Frame{.width = 200.0F, .height = 64.0F},
@@ -69,17 +85,40 @@ View InteractionGallery() {
                           Ripple{RippleStyle{.color = Color::Rgb(255, 255, 255, 0.25F)}})
           .Key("ripple"),
     }.With(Spacing(16.0F), CrossAlign(CrossAxisAlignment::Center)),
+    Row {
+      Shaken(Text("Shake").With(Frame{.width = 120.0F, .height = 48.0F},
+                                Background{Color::Rgb(178, 88, 88)}), shake)
+          .Key("shake"),
+      Button("Trigger").OnClick([shake] { shake.Trigger(); }).Key("shake-trigger"),
+    }.With(Spacing(16.0F), CrossAlign(CrossAxisAlignment::Center)),
+    Row {
+      Text("Spotlight").With(Frame{.width = 160.0F, .height = 48.0F},
+                             Background{Color::Rgb(60, 70, 90)},
+                             Spotlight{SpotlightStyle{.diameter = 120.0F}})
+          .Key("spotlight"),
+      Text("Highlight").With(Frame{.width = 160.0F, .height = 48.0F},
+                             Background{Color::Rgb(90, 100, 70)},
+                             HoverHighlight{HoverHighlightStyle{}})
+          .Key("highlight"),
+      DragSpring(Text("Drag").With(Frame{.width = 100.0F, .height = 40.0F},
+                                   Background{Color::Rgb(70, 110, 130)}))
+          .With(Frame{.width = 320.0F, .height = 56.0F})
+          .Key("dragspring"),
+    }.With(Spacing(16.0F), CrossAlign(CrossAxisAlignment::Center)),
     Text("clicks: " + std::to_string(clicks.Get())).Key("count"),
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
 void CheckInteractionContracts() {
-  Application app(InteractionGallery, {.window = {.initial_size = {720, 320}}, .show_debug_overlay = false});
+  Application app(InteractionGallery, {.window = {.initial_size = {980, 480}}, .show_debug_overlay = false});
   UiTest ui(app);
   CHECK(ui.Find(UiSelector::Key("pressable")).One().size == (Size{200, 64}));
   CHECK(ui.Find(UiSelector::Key("lift")).One().size == (Size{160, 48}));
   CHECK(ui.Find(UiSelector::Key("pulse")).One().size == (Size{80, 48}));
   CHECK(ui.Find(UiSelector::Key("ripple")).Exists());
+  CHECK(ui.Find(UiSelector::Key("spotlight")).Exists());
+  CHECK(ui.Find(UiSelector::Key("highlight")).Exists());
+  CHECK(ui.Find(UiSelector::Key("dragspring")).One().size == (Size{320, 56}));
   CHECK(ui.Find(UiSelector::Text("clicks: 0")).Exists());
   ui.Find(UiSelector::Key("pressable")).Tap();
   ui.PumpAndSettle();
@@ -87,6 +126,11 @@ void CheckInteractionContracts() {
   ui.Find(UiSelector::Key("ripple")).Tap();
   ui.PumpAndSettle();
   CHECK(ui.Find(UiSelector::Text("clicks: 1")).Exists());
+  ui.Find(UiSelector::Key("shake-trigger")).Tap();
+  ui.PumpAndSettle();
+  ui.Find(UiSelector::Key("highlight")).Tap();
+  ui.PumpAndSettle();
+  CHECK(ui.Find(UiSelector::Key("shake")).Exists());
 }
 
 #endif

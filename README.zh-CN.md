@@ -2,13 +2,17 @@
 
 [English](README.md)
 
-[HuxerUI](https://github.com/HuxerUI/HuxerUI) 的交互动画控件扩展：可按压表面、悬停抬升、持续脉冲和按压涟漪，全部基于框架的保留式动画原语构建。使用 C++20，命名空间为 `huxerui::interaction`，CMake 目标为 `HuxerUI::Interaction`（`huxerui_interaction`）。
+[HuxerUI](https://github.com/HuxerUI/HuxerUI) 的交互动画控件扩展：可按压表面、悬停抬升、持续脉冲、按压涟漪、拖拽回弹、摇晃序列、指针跟随辉光和交互色调叠加，全部基于框架的保留式动画原语构建。使用 C++20，命名空间为 `huxerui::interaction`，CMake 目标为 `HuxerUI::Interaction`（`huxerui_interaction`）。
 
 - `Pressable`：悬停与按压时围绕一个轴点缩放，并通过 OnClick 转发激活。
 - `HoverLift`：悬停时内容上浮并轻微放大。
 - `Pulsing`：以无限往复播放振荡缩放或透明度，不需要任何应用状态。
 - `Ripple`：保留式修饰符，从每次主键按压位置绘制扩散、淡出的圆形，且不消费点击事件。
-- 所有动画都经过 HuxerUI 动画系统（`AnimateTo`、`MotionController`），因此减弱动态、帧调度与后台节流均遵循框架策略。
+- `Spotlight`：保留式修饰符，在内容之后绘制跟随指针的径向辉光。
+- `HoverHighlight`：保留式修饰符，由 `InteractionState` 驱动的交互色调叠加。
+- `DragSpring`：跟随拖拽手势，松开后弹簧回弹到原位。
+- `UseShake` / `Shaken`：通过可复制的触发器句柄，从事件回调播放衰减摇晃序列。
+- 所有动画都经过 HuxerUI 动画系统（`AnimateTo`、`MotionController`、`TaskScope::Delay`），因此减弱动态、帧调度与后台节流均遵循框架策略。
 
 控件不使用任何平台专属 API。已在本地验证 Windows 构建与测试；CI 在 Windows 上覆盖原生控件与预览测试。其他 HuxerUI 后端需要各自的 SDK/工具链，尚未在此验证。
 
@@ -30,6 +34,7 @@ using namespace huxerui::interaction;
 
 View Gallery() {
   auto clicks = UseState(0);
+  auto shake = UseShake();
   return Column {
     Pressable(Card(), {},
               [clicks] { clicks += 1; })
@@ -38,15 +43,19 @@ View Gallery() {
     Pulsing(StatusDot(), {.scale_amplitude = 0.08F, .animate_opacity = true, .minimum_opacity = 0.4F})
         .With(Frame{.width = 12.0F, .height = 12.0F}),
     Card().With(Ripple{RippleStyle{.color = Color::Rgb(255, 255, 255, 0.14F)}}),
+    Card().With(Spotlight{SpotlightStyle{.diameter = 200.0F}}),
+    DragSpring(Chip(), {.axis = Axis::Horizontal}).With(Frame{.width = 320.0F, .height = 56.0F}),
+    Shaken(FormError(), shake),
+    Button("重试").OnClick([shake] { shake.Trigger(); }),
   }.With(Spacing(16.0F));
 }
 ```
 
 `Pressable` 与 `HoverLift` 是组合期控件：每次调用创建独立的状态作用域，参数不变的重组合会按作用域位置保留已挂载的状态。它们不施加固有尺寸；请通过父容器或 `.With(Frame{...})` 提供有界布局。`Pulsing` 是无状态的声明式动画。`Ripple` 是通过 `View::With()` 应用的修饰符：它绘制在内容之上，按节点边界与解析后的圆角裁剪，并以 `PointerResult::Observe` 观察指针序列，因此兄弟手势识别器与 OnClick 不受影响。
 
-无效配置在调用点抛出 `std::invalid_argument`：非有限或非正的缩放、非有限的位移、负的振幅、[0, 1] 之外的透明度、非正的时长、没有任何参与通道的 `Pulsing` 样式，或时长／透明度乘数无效的 `Ripple`。
+无效配置在调用点抛出 `std::invalid_argument`：非有限或非正的缩放、非有限的位移、负的振幅、[0, 1] 之外的透明度、非正的时长、没有任何参与通道的 `Pulsing` 样式、时长／透明度乘数无效的 `Ripple`、直径非正或 fade 为负的 `Spotlight`，或振幅／摆动次数／时长无效的 `Shake`。
 
-按压跟踪遵循主键的按下、抬起与取消事件。键盘激活、焦点可见的按压反馈与禁用状态恢复在本版本中尚未提供；请在调用处按需组合 `OnClick` 与 `Enabled`。组件目录与动效约定见 [docs/design.md](docs/design.md)，设计决策记录见 [docs/open-questions.md](docs/open-questions.md)。
+按压跟踪遵循主键的按下、抬起与取消事件。键盘激活、焦点可见的按压反馈与禁用状态恢复在本版本中尚未提供；请在调用处按需组合 `OnClick` 与 `Enabled`。`ShakeTrigger::Trigger()` 只能从事件回调或任务中调用，不能在组合期间调用。组件目录与动效约定见 [docs/design.md](docs/design.md)，设计决策记录见 [docs/open-questions.md](docs/open-questions.md)。
 
 ## 构建与测试
 

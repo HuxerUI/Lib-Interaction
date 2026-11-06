@@ -13,10 +13,14 @@ if(HUXERUI_PROJECT_PLAN_ONLY)
 endif()
 
 huxerui_add_library(huxerui_interaction SOURCES
-    src/pressable.cpp
+    src/dragspring.cpp
+    src/highlight.cpp
     src/hover.cpp
+    src/pressable.cpp
     src/pulse.cpp
-    src/ripple.cpp)
+    src/ripple.cpp
+    src/shake.cpp
+    src/spotlight.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)
 if(HUXERUI_LIBRARY_GRAPH_ONLY)
     return()

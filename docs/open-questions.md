@@ -36,6 +36,19 @@ Decisions made while scaffolding Lib-Interaction that deserve review. Each item 
 
 ## Follow-ups for tomorrow
 
-- Run the preview app (`example_interaction`) manually and eyeball all four widgets, light and dark.
+- Run the preview app (`example_interaction`) manually and eyeball all eight widgets, light and dark.
 - Confirm `PointerResult::Observe` ripples on a `Button` do not interfere with the button's own press indication.
 - Review item 2 (naming) and item 3 (shared pinned revision) with the team.
+
+## Batch two findings
+
+14. **Entrance animations (FadeIn/slide-in on mount) are not implementable with public API yet.** `TransitionExtension` resolves an `Animated` progress to its target immediately on first mount (verified in the SDK source), so a `Transition{AnimateTo(1.0F)}.Opacity(0, 1)` appears fully settled. A proper appear transition needs either an SDK mount hook, an `Animated` "from" value, or an appearance policy. Recorded as a framework request; no Lib workaround is planned.
+
+15. **`DragSpring` does not hand terminal drag velocity to the return spring.** The declarative `Animated` target form has no velocity input (`MotionController::Seek` does, but that is retained-only). Follow-up options: a retained executor widget, or an SDK velocity parameter on `AnimateTo`.
+
+16. **`Spotlight` invalidates the behind-content paint sequence on every hover move.** Repainting one gradient rect per pointer move is expected to be cheap, but confirm on the Windows backend that hover-move repaints do not visibly cost. If they do, throttle by distance or move the glow to the framework's per-frame paint path.
+
+17. **`UseShake` is defined inline in the header on purpose.** The composable-source scan processes library `.cpp` files; a plain (unmarked) function calling composition hooks from a scanned source risks transformer rejection, so the hook follows the SDK's inline-header precedent (`UseState` and friends live in `state.h`). Confirm the team is comfortable with this boundary: hooks in headers, widgets and extensions in sources.
+
+18. **`ShakeTrigger::Trigger` is legal only from handlers/tasks** because `TaskScope::Launch` throws during composition (verified in `task.h`). The header documents it; consider whether a composition-safe `RequestTrigger()` variant is worth adding later.
+

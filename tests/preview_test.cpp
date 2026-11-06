@@ -25,6 +25,8 @@ int main() { return Run([] {
   CHECK(ui.Find(UiSelector::Key("lift-demo")).Exists());
   CHECK(ui.Find(UiSelector::Key("pulse-demo")).Exists());
   CHECK(ui.Find(UiSelector::Key("ripple-demo")).Exists());
+  CHECK(ui.Find(UiSelector::Key("spotlight-demo")).Exists());
+  CHECK(ui.Find(UiSelector::Key("dragspring-demo")).Exists());
   CHECK(ui.Find(UiSelector::Text("clicks: 0")).Exists());
   ui.Find(UiSelector::Key("pressable-demo")).Tap();
   ui.PumpAndSettle();
@@ -32,6 +34,9 @@ int main() { return Run([] {
   ui.Find(UiSelector::Key("ripple-demo")).Tap();
   ui.PumpAndSettle();
   CHECK(ui.Find(UiSelector::Text("clicks: 1")).Exists());
+  ui.Find(UiSelector::Key("shake-trigger")).Tap();
+  ui.PumpAndSettle();
+  CHECK(ui.Find(UiSelector::Key("shake-demo")).Exists());
   ui.Find(UiSelector::Text("Dark theme")).Tap();
   CHECK(ui.Find(UiSelector::Text("Light theme")).Exists());
   ui.PumpAndSettle();

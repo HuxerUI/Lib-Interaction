@@ -18,7 +18,11 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `Pressable` | Function returning `View` | `ViewEvents::Hover`, `ViewEvents::Pointer`, `OnClick` | `Scale` around one pivot | Per-scope hover and press cells |
 | `HoverLift` | Function returning `View` | `ViewEvents::Hover` | `Offset` and `Scale` | Per-scope hover cell |
 | `Pulsing` | Function returning `View` | None (always active) | `Scale` and/or `Opacity` with unbounded reverse playback | None |
+| `DragSpring` | Function returning `View` | `DragGesture` + `DragEvents` | `Offset` following the gesture, spring return | Per-scope drag and offset cells |
+| `Shaken` + `UseShake` | Function returning `View` + hook | `ShakeTrigger::Trigger()` from handlers/tasks | `Offset` tweens over a decaying wobble sequence | Trigger-owned offset and run cells, `TaskScope` |
 | `Ripple` | Modifier applied with `With()` | `NodeExtension::OnPointer`, `HitTest` | Painted circles in `PaintAboveContent` | Retained per node |
+| `Spotlight` | Modifier applied with `With()` | `NodeExtension::OnHover`, `HoverHitTest` | Pointer-following radial gradient in `PaintBehindContent` | Retained per node |
+| `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Interaction tint in `PaintAboveContent` | Retained per node |
 
 ### Pressable
 
@@ -33,6 +37,22 @@ Pointer tracking accepts down, up, and cancel phases for the primary button. The
 ### Pulsing
 
 `Pulsing(content, style)` attaches unbounded reverse playback (`AnimationPlayback{.iterations = std::nullopt, .repeat_mode = RepeatMode::Reverse}`) to declarative targets: scale oscillates between `1.0` and `1.0 + scale_amplitude`, and opacity between `1.0` and `minimum_opacity`. At least one channel must participate. Reduced motion resolves both to their targets, which is the correct steady state for an attention pulse.
+
+### DragSpring
+
+`DragSpring(content, style)` attaches a `DragGesture` (optionally axis-constrained) and one animated `Offset` modifier. While the drag runs, the target tracks the gesture translation with a short linear tween; the widget swaps the `Animated` motion description at the same time the target returns to the origin on end or cancel, so the same modifier springs back with `DragSpringStyle::return_motion`. Terminal drag velocity is not handed to the spring in this version; the declarative `Animated` target form has no velocity input, so a velocity handoff needs a retained executor or framework support.
+
+### Shake
+
+`UseShake(style)` is a composition hook returning a copyable `ShakeTrigger`; `Shaken(content, trigger)` composes one animated `Offset` that reads the trigger's offset cell. `Trigger()` writes the first peak into the cell, launches a `TaskScope` task, and walks a decaying sequence of alternating targets paced by `Delay`, guarding every write with a run identifier so a newer trigger supersedes an older sequence. Every sequence ends at rest, which keeps reduced motion correct: tweens snap between poses and the final pose is the rest position. `TaskScope::Launch` throws during composition, so triggering is only legal from handlers and tasks; the binding states live in the caller's composition scope and are created by `UseShake` inline in the header, matching the SDK's own hook precedent.
+
+### Spotlight
+
+`Spotlight` is a retained modifier using the explicit descriptor form. The extension overrides `HoverHitTest` to receive hover entry, movement, and departure, stores the latest node-local pointer position, and repaints only the sequence behind node content: one `RadialGradient`-filled rect whose normalized center is the pointer position and whose radius fraction derives from `SpotlightStyle::diameter` over the node size. Presence is one `MotionController` fading in on enter and out on leave; reduced motion resolves it immediately. No application state and no recomposition are involved at any point.
+
+### HoverHighlight
+
+`HoverHighlight` is a retained modifier driven by `NodeExtension::OnInteraction`: the controller target is `2.0` while the node reports pressed, `1.0` while hovered, and `0.0` at rest or disabled. The overlay blends from transparent to `hover_color` and from there toward `pressed_color`, painted above content and clipped to the node bounds and style corner radii. The extension also overrides `HitTest` and `HoverHitTest` within the node bounds so inert views (no events of their own) still report interaction state; the modifier never consumes pointer events.
 
 ### Ripple
 
