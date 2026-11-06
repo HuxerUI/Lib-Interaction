@@ -1,0 +1,29 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check out verified HuxerUI revision
+        uses: actions/checkout@v4
+        with:
+          repository: HuxerUI/HuxerUI
+          ref: 42dc57f10d2713f40272be393bafb6200005ca83
+          path: .cache/HuxerUI
+      - name: Configure native components and preview
+        run: cmake -S . -B build -DHUXERUI_HOME="${{ github.workspace }}/.cache/HuxerUI" -DHUXERUI_INTERACTION_BUILD_TESTS=ON -DHUXERUI_BUILD_TESTING_LIBRARY=ON -DHUXERUI_INTERACTION_BUILD_EXAMPLES=ON
+      - name: Configure independent preview project
+        run: cmake -S examples/preview -B build-preview -DHUXERUI_HOME="${{ github.workspace }}/.cache/HuxerUI"
+      - name: Build
+        run: cmake --build build --config Release --parallel 2
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
