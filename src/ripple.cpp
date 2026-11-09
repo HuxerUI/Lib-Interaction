@@ -4,11 +4,16 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <stdexcept>
 #include <utility>
+#include <vector>
 
 namespace huxerui::interaction {
 namespace {
+
+// Bounds the per-frame cost of many simultaneous touches.
+constexpr std::size_t kMaximumRipples = 4;
 
 void ValidateStyle(const RippleStyle& style) {
   if(!std::isfinite(style.duration) || style.duration <= 0.0) {
@@ -28,7 +33,7 @@ float MaximumRadius(Point origin, const Rect& bounds) {
 } // namespace
 
 /// Retained paint behavior for the Ripple modifier. The framework preserves this extension across recomposition
-/// and calls Update() with the latest modifier value.
+/// and calls Update() with the latest modifier value. Each active pointer owns one independent ripple.
 class Ripple::Extension final : public NodeExtension {
 public:
   Extension(ViewNode& node, const Ripple& value) { Update(node, value); }
@@ -45,42 +50,77 @@ public:
 
   PointerResult OnPointer(ViewNode&, const PointerEvent& event) override {
     if(event.type == PointerEventType::Down && event.changed_button == PointerButton::Primary) {
-      origin_ = event.position;
-      controller_.Set(0.0F);
-      controller_.AnimateTo(1.0F, TweenSpec{.duration = style_.duration, .easing = Easing::EaseOut});
-      InvalidatePaint(PaintInvalidation::Foreground);
+      if(ripples_.size() < kMaximumRipples) {
+        ActiveRipple ripple;
+        ripple.pointer_id = event.pointer_id;
+        ripple.origin = event.position;
+        ripple.controller.AnimateTo(1.0F, TweenSpec{.duration = style_.duration, .easing = Easing::EaseOut});
+        ripples_.push_back(std::move(ripple));
+        InvalidatePaint(PaintInvalidation::Foreground);
+      }
       return PointerResult::Observe;
     }
-    if(event.type == PointerEventType::Cancel && controller_.IsRunning()) {
-      controller_.Set(1.0F);
-      InvalidatePaint(PaintInvalidation::Foreground);
+    if(event.type == PointerEventType::Cancel) {
+      for(auto& ripple : ripples_) {
+        if(ripple.pointer_id == event.pointer_id && ripple.controller.IsRunning()) {
+          ripple.controller.Set(1.0F);
+          InvalidatePaint(PaintInvalidation::Foreground);
+        }
+      }
     }
     return PointerResult::Ignored;
   }
 
   FrameResult OnFrame(ViewNode&, const FrameInfo& frame) override {
-    const MotionAdvanceResult result = controller_.Advance(frame);
-    if(result.changed) InvalidatePaint(PaintInvalidation::Foreground);
-    return {result.needs_frame, result.wake_after};
+    bool changed = false;
+    bool needs_frame = false;
+    std::optional<double> wake_after;
+    for(auto& ripple : ripples_) {
+      const MotionAdvanceResult result = ripple.controller.Advance(frame);
+      changed |= result.changed;
+      needs_frame |= result.needs_frame;
+      if(result.wake_after.has_value()) {
+        wake_after = wake_after.has_value() ? std::min(*wake_after, *result.wake_after) : *result.wake_after;
+      }
+    }
+    const auto settled = std::remove_if(ripples_.begin(), ripples_.end(),
+                                        [](const ActiveRipple& ripple) {
+                                          return !ripple.controller.IsRunning()
+                                              && ripple.controller.Value() >= 1.0F;
+                                        });
+    if(settled != ripples_.end()) {
+      ripples_.erase(settled, ripples_.end());
+      changed = true;
+    }
+    if(changed) InvalidatePaint(PaintInvalidation::Foreground);
+    return {needs_frame || !ripples_.empty(), wake_after};
   }
 
   void PaintAboveContent(const ViewNode& node, PaintContext& context) const override {
-    const float progress = controller_.Value();
-    if(progress <= 0.0F || progress >= 1.0F) return;
+    if(ripples_.empty()) return;
     const Rect bounds = node.Bounds();
     if(bounds.IsEmpty()) return;
-    Color color = style_.color;
-    color.alpha *= style_.maximum_opacity * (1.0F - progress);
-    if(color.alpha <= 0.0F) return;
-    context.PushClip(bounds, style_.corner_radii);
-    context.DrawCircle(origin_, MaximumRadius(origin_, bounds) * progress, color);
-    context.PopClip();
+    for(const auto& ripple : ripples_) {
+      const float progress = ripple.controller.Value();
+      if(progress <= 0.0F || progress >= 1.0F) continue;
+      Color color = style_.color;
+      color.alpha *= style_.maximum_opacity * (1.0F - progress);
+      if(color.alpha <= 0.0F) continue;
+      context.PushClip(bounds, style_.corner_radii);
+      context.DrawCircle(ripple.origin, MaximumRadius(ripple.origin, bounds) * progress, color);
+      context.PopClip();
+    }
   }
 
 private:
+  struct ActiveRipple {
+    std::int64_t pointer_id = 0;
+    Point origin;
+    MotionController controller{0.0F};
+  };
+
   RippleStyle style_;
-  MotionController controller_{1.0F};
-  Point origin_;
+  std::vector<ActiveRipple> ripples_;
 };
 
 const detail::ModifierDescriptor& Ripple::Descriptor() {
