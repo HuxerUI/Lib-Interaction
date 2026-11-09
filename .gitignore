@@ -1,8 +1,22 @@
-/build*/
+# Build trees generated in this checkout
+/.huxerui/
+/dist/
+/build/
+/build-*/
+/cmake-build-*/
+
+# Local caches and tooling state
 /.cache/
 /traces/
-/.vs/
+
+# Editors and IDEs
 /.idea/
+/.vscode/
+/.vs/
+/.agents/
+
+# OS and editor scratch files
+.DS_Store
+Thumbs.db
 *.user
 *.swp
-/.DS_Store
