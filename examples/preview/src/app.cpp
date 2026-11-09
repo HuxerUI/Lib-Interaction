@@ -267,6 +267,8 @@ View PreviewApp() {
              TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
         Text("Tab focuses, Enter or Space activates", TextRole::Label)
             .With(Foreground(theme.colors.on_surface_variant)),
+        Text("Ctrl + wheel zooms the pinch tile", TextRole::Label)
+            .With(Foreground(theme.colors.on_surface_variant)),
         Text("clicks: " + std::to_string(clicks.Get()), TextRole::Label).Key("click-count"),
         Text("holds: " + std::to_string(holds.Get()), TextRole::Label).Key("hold-count"),
         Text("double-clicks: " + std::to_string(doubles.Get()), TextRole::Label).Key("double-count"),

@@ -20,6 +20,10 @@ struct PinchZoomStyle {
   AnimationSpec return_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.7F};
   /// Whether releasing the gesture returns the content to its rest scale.
   bool spring_back = false;
+  /// Whether holding the keyboard control modifier and scrolling zooms the content on wheel and trackpad hosts.
+  /// The zoom step follows the scroll delta multiplicatively; scrolling without the modifier passes through to
+  /// the surrounding scroll container untouched.
+  bool wheel_zoom = true;
   bool operator==(const PinchZoomStyle&) const = default;
 };
 
@@ -27,8 +31,10 @@ struct PinchZoomStyle {
 ///
 /// Each scale update multiplies the current zoom by the gesture's incremental spread change, clamped to the
 /// configured range, and the effective target animates without recomposing the content. The zoom persists at
-/// the released value unless PinchZoomStyle::spring_back is set; pan and rotation updates are ignored in this
-/// version because the declarative presentation set has no rotation modifier.
+/// the released value unless PinchZoomStyle::spring_back is set. On wheel and trackpad hosts, holding the
+/// control modifier and scrolling zooms through the same clamped range (PinchZoomStyle::wheel_zoom), consuming
+/// the scroll event only while the modifier is held; pan and rotation updates are ignored in this version
+/// because the declarative presentation set has no rotation modifier.
 ///
 /// Call during composition. Each call creates an independent state scope; recomposition with equal arguments
 /// preserves the mounted zoom and gesture state by scope position. The widget imposes no intrinsic frame.

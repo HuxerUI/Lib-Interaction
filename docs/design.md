@@ -79,7 +79,7 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 
 ### PinchZoom
 
-`PinchZoom(content, style)` attaches the framework's `TransformGesture` and one animated `Scale` modifier. Scale updates multiply the current zoom by the gesture's incremental spread change, clamped to the configured range; the zoom persists at the released value unless `PinchZoomStyle::spring_back` is set, in which case Ended swaps the motion description for the return spring while the target resets to rest — the same motion-swap trick `DragSpring` uses. Pan and rotation updates are ignored in this version because the declarative presentation set has no rotation modifier; a rotation-capable version needs a framework rotate presentation modifier.
+`PinchZoom(content, style)` attaches the framework's `TransformGesture` and one animated `Scale` modifier. Scale updates multiply the current zoom by the gesture's incremental spread change, clamped to the configured range; the zoom persists at the released value unless `PinchZoomStyle::spring_back` is set, in which case Ended swaps the motion description for the return spring while the target resets to rest — the same motion-swap trick `DragSpring` uses. On wheel and trackpad hosts, `ViewEvents::ScrollInput` with the control modifier held drives the same clamped zoom multiplicatively from the scroll delta and consumes the event only while the modifier is held, so surrounding scroll containers keep working; the fallback exists because desktop backends deliver no transform gestures. Pan and rotation updates are ignored in this version because the declarative presentation set has no rotation modifier; a rotation-capable version needs a framework rotate presentation modifier.
 
 ### Spotlight
 

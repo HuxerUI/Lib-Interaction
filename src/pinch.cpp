@@ -47,7 +47,14 @@ View PinchZoom(View content, PinchZoomStyle style) {
               zoom = std::clamp(zoom.Get() * event.scale, style.minimum_scale, style.maximum_scale);
             })
         .On<TransformEvents::Ended>([active](const TransformEvent&) { active = false; })
-        .On<TransformEvents::Canceled>([active](const TransformEvent&) { active = false; });
+        .On<TransformEvents::Canceled>([active](const TransformEvent&) { active = false; })
+        .On<ViewEvents::ScrollInput>(
+            [zoom, style](const ScrollInputEvent& event) -> bool {
+              if(!style.wheel_zoom || !event.modifiers.control) return false;
+              zoom = std::clamp(zoom.Get() * std::exp(-event.delta_y * 0.15F), style.minimum_scale,
+                                style.maximum_scale);
+              return true;
+            });
   });
 }
 

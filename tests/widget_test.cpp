@@ -41,6 +41,7 @@ void CheckValidation() {
   (void)Text("ok").With(Ripple{RippleStyle{.center_origin = true}});
   (void)PinchZoom(Text("ok"));
   (void)PinchZoom(Text("ok"), {.minimum_scale = 1.0F, .maximum_scale = 2.0F, .spring_back = true});
+  (void)PinchZoom(Text("ok"), {.wheel_zoom = false});
   // Reorderable compositions.
   (void)Reorderable({Text("a"), Text("b")});
   (void)Reorderable({Text("a")}, {.spacing = 8.0F}, [](std::size_t, std::size_t) {});

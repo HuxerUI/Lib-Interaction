@@ -19,7 +19,7 @@ Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI):
 - `Shimmer` is a retained, paint-only modifier sweeping a looping highlight band over placeholder content.
 - `Fireworks` is a retained, paint-only modifier playing value-driven particle bursts at composed positions.
 - `Reorderable` composes a drag-to-reorder column: slots record their layout geometry, displaced items ease one slot aside, and the model reorders at drop.
-- `PinchZoom` zooms content with a two-pointer pinch, clamped to a configured range, with optional spring back.
+- `PinchZoom` zooms content with a two-pointer pinch or Ctrl + scroll wheel, clamped to a configured range, with optional spring back.
 - All motion flows through the HuxerUI animation system (`AnimateTo`, `MotionController`, `TaskScope::Delay`), so reduced motion, frame scheduling, and background throttling follow the framework policy.
 
 The widgets use no platform-specific APIs. Windows builds and tests are verified locally; CI covers native widget and preview tests on Windows. Other HuxerUI backends require their normal SDK/toolchain and have not been verified here.
