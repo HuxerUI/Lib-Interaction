@@ -1,5 +1,6 @@
 #include <huxerui/interaction/pressable.h>
 
+#include <huxerui/modifier.h>
 #include <huxerui/state.h>
 
 #include <cmath>
@@ -39,6 +40,9 @@ View Pressable(View content, PressableStyle style, std::function<void()> on_clic
                         }
                       });
     if(on_click) interactive = std::move(interactive).OnClick(on_click);
+    if(style.cursor != PointerCursorKind::Default) {
+      interactive = std::move(interactive).With(PointerCursor{style.cursor});
+    }
     return interactive;
   });
 }

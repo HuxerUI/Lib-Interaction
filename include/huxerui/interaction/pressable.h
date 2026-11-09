@@ -19,6 +19,8 @@ struct PressableStyle {
   AnimationSpec animation = TweenSpec{.duration = 0.16, .easing = Easing::EaseOut};
   /// Pivot used by the scale transform. Defaults to the center of the content.
   TransformOrigin origin = {};
+  /// Cursor shown over the content. Default keeps the platform cursor.
+  PointerCursorKind cursor = PointerCursorKind::Hand;
   bool operator==(const PressableStyle&) const = default;
 };
 

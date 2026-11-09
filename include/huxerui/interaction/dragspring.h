@@ -14,6 +14,8 @@ struct DragSpringStyle {
   std::optional<Axis> axis = std::nullopt;
   /// Motion used to return the content to its rest position after the drag ends or cancels.
   AnimationSpec return_motion = SpringSpec{.stiffness = 180.0F, .damping_ratio = 0.75F};
+  /// Cursor shown over the content at rest. An active drag always shows the grabbing cursor.
+  PointerCursorKind cursor = PointerCursorKind::Grab;
   bool operator==(const DragSpringStyle&) const = default;
 };
 

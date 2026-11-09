@@ -1,5 +1,6 @@
 #include <huxerui/interaction/dragspring.h>
 
+#include <huxerui/modifier.h>
 #include <huxerui/state.h>
 
 #include <utility>
@@ -18,6 +19,7 @@ View DragSpring(View content, DragSpringStyle style) {
     return std::move(draggable)
         .With(DragGesture{.axis = style.axis})
         .With(Offset(AnimateTo(target, motion)))
+        .With(PointerCursor{dragging ? PointerCursorKind::Grabbing : style.cursor})
         .On<DragEvents::Started>([dragging](const DragEvent&) { dragging = true; })
         .On<DragEvents::Changed>([offset](const DragEvent& event) { offset = event.translation; })
         .On<DragEvents::Ended>([dragging](const DragEvent&) { dragging = false; })
