@@ -26,6 +26,10 @@ int main() { return Run([] {
   CHECK(ui.Find(UiSelector::Key("pulse-demo")).Exists());
   CHECK(ui.Find(UiSelector::Key("ripple-demo")).Exists());
   CHECK(ui.Find(UiSelector::Key("spotlight-demo")).Exists());
+  CHECK(ui.Find(UiSelector::Key("longpress-demo")).Exists());
+  CHECK(ui.Find(UiSelector::Key("doubleclick-demo")).Exists());
+  CHECK(ui.Find(UiSelector::Key("pop-demo")).Exists());
+  CHECK(ui.Find(UiSelector::Key("shimmer-demo")).Exists());
   CHECK(ui.Find(UiSelector::Key("dragspring-demo")).Exists());
   CHECK(ui.Find(UiSelector::Text("clicks: 0")).Exists());
   ui.Find(UiSelector::Key("pressable-demo")).Tap();
@@ -34,10 +38,17 @@ int main() { return Run([] {
   ui.Find(UiSelector::Key("ripple-demo")).Tap();
   ui.PumpAndSettle();
   CHECK(ui.Find(UiSelector::Text("clicks: 1")).Exists());
-  ui.Find(UiSelector::Key("shake-trigger")).Tap();
+  ui.Find(UiSelector::Key("shake-demo")).Tap();
   ui.PumpAndSettle();
   CHECK(ui.Find(UiSelector::Key("shake-demo")).Exists());
-  ui.Find(UiSelector::Text("Dark theme")).Tap();
-  CHECK(ui.Find(UiSelector::Text("Light theme")).Exists());
+  ui.Find(UiSelector::Key("theme-dark")).Tap();
+  ui.PumpAndSettle();
+  CHECK(ui.Find(UiSelector::Key("theme-system")).Exists());
+  ui.Find(UiSelector::Key("theme-system")).Tap();
+  ui.PumpAndSettle();
+  CHECK(ui.Find(UiSelector::Key("theme-light")).Exists());
+  ui.Find(UiSelector::Key("pop-demo")).Tap();
+  ui.PumpAndSettle();
+  CHECK(ui.Find(UiSelector::Key("longpress-demo")).Exists());
   ui.PumpAndSettle();
 }); }

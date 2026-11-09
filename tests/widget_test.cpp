@@ -3,6 +3,7 @@
 
 #include "test.h"
 
+#include <chrono>
 #include <cmath>
 #include <limits>
 #ifdef INTERACTION_HAS_UI_TESTING
@@ -30,6 +31,11 @@ void CheckValidation() {
   (void)Text("ok").With(Spotlight{SpotlightStyle{.diameter = 160.0F, .fade = 0.0}});
   (void)Text("ok").With(HoverHighlight{});
   (void)Text("ok").With(HoverHighlight{HoverHighlightStyle{.corner_radii = 10.0F}});
+  (void)Text("ok").With(Shimmer{});
+  (void)Text("ok").With(Shimmer{ShimmerStyle{.period = 2.0, .band_width = 0.5F}});
+  (void)Text("ok").With(Fireworks{});
+  (void)Text("ok").With(
+      Fireworks{FireworksStyle{.particle_count = 8}, FireworksBurst{.id = 1, .local_position = {10.0F, 10.0F}}});
   (void)Shaken(Text("ok"), ShakeTrigger{});
 
   // Pressable scale validation.
@@ -60,13 +66,49 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] { (void)UseShake({.amplitude = 0.0F}); });
   Throws<std::invalid_argument>([] { (void)UseShake({.wobbles = 0}); });
   Throws<std::invalid_argument>([] { (void)UseShake({.duration = 0.0}); });
+  // LongPressable and DoubleClickable validation.
+  (void)LongPressable(Text("ok"));
+  (void)LongPressable(
+      Text("ok"), {.minimum_duration = std::chrono::duration<double>(0.3), .held_scale = 0.9F}, [] {});
+  (void)LongPressable(Text("ok"), {.show_progress = true});
+  (void)DoubleClickable(Text("ok"));
+  (void)DoubleClickable(
+      Text("ok"), {.maximum_interval = std::chrono::duration<double>(0.25), .maximum_movement = 24.0F},
+      [](const MultiTapEvent&) {});
+  (void)Popped(Text("ok"), PopTrigger{});
+  Throws<std::invalid_argument>([] {
+    (void)LongPressable(Text("x"), {.minimum_duration = std::chrono::duration<double>(0.0)});
+  });
+  Throws<std::invalid_argument>([] { (void)LongPressable(Text("x"), {.maximum_movement = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)LongPressable(Text("x"), {.held_scale = 0.0F}); });
+  Throws<std::invalid_argument>([] {
+    (void)DoubleClickable(Text("x"), {.maximum_interval = std::chrono::duration<double>(0.0)});
+  });
+  Throws<std::invalid_argument>([] { (void)DoubleClickable(Text("x"), {.maximum_movement = 0.0F}); });
+  // Pop validation through the composition hook.
+  Throws<std::invalid_argument>([] { (void)UsePop({.amplitude = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)UsePop({.duration = 0.0}); });
+  // Shimmer validation.
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Shimmer{ShimmerStyle{.period = 0.0}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Shimmer{ShimmerStyle{.band_width = 0.0F}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Shimmer{ShimmerStyle{.band_width = 1.5F}}); });
+  // Fireworks validation.
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.palette = {}}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.particle_count = 0}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.particle_count = 65}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.duration = 0.0}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.spread_radius = 0.0F}}); });
+  Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.gravity = -1.0F}}); });
 }
 
 #ifdef INTERACTION_HAS_UI_TESTING
 
 View InteractionGallery() {
   auto clicks = UseState(0);
+  auto holds = UseState(0);
+  auto doubles = UseState(0);
   auto shake = UseShake();
+  auto pop = UsePop();
   return Column {
     Row {
       Pressable(Text("Pressable card").With(Frame{.width = 200.0F, .height = 64.0F},
@@ -105,6 +147,20 @@ View InteractionGallery() {
           .With(Frame{.width = 320.0F, .height = 56.0F})
           .Key("dragspring"),
     }.With(Spacing(16.0F), CrossAlign(CrossAxisAlignment::Center)),
+    Row {
+      LongPressable(Text("Hold").With(Frame{.width = 120.0F, .height = 48.0F},
+                                      Background{Color::Rgb(96, 110, 160)}, CornerRadius(10.0F)),
+                    {}, [holds] { holds += 1; })
+          .Key("hold"),
+      DoubleClickable(Text("Double-click").With(Frame{.width = 140.0F, .height = 48.0F},
+                                                 Background{Color::Rgb(120, 140, 90)}, CornerRadius(10.0F)),
+                      {}, [doubles](const MultiTapEvent&) { doubles += 1; })
+          .Key("double-click"),
+      Popped(Text("Pop").With(Frame{.width = 80.0F, .height = 48.0F},
+                             Background{Color::Rgb(160, 96, 140)}, CornerRadius(10.0F)), pop)
+          .Key("pop"),
+      Button("Pop trigger").OnClick([pop] { pop.Trigger(); }).Key("pop-trigger"),
+    }.With(Spacing(16.0F), CrossAlign(CrossAxisAlignment::Center)),
     Text("clicks: " + std::to_string(clicks.Get())).Key("count"),
   }.With(Padding(16.0F), Spacing(16.0F));
 }
@@ -119,6 +175,9 @@ void CheckInteractionContracts() {
   CHECK(ui.Find(UiSelector::Key("spotlight")).Exists());
   CHECK(ui.Find(UiSelector::Key("highlight")).Exists());
   CHECK(ui.Find(UiSelector::Key("dragspring")).One().size == (Size{320, 56}));
+  CHECK(ui.Find(UiSelector::Key("hold")).Exists());
+  CHECK(ui.Find(UiSelector::Key("double-click")).Exists());
+  CHECK(ui.Find(UiSelector::Key("pop")).Exists());
   CHECK(ui.Find(UiSelector::Text("clicks: 0")).Exists());
   ui.Find(UiSelector::Key("pressable")).Tap();
   ui.PumpAndSettle();
@@ -131,6 +190,9 @@ void CheckInteractionContracts() {
   ui.Find(UiSelector::Key("highlight")).Tap();
   ui.PumpAndSettle();
   CHECK(ui.Find(UiSelector::Key("shake")).Exists());
+  ui.Find(UiSelector::Key("pop-trigger")).Tap();
+  ui.PumpAndSettle();
+  CHECK(ui.Find(UiSelector::Key("pop")).Exists());
 }
 
 #endif

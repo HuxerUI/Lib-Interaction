@@ -2,17 +2,22 @@
 
 [简体中文](README.zh-CN.md)
 
-Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI): pressable surfaces, hover lifts, continuous pulses, press ripples, drag-and-spring motion, shake sequences, pointer-following spotlights, and interaction tints — all composed from the framework's retained motion primitives.
+Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI): pressable surfaces, hover lifts, continuous pulses, press ripples, drag-and-spring motion, shake sequences, long presses, double clicks, pop bursts, pointer-following spotlights, and interaction tints — all composed from the framework's retained motion primitives.
 
 - C++20; namespace `huxerui::interaction`, CMake target `HuxerUI::Interaction` (`huxerui_interaction`).
-- `Pressable` animates hover and press scale around one pivot and forwards activation through OnClick.
+- `Pressable` animates hover and press scale around one pivot, forwards activation through OnClick, and shows the hand cursor.
 - `HoverLift` drifts and grows content while a hover-capable pointer targets it.
 - `Pulsing` oscillates scale or opacity with unbounded reverse repetition and no application state.
 - `Ripple` is a retained modifier painting an expanding, fading circle from each primary press without consuming clicks.
 - `Spotlight` is a retained modifier painting a pointer-following radial glow behind the content.
 - `HoverHighlight` is a retained modifier painting an interaction-driven tint driven by `InteractionState`.
-- `DragSpring` follows a drag gesture and springs the content back to rest on release.
+- `DragSpring` follows a drag gesture and springs the content back to rest on release, with grab and grabbing cursors.
 - `UseShake` / `Shaken` play decaying shake sequences from event handlers through a copyable trigger handle.
+- `LongPressable` recognizes a press-and-hold gesture, firing once at recognition with a subtle held scale and an optional circular progress ring.
+- `DoubleClickable` recognizes double taps through the platform multi-tap recognizer without replacing ordinary Click handling.
+- `UsePop` / `Popped` play one out-and-back scale burst through a copyable trigger handle.
+- `Shimmer` is a retained, paint-only modifier sweeping a looping highlight band over placeholder content.
+- `Fireworks` is a retained, paint-only modifier playing value-driven particle bursts at composed positions.
 - All motion flows through the HuxerUI animation system (`AnimateTo`, `MotionController`, `TaskScope::Delay`), so reduced motion, frame scheduling, and background throttling follow the framework policy.
 
 The widgets use no platform-specific APIs. Windows builds and tests are verified locally; CI covers native widget and preview tests on Windows. Other HuxerUI backends require their normal SDK/toolchain and have not been verified here.
@@ -72,7 +77,7 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Run `example_interaction` to try the widgets: pressable cards with spring and tween motion, a hover-lift tile, a pulsing status tile, and a ripple card, with a light/dark theme toggle. Like the other Lib projects, the demo lives in [`examples/preview`](examples/preview/README.md) and can also be configured independently:
+Run `example_interaction` to try the widgets: pressable cards with spring and tween motion, a hover-lift tile, a pulsing status tile, and a ripple card, with icon toggles for the system, light, and dark themes (the system mode follows the platform preference). Like the other Lib projects, the demo lives in [`examples/preview`](examples/preview/README.md) and can also be configured independently:
 
 ```sh
 cmake -S examples/preview -B build-preview -DHUXERUI_HOME=/path/to/HuxerUI

@@ -2,16 +2,21 @@
 
 [English](README.md)
 
-[HuxerUI](https://github.com/HuxerUI/HuxerUI) 的交互动画控件扩展：可按压表面、悬停抬升、持续脉冲、按压涟漪、拖拽回弹、摇晃序列、指针跟随辉光和交互色调叠加，全部基于框架的保留式动画原语构建。使用 C++20，命名空间为 `huxerui::interaction`，CMake 目标为 `HuxerUI::Interaction`（`huxerui_interaction`）。
+[HuxerUI](https://github.com/HuxerUI/HuxerUI) 的交互动画控件扩展：可按压表面、悬停抬升、持续脉冲、按压涟漪、拖拽回弹、摇晃序列、长按、双击、弹跳、指针跟随辉光和交互色调叠加，全部基于框架的保留式动画原语构建。使用 C++20，命名空间为 `huxerui::interaction`，CMake 目标为 `HuxerUI::Interaction`（`huxerui_interaction`）。
 
-- `Pressable`：悬停与按压时围绕一个轴点缩放，并通过 OnClick 转发激活。
+- `Pressable`：悬停与按压时围绕一个轴点缩放，并通过 OnClick 转发激活，默认手型光标。
 - `HoverLift`：悬停时内容上浮并轻微放大。
 - `Pulsing`：以无限往复播放振荡缩放或透明度，不需要任何应用状态。
 - `Ripple`：保留式修饰符，从每次主键按压位置绘制扩散、淡出的圆形，且不消费点击事件。
 - `Spotlight`：保留式修饰符，在内容之后绘制跟随指针的径向辉光。
 - `HoverHighlight`：保留式修饰符，由 `InteractionState` 驱动的交互色调叠加。
-- `DragSpring`：跟随拖拽手势，松开后弹簧回弹到原位。
+- `DragSpring`：跟随拖拽手势，松开后弹簧回弹到原位，光标在抓取与拖拽间切换。
 - `UseShake` / `Shaken`：通过可复制的触发器句柄，从事件回调播放衰减摇晃序列。
+- `LongPressable`：识别按住手势，识别时触发一次回调，按住期间轻微缩放，并可选圆形进度环。
+- `DoubleClickable`：通过平台多击识别器识别双击，不替代普通 OnClick。
+- `UsePop` / `Popped`：通过可复制的触发器句柄播放一次放大回弹的弹跳。
+- `Shimmer`：保留式纯绘制修饰符，在占位内容上循环扫过高光条带。
+- `Fireworks`：保留式纯绘制修饰符，按值驱动的请求在指定位置播放粒子爆发。
 - 所有动画都经过 HuxerUI 动画系统（`AnimateTo`、`MotionController`、`TaskScope::Delay`），因此减弱动态、帧调度与后台节流均遵循框架策略。
 
 控件不使用任何平台专属 API。已在本地验证 Windows 构建与测试；CI 在 Windows 上覆盖原生控件与预览测试。其他 HuxerUI 后端需要各自的 SDK/工具链，尚未在此验证。
@@ -70,7 +75,7 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-运行 `example_interaction` 体验控件：弹簧／补间按压卡片、悬停抬升、脉冲状态与涟漪卡片，并支持亮暗主题切换。与其他 Lib 项目一样，演示位于 [`examples/preview`](examples/preview/README.md)，也可以独立配置：
+运行 `example_interaction` 体验控件：弹簧／补间按压卡片、悬停抬升、脉冲状态与涟漪卡片，右上角提供跟随系统／浅色／深色三个图标按钮切换主题（跟随系统模式取平台偏好）。与其他 Lib 项目一样，演示位于 [`examples/preview`](examples/preview/README.md)，也可以独立配置：
 
 ```sh
 cmake -S examples/preview -B build-preview -DHUXERUI_HOME=/path/to/HuxerUI
