@@ -105,6 +105,9 @@ View PreviewApp() {
       || (mode.Get() == ThemeMode::System && UseSystemThemeBrightness() == ThemeBrightness::Dark);
   return MaterialTheme(BlueThemeSpec(dark), Scope([=] {
     const auto& theme = UseTheme();
+    const ViewportClass viewport = UseViewportClass();
+    const bool compact = viewport == ViewportClass::Compact;
+    const bool expanded = viewport == ViewportClass::Expanded;
     const auto tile = Frame{.width = 240.0F, .height = 120.0F};
     const auto card_label = Foreground(theme.colors.on_primary_container);
     const auto reorder_tile = [&theme](const char* label) {
@@ -121,7 +124,7 @@ View PreviewApp() {
       }
       return button;
     };
-    return Column {
+    return ScrollView(Column {
       Row {
         Column {
           Text("Interaction", TextRole::Title),
@@ -133,7 +136,7 @@ View PreviewApp() {
         theme_button(ThemeDarkIcon(), "Dark theme", ThemeMode::Dark).Key("theme-dark"),
       }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Center)),
       Text("Press and hover", TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
-      Row {
+      Flow {
         Pressable(
             Stack {
               Column {
@@ -166,7 +169,7 @@ View PreviewApp() {
             .Key("shake-demo"),
       }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Center)),
       Text("Paint and pulse", TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
-      Row {
+      Flow {
         Pulsing(
             Stack { Text("Live", TextRole::Label).With(card_label) }.With(
                 Frame{.width = 96.0F, .height = 40.0F},
@@ -194,7 +197,7 @@ View PreviewApp() {
                 HoverHighlight{HoverHighlightStyle{.corner_radii = 14.0F}}),
       }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Center)),
       Text("Gesture", TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
-      Row {
+      Flow {
         LongPressable(
             Stack { Text("Hold me", TextRole::Label).With(card_label) }.With(
                 Frame{.width = 240.0F, .height = 96.0F},
@@ -232,7 +235,7 @@ View PreviewApp() {
             .Key("shimmer-demo"),
       }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Center)),
       Text("Reorder", TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
-      Row {
+      Flow {
         Reorderable(
             {reorder_tile("1 · Drag me"), reorder_tile("2 · over a slot"), reorder_tile("3 · and drop")},
             {},
@@ -250,7 +253,7 @@ View PreviewApp() {
               Frame{.width = 140.0F, .height = 48.0F},
               Align(HorizontalAlignment::Center, VerticalAlignment::Center),
               Background{theme.colors.primary}, CornerRadius(12.0F)))
-          .With(Frame{.width = 560.0F, .height = 72.0F},
+          .With(Frame{.width = expanded ? 560.0F : (compact ? 240.0F : 400.0F), .height = 72.0F},
                 Background{theme.colors.surface_container_low}, CornerRadius(14.0F))
           .Key("dragspring-demo"),
       PinchZoom(
@@ -259,7 +262,7 @@ View PreviewApp() {
               Align(HorizontalAlignment::Center, VerticalAlignment::Center),
               Background{theme.colors.primary_container}, CornerRadius(14.0F)))
           .Key("pinch-demo"),
-      Row {
+      Flow {
         Text("Tap anywhere on the tiles",
              TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
         Text("Tab focuses, Enter or Space activates", TextRole::Label)
@@ -270,8 +273,8 @@ View PreviewApp() {
         Text("Motion respects the system reduced-motion preference.", TextRole::Label)
             .With(Foreground(theme.colors.on_surface_variant)),
       }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Center)),
-    }.With(Padding(24.0F), Spacing(20.0F), CrossAlign(CrossAxisAlignment::Start),
-            Background{theme.colors.background});
+    }.With(Padding(compact ? 16.0F : 24.0F), Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch)))
+        .With(Background{theme.colors.background}, ScrollBar());
   }));
 }
 
