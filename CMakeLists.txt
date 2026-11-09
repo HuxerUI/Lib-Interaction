@@ -14,12 +14,17 @@ endif()
 
 huxerui_add_library(huxerui_interaction SOURCES
     src/dragspring.cpp
+    src/fireworks.cpp
     src/highlight.cpp
     src/hover.cpp
+    src/longpress.cpp
+    src/multitap.cpp
+    src/pop.cpp
     src/pressable.cpp
     src/pulse.cpp
     src/ripple.cpp
     src/shake.cpp
+    src/shimmer.cpp
     src/spotlight.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)
 if(HUXERUI_LIBRARY_GRAPH_ONLY)
