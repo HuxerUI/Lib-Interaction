@@ -40,6 +40,9 @@ View Pressable(View content, PressableStyle style, std::function<void()> on_clic
                         }
                       });
     if(on_click) interactive = std::move(interactive).OnClick(on_click);
+    if(on_click && style.keyboard_focusable) {
+      interactive = std::move(interactive).With(Focusable{true});
+    }
     if(style.cursor != PointerCursorKind::Default) {
       interactive = std::move(interactive).With(PointerCursor{style.cursor});
     }

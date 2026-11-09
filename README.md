@@ -5,7 +5,7 @@
 Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI): pressable surfaces, hover lifts, continuous pulses, press ripples, drag-and-spring motion, shake sequences, long presses, double clicks, pop bursts, pointer-following spotlights, and interaction tints — all composed from the framework's retained motion primitives.
 
 - C++20; namespace `huxerui::interaction`, CMake target `HuxerUI::Interaction` (`huxerui_interaction`).
-- `Pressable` animates hover and press scale around one pivot, forwards activation through OnClick, and shows the hand cursor.
+- `Pressable` animates hover and press scale around one pivot, forwards activation through OnClick with keyboard Enter/Space support and a focus-visible ring, and shows the hand cursor.
 - `HoverLift` drifts and grows content while a hover-capable pointer targets it.
 - `Pulsing` oscillates scale or opacity with unbounded reverse repetition and no application state.
 - `Ripple` is a retained modifier painting an expanding, fading circle from each primary press without consuming clicks.

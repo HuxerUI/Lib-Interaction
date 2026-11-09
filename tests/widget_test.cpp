@@ -19,6 +19,7 @@ void CheckValidation() {
   (void)Pressable(Text("ok"));
   (void)Pressable(Text("ok"), {.hovered_scale = 1.0F, .pressed_scale = 0.9F, .animation = SpringSpec{}});
   (void)Pressable(Text("ok"), {}, [] {});
+  (void)Pressable(Text("ok"), {.keyboard_focusable = false}, [] {});
   (void)HoverLift(Text("ok"));
   (void)HoverLift(Text("ok"), {.lift = {6.0F, -6.0F}, .hovered_scale = 1.0F});
   (void)Pulsing(Text("ok"));

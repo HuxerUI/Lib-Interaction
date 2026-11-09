@@ -35,6 +35,8 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 
 Pointer tracking accepts down, up, and cancel phases for the primary button. The hover binding treats every non-leave event as presence. Because a disabled node does not receive input, a press that is interrupted by becoming disabled relies on the framework delivering a cancel phase; this limitation is recorded in [open-questions.md](open-questions.md). The style carries a cursor kind applied through the framework's `PointerCursor` modifier when it is not `PointerCursorKind::Default`; the default shows the hand cursor over the composed surface.
 
+When `on_click` is provided and `keyboard_focusable` is set, the widget attaches the framework's `Focusable` modifier: the window-level keyboard activation handles Enter (immediate) and Space (press-then-release) activation, and the theme's focus-visible ring paints automatically while the surface holds keyboard focus. Held-Space scale feedback is not included — `InteractionState` is not yet exposed to composition — and that gap is recorded in the roadmap.
+
 ### HoverLift
 
 `HoverLift(content, style)` composes content with independent animated `Offset` and `Scale` modifiers that share one hover state and one `AnimationSpec`. Touch-only hosts without hover-capable presence keep the rest state.
@@ -112,5 +114,5 @@ Not implemented in this version; see [open-questions.md](open-questions.md) for 
 - `Marquee` and a rolling-digit counter (require a public rectangular clip modifier; only CornerRadius clips descendants today).
 - `Magnetic` pointer-following content (requires a composition-time node size hook or normalized hover positions; HoverEvent reports node-local coordinates only).
 - Shake and attention gestures driven by `MotionController` with velocity handoff.
-- Keyboard-equivalent press feedback and focus-visible states.
+- Held-Space scale feedback for keyboard activation (requires `InteractionState` exposure to composition).
 - Shared `InteractionCallbacks` type for widgets that need to mirror state into application models.
