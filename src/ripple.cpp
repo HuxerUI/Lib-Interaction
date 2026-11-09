@@ -48,12 +48,16 @@ public:
     return node.Bounds().Contains(position);
   }
 
-  PointerResult OnPointer(ViewNode&, const PointerEvent& event) override {
+  PointerResult OnPointer(ViewNode& node, const PointerEvent& event) override {
     if(event.type == PointerEventType::Down && event.changed_button == PointerButton::Primary) {
       if(ripples_.size() < kMaximumRipples) {
         ActiveRipple ripple;
         ripple.pointer_id = event.pointer_id;
         ripple.origin = event.position;
+        if(style_.center_origin) {
+          const Rect bounds = node.Bounds();
+          ripple.origin = {bounds.x + bounds.width * 0.5F, bounds.y + bounds.height * 0.5F};
+        }
         ripple.controller.AnimateTo(1.0F, TweenSpec{.duration = style_.duration, .easing = Easing::EaseOut});
         ripples_.push_back(std::move(ripple));
         InvalidatePaint(PaintInvalidation::Foreground);

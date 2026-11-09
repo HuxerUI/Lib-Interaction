@@ -19,6 +19,8 @@ struct ShakeStyle {
   double duration = 0.06;
   /// Curve applied within each direction of each wobble.
   Easing easing = Easing::EaseInOut;
+  /// Axis the shake travels along.
+  Axis axis = Axis::Horizontal;
   bool operator==(const ShakeStyle&) const = default;
 };
 

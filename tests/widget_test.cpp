@@ -38,6 +38,9 @@ void CheckValidation() {
   (void)Text("ok").With(
       Fireworks{FireworksStyle{.particle_count = 8}, FireworksBurst{.id = 1, .local_position = {10.0F, 10.0F}}});
   (void)Shaken(Text("ok"), ShakeTrigger{});
+  (void)Text("ok").With(Ripple{RippleStyle{.center_origin = true}});
+  (void)PinchZoom(Text("ok"));
+  (void)PinchZoom(Text("ok"), {.minimum_scale = 1.0F, .maximum_scale = 2.0F, .spring_back = true});
   // Reorderable compositions.
   (void)Reorderable({Text("a"), Text("b")});
   (void)Reorderable({Text("a")}, {.spacing = 8.0F}, [](std::size_t, std::size_t) {});
@@ -106,6 +109,12 @@ void CheckValidation() {
   // Reorderable validation.
   Throws<std::invalid_argument>([] { (void)Reorderable({Text("x")}, {.spacing = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)Reorderable({Text("x")}, {.target_highlight_width = -2.0F}); });
+  // PinchZoom validation.
+  Throws<std::invalid_argument>([] { (void)PinchZoom(Text("x"), {.minimum_scale = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)PinchZoom(Text("x"), {.maximum_scale = -1.0F}); });
+  Throws<std::invalid_argument>([] {
+    (void)PinchZoom(Text("x"), {.minimum_scale = 2.0F, .maximum_scale = 1.0F});
+  });
 }
 
 #ifdef INTERACTION_HAS_UI_TESTING

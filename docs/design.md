@@ -28,6 +28,7 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `Shimmer` | Modifier applied with `With()` | None (always sweeping) | Restarting highlight band in `PaintAboveContent` | Retained per node |
 | `Fireworks` | Modifier applied with `With()` | `FireworksBurst` ids delivered through modifier updates | Particle bursts in `PaintAboveContent` | Retained per node, bounded burst list |
 | `Reorderable` | Function returning `View` | `DragGesture` + `DragEvents` per slot | Dragged item follows the pointer, displaced items ease aside | Per-scope session plus shared slot geometry recorded in `PrepareGeometry` |
+| `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Interaction tint in `PaintAboveContent` | Retained per node |
 
 ### Pressable
@@ -52,7 +53,7 @@ When `on_click` is provided and `keyboard_focusable` is set, the widget attaches
 
 ### Shake
 
-`UseShake(style)` is a composition hook returning a copyable `ShakeTrigger`; `Shaken(content, trigger)` composes one animated `Offset` that reads the trigger's offset cell. `Trigger()` writes the first peak into the cell, launches a `TaskScope` task, and walks a decaying sequence of alternating targets paced by `Delay`, guarding every write with a run identifier so a newer trigger supersedes an older sequence. Every sequence ends at rest, which keeps reduced motion correct: tweens snap between poses and the final pose is the rest position. `TaskScope::Launch` throws during composition, so triggering is only legal from handlers and tasks; the binding states live in the caller's composition scope and are created by `UseShake` inline in the header, matching the SDK's own hook precedent.
+`UseShake(style)` is a composition hook returning a copyable `ShakeTrigger`; `Shaken(content, trigger)` composes one animated `Offset` that reads the trigger's offset cell. `Trigger()` writes the first peak into the cell, launches a `TaskScope` task, and walks a decaying sequence of alternating targets paced by `Delay`, guarding every write with a run identifier so a newer trigger supersedes an older sequence. `ShakeStyle::axis` picks the travel direction — horizontal by default, vertical when set. Every sequence ends at rest, which keeps reduced motion correct: tweens snap between poses and the final pose is the rest position. `TaskScope::Launch` throws during composition, so triggering is only legal from handlers and tasks; the binding states live in the caller's composition scope and are created by `UseShake` inline in the header, matching the SDK's own hook precedent.
 
 ### LongPressable
 
@@ -76,6 +77,10 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 
 `Reorderable(items, style, on_reordered)` composes items in one column with drag-to-reorder, following the slot-recording pattern proven by Clash-Flux's profile grid. An internal retained modifier overrides `PrepareGeometry` to record each slot's undragged window-space bounds into a shared geometry map, so hit testing and preview targeting stay anchored to layout positions while displaced items animate. While a drag runs the layout stays in the original order — the dragged item follows the pointer with `follow_motion` from its own slot, the items between the source and the pointer's closest slot (point-to-rect distance, gap included) ease one position aside with `settle_motion`, and the closest slot draws the target highlight. Dropping fires `on_reordered(from, to)` once and resets the session; the model reorders at recomposition, which keeps the pointer session alive because no node is re-keyed mid-drag.
 
+### PinchZoom
+
+`PinchZoom(content, style)` attaches the framework's `TransformGesture` and one animated `Scale` modifier. Scale updates multiply the current zoom by the gesture's incremental spread change, clamped to the configured range; the zoom persists at the released value unless `PinchZoomStyle::spring_back` is set, in which case Ended swaps the motion description for the return spring while the target resets to rest — the same motion-swap trick `DragSpring` uses. Pan and rotation updates are ignored in this version because the declarative presentation set has no rotation modifier; a rotation-capable version needs a framework rotate presentation modifier.
+
 ### Spotlight
 
 `Spotlight` is a retained modifier using the explicit descriptor form. The extension overrides `HoverHitTest` to receive hover entry, movement, and departure, stores the latest node-local pointer position, and repaints only the sequence behind node content: one `RadialGradient`-filled rect whose normalized center is the pointer position and whose radius fraction derives from `SpotlightStyle::diameter` over the node size. Presence is one `MotionController` fading in on enter and out on leave; reduced motion resolves it immediately. No application state and no recomposition are involved at any point.
@@ -89,7 +94,7 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 `Ripple` is a retained modifier using the framework's explicit descriptor form (`static const detail::ModifierDescriptor& Descriptor()`), so the extension class can stay out of the public header. The extension:
 
 - Returns `true` from `HitTest` within node bounds so the node participates in pointer routing.
-- Starts a ripple on primary-button down at the node-local position and returns `PointerResult::Observe`, leaving click and gesture handling untouched. Each active pointer owns one independent ripple, bounded to four simultaneous circles.
+- Starts a ripple on primary-button down at the node-local position — or at the node center when `RippleStyle::center_origin` is set — and returns `PointerResult::Observe`, leaving click and gesture handling untouched. Each active pointer owns one independent ripple, bounded to four simultaneous circles.
 - Advances one `MotionController` per active ripple per frame, invalidating only the foreground paint sequence when a value changes.
 - Paints expanding, fading circles clipped to the node bounds and the style's corner radii. Radius covers the distance to the farthest corner; the alpha envelope is `color.alpha * maximum_opacity * (1 - progress)`.
 - Resolves a pointer's ripple immediately on cancel and under reduced motion.

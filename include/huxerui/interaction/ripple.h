@@ -19,6 +19,8 @@ struct RippleStyle {
   /// Clip corner radii applied to the ripple's paint clip. Set these to match the host surface's rounding;
   /// the zero default clips to the rectangular node bounds.
   CornerRadii corner_radii = {};
+  /// Whether ripples expand from the node center instead of the press position.
+  bool center_origin = false;
   bool operator==(const RippleStyle&) const = default;
 };
 

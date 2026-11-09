@@ -253,6 +253,12 @@ View PreviewApp() {
           .With(Frame{.width = 560.0F, .height = 72.0F},
                 Background{theme.colors.surface_container_low}, CornerRadius(14.0F))
           .Key("dragspring-demo"),
+      PinchZoom(
+          Stack { Text("Pinch me", TextRole::Label).With(card_label) }.With(
+              Frame{.width = 240.0F, .height = 72.0F},
+              Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+              Background{theme.colors.primary_container}, CornerRadius(14.0F)))
+          .Key("pinch-demo"),
       Row {
         Text("Tap anywhere on the tiles",
              TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),

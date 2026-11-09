@@ -19,6 +19,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/hover.cpp
     src/longpress.cpp
     src/multitap.cpp
+    src/pinch.cpp
     src/pop.cpp
     src/pressable.cpp
     src/pulse.cpp

@@ -34,8 +34,10 @@ void ShakeTrigger::Trigger() const {
   if(!*this) return;
   const std::uint64_t id = run_.Get() + 1;
   run_ = id;
-  offset_ = Point{style_.amplitude, 0.0F};
-  tasks_.Launch([offset = offset_, run = run_, id, style = style_]() -> Task<void> {
+  const Point direction = style_.axis == Axis::Vertical ? Point{0.0F, style_.amplitude}
+                                                        : Point{style_.amplitude, 0.0F};
+  offset_ = direction;
+  tasks_.Launch([offset = offset_, run = run_, id, style = style_, direction]() -> Task<void> {
     for(int wobble = 0; wobble < style.wobbles; ++wobble) {
       co_await Delay(std::chrono::duration<double>(style.duration));
       if(run.Get() != id) co_return;
@@ -44,7 +46,7 @@ void ShakeTrigger::Trigger() const {
         co_await Delay(std::chrono::duration<double>(style.duration));
         if(run.Get() != id) co_return;
         const float decay = static_cast<float>(wobble + 1) / static_cast<float>(style.wobbles);
-        offset = Point{style.amplitude * (1.0F - decay), 0.0F};
+        offset = Point{direction.x * (1.0F - decay), direction.y * (1.0F - decay)};
       }
     }
   });

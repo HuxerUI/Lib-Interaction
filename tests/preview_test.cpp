@@ -31,6 +31,7 @@ int main() { return Run([] {
   CHECK(ui.Find(UiSelector::Key("pop-demo")).Exists());
   CHECK(ui.Find(UiSelector::Key("shimmer-demo")).Exists());
   CHECK(ui.Find(UiSelector::Key("reorder-demo")).Exists());
+  CHECK(ui.Find(UiSelector::Key("pinch-demo")).Exists());
   CHECK(ui.Find(UiSelector::Key("dragspring-demo")).Exists());
   CHECK(ui.Find(UiSelector::Text("clicks: 0")).Exists());
   ui.Find(UiSelector::Key("pressable-demo")).Tap();
