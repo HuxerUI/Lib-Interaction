@@ -22,6 +22,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/pop.cpp
     src/pressable.cpp
     src/pulse.cpp
+    src/reorder.cpp
     src/ripple.cpp
     src/shake.cpp
     src/shimmer.cpp

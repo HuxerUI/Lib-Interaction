@@ -9,6 +9,7 @@
 #include <huxerui/interaction/pop.h>
 #include <huxerui/interaction/pressable.h>
 #include <huxerui/interaction/pulse.h>
+#include <huxerui/interaction/reorder.h>
 #include <huxerui/interaction/ripple.h>
 #include <huxerui/interaction/shake.h>
 #include <huxerui/interaction/shimmer.h>

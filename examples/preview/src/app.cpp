@@ -97,6 +97,7 @@ View PreviewApp() {
   auto holds = UseState(0);
   auto doubles = UseState(0);
   auto burst = UseState(FireworksBurst{});
+  auto lastReorder = UseState(std::string{"drop to reorder"});
   auto shake = UseShake();
   auto pop = UsePop();
   auto mode = UseState(ThemeMode::System);
@@ -106,6 +107,13 @@ View PreviewApp() {
     const auto& theme = UseTheme();
     const auto tile = Frame{.width = 240.0F, .height = 120.0F};
     const auto card_label = Foreground(theme.colors.on_primary_container);
+    const auto reorder_tile = [&theme](const char* label) {
+      return Stack { Text(label, TextRole::Label)
+                         .With(Foreground(theme.colors.on_primary_container)) }
+          .With(Frame{.width = 240.0F, .height = 48.0F},
+                Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                Background{theme.colors.primary_container}, CornerRadius(12.0F));
+    };
     const auto theme_button = [&theme, mode](VectorAsset icon, const char* label, ThemeMode value) -> View {
       View button = IconButton(std::move(icon), label).OnClick([mode, value] { mode = value; });
       if(mode.Get() == value) {
@@ -223,6 +231,19 @@ View PreviewApp() {
                 Shimmer{ShimmerStyle{.corner_radii = 14.0F}})
             .Key("shimmer-demo"),
       }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Center)),
+      Text("Reorder", TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
+      Row {
+        Reorderable(
+            {reorder_tile("1 · Drag me"), reorder_tile("2 · over a slot"), reorder_tile("3 · and drop")},
+            {},
+            [=](std::size_t from, std::size_t to) {
+              lastReorder = "moved slot " + std::to_string(from) + " → " + std::to_string(to);
+            })
+            .With(Frame{.width = 240.0F})
+            .Key("reorder-demo"),
+        Text("last: " + lastReorder.Get(), TextRole::Label)
+            .With(Foreground(theme.colors.on_surface_variant)),
+      }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Start)),
       Text("Drag", TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
       DragSpring(
           Stack { Text("Drag me", TextRole::Label).With(Foreground(theme.colors.on_primary)) }.With(

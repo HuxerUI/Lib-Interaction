@@ -38,6 +38,9 @@ void CheckValidation() {
   (void)Text("ok").With(
       Fireworks{FireworksStyle{.particle_count = 8}, FireworksBurst{.id = 1, .local_position = {10.0F, 10.0F}}});
   (void)Shaken(Text("ok"), ShakeTrigger{});
+  // Reorderable compositions.
+  (void)Reorderable({Text("a"), Text("b")});
+  (void)Reorderable({Text("a")}, {.spacing = 8.0F}, [](std::size_t, std::size_t) {});
 
   // Pressable scale validation.
   Throws<std::invalid_argument>([] { (void)Pressable(Text("x"), {.hovered_scale = 0.0F}); });
@@ -100,6 +103,9 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.duration = 0.0}}); });
   Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.spread_radius = 0.0F}}); });
   Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.gravity = -1.0F}}); });
+  // Reorderable validation.
+  Throws<std::invalid_argument>([] { (void)Reorderable({Text("x")}, {.spacing = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)Reorderable({Text("x")}, {.target_highlight_width = -2.0F}); });
 }
 
 #ifdef INTERACTION_HAS_UI_TESTING

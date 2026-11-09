@@ -17,6 +17,7 @@
 - `UsePop` / `Popped`：通过可复制的触发器句柄播放一次放大回弹的弹跳。
 - `Shimmer`：保留式纯绘制修饰符，在占位内容上循环扫过高光条带。
 - `Fireworks`：保留式纯绘制修饰符，按值驱动的请求在指定位置播放粒子爆发。
+- `Reorderable`：可拖拽排序的单列容器：槽位在布局期记录几何，被让位项缓动偏移，落点时回调重排。
 - 所有动画都经过 HuxerUI 动画系统（`AnimateTo`、`MotionController`、`TaskScope::Delay`），因此减弱动态、帧调度与后台节流均遵循框架策略。
 
 控件不使用任何平台专属 API。已在本地验证 Windows 构建与测试；CI 在 Windows 上覆盖原生控件与预览测试。其他 HuxerUI 后端需要各自的 SDK/工具链，尚未在此验证。

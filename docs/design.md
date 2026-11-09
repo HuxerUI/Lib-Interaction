@@ -27,6 +27,7 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `Spotlight` | Modifier applied with `With()` | `NodeExtension::OnHover`, `HoverHitTest` | Pointer-following radial gradient in `PaintBehindContent` | Retained per node |
 | `Shimmer` | Modifier applied with `With()` | None (always sweeping) | Restarting highlight band in `PaintAboveContent` | Retained per node |
 | `Fireworks` | Modifier applied with `With()` | `FireworksBurst` ids delivered through modifier updates | Particle bursts in `PaintAboveContent` | Retained per node, bounded burst list |
+| `Reorderable` | Function returning `View` | `DragGesture` + `DragEvents` per slot | Dragged item follows the pointer, displaced items ease aside | Per-scope session plus shared slot geometry recorded in `PrepareGeometry` |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Interaction tint in `PaintAboveContent` | Retained per node |
 
 ### Pressable
@@ -70,6 +71,10 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 ### Pop
 
 `UsePop(style)` mirrors `UseShake`: a composition hook returning a copyable `PopTrigger`, with `Popped(content, trigger)` composing one animated `Scale` that reads the trigger's scale cell. `Trigger()` writes the peak `1.0 + amplitude` into the cell and launches a `TaskScope` task that restores rest after `PopStyle::duration`, guarded by a run identifier so a newer trigger supersedes an older sequence. Every sequence ends at rest, which keeps reduced motion correct: tweens snap between poses and the final pose is the rest scale.
+
+### Reorderable
+
+`Reorderable(items, style, on_reordered)` composes items in one column with drag-to-reorder, following the slot-recording pattern proven by Clash-Flux's profile grid. An internal retained modifier overrides `PrepareGeometry` to record each slot's undragged window-space bounds into a shared geometry map, so hit testing and preview targeting stay anchored to layout positions while displaced items animate. While a drag runs the layout stays in the original order — the dragged item follows the pointer with `follow_motion` from its own slot, the items between the source and the pointer's closest slot (point-to-rect distance, gap included) ease one position aside with `settle_motion`, and the closest slot draws the target highlight. Dropping fires `on_reordered(from, to)` once and resets the session; the model reorders at recomposition, which keeps the pointer session alive because no node is re-keyed mid-drag.
 
 ### Spotlight
 
