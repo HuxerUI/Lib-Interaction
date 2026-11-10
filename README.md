@@ -19,6 +19,8 @@ Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI):
 - `Shimmer` is a retained, paint-only modifier sweeping a looping highlight band over placeholder content.
 - `Fireworks` is a retained, paint-only modifier playing value-driven particle bursts at composed positions.
 - `Reorderable` composes a drag-to-reorder column: slots record their layout geometry, displaced items ease one slot aside, and the model reorders at drop.
+- `SwipeActions` reveals a trailing action strip through a horizontal drag, settles open or closed from distance and velocity, and closes from builder-provided action callbacks.
+- `ContextMenuArea` unifies desktop secondary-click requests and touch long presses into one window-position callback.
 - `PinchZoom` zooms content with a two-pointer pinch or Ctrl + scroll wheel, clamped to a configured range, with optional spring back.
 - All motion flows through the HuxerUI animation system (`AnimateTo`, `MotionController`, `TaskScope::Delay`), so reduced motion, frame scheduling, and background throttling follow the framework policy.
 
@@ -62,7 +64,7 @@ View Gallery() {
 
 `Pressable` and `HoverLift` are composition widgets: each call creates an independent state scope, and recomposition with equal arguments preserves the mounted state by scope position. They impose no intrinsic frame; supply bounded layout through a parent or `.With(Frame{...})`. `Pulsing` is stateless declarative motion. `Ripple` is a modifier applied through `View::With()`; it paints above content, clips to the node bounds and resolved corner radii, and observes pointer sequences with `PointerResult::Observe` so sibling gestures and OnClick continue to work.
 
-Invalid configuration throws `std::invalid_argument` at the call site: non-finite or non-positive scales, non-finite lifts, negative amplitudes, opacities outside [0, 1], non-positive durations, a `Pulsing` style with no participating channel, a `Ripple` with an invalid duration or opacity multiplier, a `Spotlight` with a non-positive diameter or negative fade, or a `Shake` with non-positive amplitude, fewer than one wobble, or non-positive duration.
+Invalid configuration throws `std::invalid_argument` at the call site: non-finite or non-positive scales, non-finite lifts, negative amplitudes, opacities outside [0, 1], non-positive durations, a `Pulsing` style with no participating channel, a `Ripple` with an invalid duration or opacity multiplier, a `Spotlight` with a non-positive diameter or negative fade, or a `Shake` with non-positive amplitude, fewer than one wobble, or non-positive duration. `SwipeActions` rejects a non-positive extent, an activation ratio outside [0, 1], a negative velocity, or an empty action builder; `ContextMenuArea` rejects a non-positive long-press duration.
 
 Press tracking follows pointer down, up, and cancel events for the primary button. Held-Space scale feedback clears on focus loss; general disabled-state recovery still relies on the framework cancel path, so combine `OnClick` and `Enabled` at the call site as needed. `ShakeTrigger::Trigger()` must be called from event handlers or tasks, never during composition. See [docs/design.md](docs/design.md) for the component catalog and motion conventions, and [docs/open-questions.md](docs/open-questions.md) for reviewed design decisions.
 

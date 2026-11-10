@@ -1,5 +1,6 @@
 #pragma once
 
+#include <huxerui/interaction/contextmenu.h>
 #include <huxerui/interaction/dragspring.h>
 #include <huxerui/interaction/fireworks.h>
 #include <huxerui/interaction/highlight.h>
@@ -15,6 +16,7 @@
 #include <huxerui/interaction/shake.h>
 #include <huxerui/interaction/shimmer.h>
 #include <huxerui/interaction/spotlight.h>
+#include <huxerui/interaction/swipe.h>
 
 /// @file
 /// Interactive animation Views and modifiers for HuxerUI. The widgets compose retained HuxerUI motion primitives

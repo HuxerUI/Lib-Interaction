@@ -28,6 +28,8 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `Shimmer` | Modifier applied with `With()` | None (always sweeping) | Restarting highlight band in `PaintAboveContent` | Retained per node |
 | `Fireworks` | Modifier applied with `With()` | `FireworksBurst` ids delivered through modifier updates | Particle bursts in `PaintAboveContent` | Retained per node, bounded burst list |
 | `Reorderable` | Function returning `View` | `DragGesture` + `DragEvents` per slot | Dragged item follows the pointer, displaced items ease aside | Per-scope session plus shared slot geometry recorded in `PrepareGeometry` |
+| `SwipeActions` | Function returning `View` | `DragGesture` + `DragEvents` | Content `Offset` follows the pointer; open/closed settles from distance and velocity | Per-scope offset and drag session |
+| `ContextMenuArea` | Function returning `View` | `ContextMenuRequested`, `LongPressGesture` | None | None |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
 
@@ -76,6 +78,14 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 ### Reorderable
 
 `Reorderable(items, style, on_reordered)` composes items in one column with drag-to-reorder, following the slot-recording pattern proven by Clash-Flux's profile grid. An internal retained modifier overrides `PrepareGeometry` to record each slot's undragged window-space bounds into a shared geometry map, so hit testing and preview targeting stay anchored to layout positions while displaced items animate. While a drag runs the layout stays in the original order — the dragged item follows the pointer with `follow_motion` from its own slot, the items between the source and the pointer's closest slot (point-to-rect distance, gap included) ease one position aside with `settle_motion`, and the closest slot draws the target highlight. Dropping fires `on_reordered(from, to)` once and resets the session; the model reorders at recomposition, which keeps the pointer session alive because no node is re-keyed mid-drag.
+
+### SwipeActions
+
+`SwipeActions(content, actions, style)` composes an internal custom layout: the action strip is declared first, measured to the content height and the configured action extent, and placed behind the content at the trailing edge; the content is declared second and translated left by a `DragGesture`. The root clips descendants, so the action strip is revealed only as the content moves and remains clickable once exposed. An action builder receives a copyable `close` callback, letting action buttons dismiss the strip after performing their command. A release opens the strip when the exposed fraction reaches `activation_ratio` or the leftward velocity reaches `minimum_velocity`; otherwise it settles closed. A canceled drag always closes.
+
+### ContextMenuArea
+
+`ContextMenuArea(content, on_request, style)` binds the framework's `ContextMenuRequested` event, which already covers unchorded secondary taps, the Context Menu key, and Shift+F10. When touch long press is enabled it also attaches `LongPressGesture`; touch recognition forwards the event's window position because the framework intentionally does not convert touch long presses into context-menu events. The wrapper does not consume ordinary clicks or gestures and imposes no layout.
 
 ### PinchZoom
 

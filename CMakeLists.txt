@@ -13,6 +13,7 @@ if(HUXERUI_PROJECT_PLAN_ONLY)
 endif()
 
 huxerui_add_library(huxerui_interaction SOURCES
+    src/contextmenu.cpp
     src/dragspring.cpp
     src/fireworks.cpp
     src/highlight.cpp
@@ -27,7 +28,8 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/ripple.cpp
     src/shake.cpp
     src/shimmer.cpp
-    src/spotlight.cpp)
+    src/spotlight.cpp
+    src/swipe.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)
 if(HUXERUI_LIBRARY_GRAPH_ONLY)
     return()
