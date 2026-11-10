@@ -22,9 +22,8 @@ struct PressableStyle {
   /// Cursor shown over the content. Default keeps the platform cursor.
   PointerCursorKind cursor = PointerCursorKind::Hand;
   /// Whether a composed on_click surface participates in keyboard focus. When set, the framework's keyboard
-  /// activation handles Enter (immediate) and Space (press-then-release) activation and paints the theme's
-  /// focus-visible ring while the surface is keyboard-focused. Held-Space scale feedback is not included because
-  /// InteractionState is not yet exposed to composition.
+  /// activation handles Enter (immediate) and Space (press-then-release) activation, paints the theme's
+  /// focus-visible ring, and applies pressed_scale while Space is held.
   bool keyboard_focusable = true;
   bool operator==(const PressableStyle&) const = default;
 };
@@ -34,9 +33,9 @@ struct PressableStyle {
 /// Hover is tracked through ViewEvents::Hover; press is tracked through ViewEvents::Pointer down, up, and cancel
 /// phases. The effective scale target is 1.0 at rest, hovered_scale while hovered, and pressed_scale while pressed;
 /// target changes animate with the configured motion without recomposing the content. With an on_click callback the
-/// surface is keyboard-focusable: the framework's keyboard activation handles Enter and Space activation and paints
-/// the focus-visible ring, while held-Space scale feedback and disabled-state recovery are not provided in this
-/// version; combine OnClick and Enabled at the call site as needed.
+/// surface is keyboard-focusable: the framework's keyboard activation handles Enter and Space activation, paints the
+/// focus-visible ring, and held Space applies pressed_scale. Focus loss clears the held keyboard press, and a
+/// framework pointer cancel clears the pointer press.
 ///
 /// Call during composition. Each call creates an independent state scope; recomposition with equal arguments
 /// preserves the mounted hover and press state by scope position.

@@ -7,9 +7,9 @@
 - `Pressable`：悬停与按压时围绕一个轴点缩放，并通过 OnClick 转发激活（支持键盘 Enter/Space 与焦点可见环），默认手型光标。
 - `HoverLift`：悬停时内容上浮并轻微放大。
 - `Pulsing`：以无限往复播放振荡缩放或透明度，不需要任何应用状态。
-- `Ripple`：保留式修饰符，从每次主键按压位置绘制扩散、淡出的圆形，且不消费点击事件。
+- `Ripple`：保留式修饰符，从每次指针或键盘按压位置绘制扩散、淡出的圆形，且不消费点击事件。
 - `Spotlight`：保留式修饰符，在内容之后绘制跟随指针的径向辉光。
-- `HoverHighlight`：保留式修饰符，由 `InteractionState` 驱动的交互色调叠加。
+- `HoverHighlight`：保留式修饰符，由 `InteractionState` 驱动悬停、按压、焦点可见与禁用感知的色调叠加。
 - `DragSpring`：跟随拖拽手势，松开后弹簧回弹到原位，光标在抓取与拖拽间切换。
 - `UseShake` / `Shaken`：通过可复制的触发器句柄，从事件回调播放衰减摇晃序列。
 - `LongPressable`：识别按住手势，识别时触发一次回调，按住期间轻微缩放，并可选圆形进度环。
@@ -62,7 +62,7 @@ View Gallery() {
 
 无效配置在调用点抛出 `std::invalid_argument`：非有限或非正的缩放、非有限的位移、负的振幅、[0, 1] 之外的透明度、非正的时长、没有任何参与通道的 `Pulsing` 样式、时长／透明度乘数无效的 `Ripple`、直径非正或 fade 为负的 `Spotlight`，或振幅／摆动次数／时长无效的 `Shake`。
 
-按压跟踪遵循主键的按下、抬起与取消事件。按住空格时的缩放反馈与禁用状态恢复在本版本中尚未提供；请在调用处按需组合 `OnClick` 与 `Enabled`。`ShakeTrigger::Trigger()` 只能从事件回调或任务中调用，不能在组合期间调用。组件目录与动效约定见 [docs/design.md](docs/design.md)，设计决策记录见 [docs/open-questions.md](docs/open-questions.md)。
+按压跟踪遵循主键的按下、抬起与取消事件。按住空格的缩放反馈会在焦点丢失时清除；通用禁用状态恢复仍依赖框架的取消路径，请在调用处按需组合 `OnClick` 与 `Enabled`。`ShakeTrigger::Trigger()` 只能从事件回调或任务中调用，不能在组合期间调用。组件目录与动效约定见 [docs/design.md](docs/design.md)，设计决策记录见 [docs/open-questions.md](docs/open-questions.md)。
 
 ## 构建与测试
 

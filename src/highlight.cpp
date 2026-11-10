@@ -33,16 +33,33 @@ public:
   }
 
   FrameResult OnFrame(ViewNode&, const FrameInfo& frame) override {
-    const MotionAdvanceResult result = presence_.Advance(frame);
-    if(result.changed) InvalidatePaint(PaintInvalidation::Foreground);
-    return {result.needs_frame, result.wake_after};
+    const MotionAdvanceResult presence_result = presence_.Advance(frame);
+    const MotionAdvanceResult focus_result = focus_.Advance(frame);
+    if(presence_result.changed || focus_result.changed) {
+      InvalidatePaint(PaintInvalidation::Foreground);
+    }
+    std::optional<double> wake_after;
+    if(presence_result.wake_after.has_value()) wake_after = presence_result.wake_after;
+    if(focus_result.wake_after.has_value()) {
+      wake_after = wake_after.has_value() ? std::min(*wake_after, *focus_result.wake_after)
+                                          : focus_result.wake_after;
+    }
+    return {presence_result.needs_frame || focus_result.needs_frame, wake_after};
   }
 
   void PaintAboveContent(const ViewNode& node, PaintContext& context) const override {
-    const float presence = std::clamp(presence_.Value(), 0.0F, 2.0F);
-    if(presence <= 0.0F) return;
     const Rect bounds = node.Bounds();
     if(bounds.IsEmpty()) return;
+    const float focus = std::clamp(focus_.Value(), 0.0F, 1.0F);
+    if(focus > 0.0F && style_.focus_color.alpha > 0.0F) {
+      Color overlay = style_.focus_color;
+      overlay.alpha *= focus;
+      context.PushClip(bounds, style_.corner_radii);
+      context.DrawRect(bounds, overlay, style_.corner_radii);
+      context.PopClip();
+    }
+    const float presence = std::clamp(presence_.Value(), 0.0F, 2.0F);
+    if(presence <= 0.0F) return;
     Color overlay;
     if(presence <= 1.0F) {
       overlay = Blend(Color::Transparent(), style_.hover_color, presence);
@@ -62,15 +79,22 @@ private:
   }
 
   void DriveFrom(const InteractionState& state) {
-    const float target = state.pressed ? 2.0F : (state.hovered ? 1.0F : 0.0F);
-    if(presence_.Target() != target) {
-      presence_.AnimateTo(target, style_.motion);
+    const float presence_target =
+        state.enabled ? (state.pressed ? 2.0F : (state.hovered ? 1.0F : 0.0F)) : 0.0F;
+    if(presence_.Target() != presence_target) {
+      presence_.AnimateTo(presence_target, style_.motion);
+      InvalidatePaint(PaintInvalidation::Foreground);
+    }
+    const float focus_target = state.enabled && state.focus_visible ? 1.0F : 0.0F;
+    if(focus_.Target() != focus_target) {
+      focus_.AnimateTo(focus_target, style_.motion);
       InvalidatePaint(PaintInvalidation::Foreground);
     }
   }
 
   HoverHighlightStyle style_;
   MotionController presence_{0.0F};
+  MotionController focus_{0.0F};
 };
 
 const detail::ModifierDescriptor& HoverHighlight::Descriptor() {

@@ -23,13 +23,13 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `LongPressable` | Function returning `View` | `LongPressGesture` + `LongPressEvents` | `Scale` while the press is held | Per-scope hold cell |
 | `DoubleClickable` | Function returning `View` | `MultiTapGesture` + `MultiTapEvents` | None (callback and cursor only) | Per-scope binding |
 | `Popped` + `UsePop` | Function returning `View` + hook | `PopTrigger::Trigger()` from handlers/tasks | `Scale` out-and-back tweens | Trigger-owned scale and run cells, `TaskScope` |
-| `Ripple` | Modifier applied with `With()` | `NodeExtension::OnPointer`, `HitTest` | Painted circles in `PaintAboveContent` | Retained per node, one ripple per active pointer |
+| `Ripple` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `OnPointer`, `HitTest` | Painted circles in `PaintAboveContent` | Retained per node, one ripple per press |
 | `Spotlight` | Modifier applied with `With()` | `NodeExtension::OnHover`, `HoverHitTest` | Pointer-following radial gradient in `PaintBehindContent` | Retained per node |
 | `Shimmer` | Modifier applied with `With()` | None (always sweeping) | Restarting highlight band in `PaintAboveContent` | Retained per node |
 | `Fireworks` | Modifier applied with `With()` | `FireworksBurst` ids delivered through modifier updates | Particle bursts in `PaintAboveContent` | Retained per node, bounded burst list |
 | `Reorderable` | Function returning `View` | `DragGesture` + `DragEvents` per slot | Dragged item follows the pointer, displaced items ease aside | Per-scope session plus shared slot geometry recorded in `PrepareGeometry` |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
-| `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Interaction tint in `PaintAboveContent` | Retained per node |
+| `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
 
 ### Pressable
 
@@ -37,7 +37,7 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 
 Pointer tracking accepts down, up, and cancel phases for the primary button. The hover binding treats every non-leave event as presence. Because a disabled node does not receive input, a press that is interrupted by becoming disabled relies on the framework delivering a cancel phase; this limitation is recorded in [open-questions.md](open-questions.md). The style carries a cursor kind applied through the framework's `PointerCursor` modifier when it is not `PointerCursorKind::Default`; the default shows the hand cursor over the composed surface.
 
-When `on_click` is provided and `keyboard_focusable` is set, the widget attaches the framework's `Focusable` modifier: the window-level keyboard activation handles Enter (immediate) and Space (press-then-release) activation, and the theme's focus-visible ring paints automatically while the surface holds keyboard focus. Held-Space scale feedback is not included — `InteractionState` is not yet exposed to composition — and that gap is recorded in the roadmap.
+When `on_click` is provided and `keyboard_focusable` is set, the widget attaches the framework's `Focusable` modifier: the window-level keyboard activation handles Enter (immediate) and Space (press-then-release) activation, and the theme's focus-visible ring paints automatically while the surface holds keyboard focus. A `KeyIntercept` binding observes Space on the focused surface and applies `pressed_scale` while the key is held; `FocusChanged` clears that state when focus leaves, so the framework can cancel a keyboard activation without leaving the surface visually pressed.
 
 ### HoverLift
 
@@ -87,14 +87,14 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 
 ### HoverHighlight
 
-`HoverHighlight` is a retained modifier driven by `NodeExtension::OnInteraction`: the controller target is `2.0` while the node reports pressed, `1.0` while hovered, and `0.0` at rest or disabled. The overlay blends from transparent to `hover_color` and from there toward `pressed_color`, painted above content and clipped to the node bounds and style corner radii. The extension also overrides `HitTest` and `HoverHitTest` within the node bounds so inert views (no events of their own) still report interaction state; the modifier never consumes pointer events.
+`HoverHighlight` is a retained modifier driven by `NodeExtension::OnInteraction`: the hover/press controller target is `2.0` while the node reports pressed, `1.0` while hovered, and `0.0` at rest or disabled. A second controller fades `focus_color` while `focus_visible` is set; its transparent default leaves the theme focus ring as the only focus treatment. The overlay blends from transparent to `hover_color` and from there toward `pressed_color`, painted above content and clipped to the node bounds and style corner radii. The extension also overrides `HitTest` and `HoverHitTest` within the node bounds so inert views (no events of their own) still report interaction state; the modifier never consumes pointer events.
 
 ### Ripple
 
 `Ripple` is a retained modifier using the framework's explicit descriptor form (`static const detail::ModifierDescriptor& Descriptor()`), so the extension class can stay out of the public header. The extension:
 
 - Returns `true` from `HitTest` within node bounds so the node participates in pointer routing.
-- Starts a ripple on primary-button down at the node-local position — or at the node center when `RippleStyle::center_origin` is set — and returns `PointerResult::Observe`, leaving click and gesture handling untouched. Each active pointer owns one independent ripple, bounded to four simultaneous circles.
+- Starts a ripple on each `InteractionEvent::Press` at the node-local pointer position, or at the node center when `RippleStyle::center_origin` is set or the press came from the keyboard. `OnPointer` still returns `PointerResult::Observe` for an inert view so it becomes the interaction target without consuming click handling. Each active press owns one independent ripple, bounded to four simultaneous circles.
 - Advances one `MotionController` per active ripple per frame, invalidating only the foreground paint sequence when a value changes.
 - Paints expanding, fading circles clipped to the node bounds and the style's corner radii. Radius covers the distance to the farthest corner; the alpha envelope is `color.alpha * maximum_opacity * (1 - progress)`.
 - Resolves a pointer's ripple immediately on cancel and under reduced motion.
@@ -124,5 +124,4 @@ Not implemented in this version; see [open-questions.md](open-questions.md) for 
 - `Marquee` and a rolling-digit counter (require a public rectangular clip modifier; only CornerRadius clips descendants today).
 - `Magnetic` pointer-following content (requires a composition-time node size hook or normalized hover positions; HoverEvent reports node-local coordinates only).
 - Shake and attention gestures driven by `MotionController` with velocity handoff.
-- Held-Space scale feedback for keyboard activation (requires `InteractionState` exposure to composition).
 - Shared `InteractionCallbacks` type for widgets that need to mirror state into application models.

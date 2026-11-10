@@ -1,5 +1,6 @@
 #include <huxerui/interaction/ripple.h>
 
+#include <huxerui/event.h>
 #include <huxerui/modifier.h>
 
 #include <algorithm>
@@ -48,31 +49,29 @@ public:
     return node.Bounds().Contains(position);
   }
 
-  PointerResult OnPointer(ViewNode& node, const PointerEvent& event) override {
+  /// Observe remains necessary so an otherwise inert view still becomes the interaction target that publishes
+  /// Press events to OnInteraction.
+  PointerResult OnPointer(ViewNode&, const PointerEvent& event) override {
     if(event.type == PointerEventType::Down && event.changed_button == PointerButton::Primary) {
-      if(ripples_.size() < kMaximumRipples) {
-        ActiveRipple ripple;
-        ripple.pointer_id = event.pointer_id;
-        ripple.origin = event.position;
-        if(style_.center_origin) {
-          const Rect bounds = node.Bounds();
-          ripple.origin = {bounds.x + bounds.width * 0.5F, bounds.y + bounds.height * 0.5F};
-        }
-        ripple.controller.AnimateTo(1.0F, TweenSpec{.duration = style_.duration, .easing = Easing::EaseOut});
-        ripples_.push_back(std::move(ripple));
-        InvalidatePaint(PaintInvalidation::Foreground);
-      }
       return PointerResult::Observe;
     }
-    if(event.type == PointerEventType::Cancel) {
-      for(auto& ripple : ripples_) {
-        if(ripple.pointer_id == event.pointer_id && ripple.controller.IsRunning()) {
-          ripple.controller.Set(1.0F);
-          InvalidatePaint(PaintInvalidation::Foreground);
-        }
-      }
-    }
     return PointerResult::Ignored;
+  }
+
+  /// Press events carry both pointer and keyboard origins. Pointer presses use their node-local position; keyboard
+  /// presses have no coordinate and start at the center.
+  void OnInteraction(ViewNode& node, const InteractionState& state,
+                     const std::optional<InteractionEvent>& event) override {
+    if(!state.enabled) {
+      CancelAll();
+      return;
+    }
+    if(!event.has_value()) return;
+    if(event->type == InteractionEvent::Type::Press) {
+      Start(node, *event);
+    } else if(event->type == InteractionEvent::Type::Cancel) {
+      Finish(event->press_id);
+    }
   }
 
   FrameResult OnFrame(ViewNode&, const FrameInfo& frame) override {
@@ -118,10 +117,48 @@ public:
 
 private:
   struct ActiveRipple {
-    std::int64_t pointer_id = 0;
+    std::uint64_t press_id = 0;
     Point origin;
     MotionController controller{0.0F};
   };
+
+  Point OriginFor(ViewNode& node, const InteractionEvent& event) const {
+    const Rect bounds = node.Bounds();
+    if(style_.center_origin || !event.position.has_value()) {
+      return {bounds.x + bounds.width * 0.5F, bounds.y + bounds.height * 0.5F};
+    }
+    return *event.position;
+  }
+
+  void Start(ViewNode& node, const InteractionEvent& event) {
+    if(ripples_.size() >= kMaximumRipples) return;
+    ActiveRipple ripple;
+    ripple.press_id = event.press_id;
+    ripple.origin = OriginFor(node, event);
+    ripple.controller.AnimateTo(1.0F, TweenSpec{.duration = style_.duration, .easing = Easing::EaseOut});
+    ripples_.push_back(std::move(ripple));
+    InvalidatePaint(PaintInvalidation::Foreground);
+  }
+
+  void Finish(std::uint64_t press_id) {
+    for(auto& ripple : ripples_) {
+      if(ripple.press_id == press_id && ripple.controller.IsRunning()) {
+        ripple.controller.Set(1.0F);
+        InvalidatePaint(PaintInvalidation::Foreground);
+      }
+    }
+  }
+
+  void CancelAll() {
+    bool changed = false;
+    for(auto& ripple : ripples_) {
+      if(ripple.controller.IsRunning()) {
+        ripple.controller.Set(1.0F);
+        changed = true;
+      }
+    }
+    if(changed) InvalidatePaint(PaintInvalidation::Foreground);
+  }
 
   RippleStyle style_;
   std::vector<ActiveRipple> ripples_;

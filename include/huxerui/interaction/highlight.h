@@ -14,6 +14,9 @@ struct HoverHighlightStyle {
   Color hover_color = Color::Rgb(255, 255, 255, 0.08F);
   /// Overlay color while pressed; the overlay blends from hover_color toward this color.
   Color pressed_color = Color::Rgb(0, 0, 0, 0.10F);
+  /// Additional overlay color while focus is visible. The default is transparent, so focus only shows when the
+  /// caller opts in; the framework focus ring remains independent.
+  Color focus_color = Color::Transparent();
   /// Motion used when the interaction state changes, including the return to rest.
   AnimationSpec motion = TweenSpec{.duration = 0.15, .easing = Easing::EaseOut};
   /// Clip corner radii applied to the overlay's paint clip. Defaults to the rectangular node bounds.
@@ -25,8 +28,9 @@ struct HoverHighlightStyle {
 ///
 /// Apply through View::With(). The modifier observes the node's InteractionState: the overlay fades to
 /// hover_color while hovered, blends toward pressed_color while pressed, and fades out at rest or when the node
-/// is disabled. Reduced motion resolves the overlay immediately. The overlay is clipped to the node bounds and
-/// HoverHighlightStyle::corner_radii.
+/// is disabled. HoverHighlightStyle::focus_color adds an independent focus-visible layer; its transparent default
+/// leaves the framework focus ring as the only focus treatment. Reduced motion resolves the overlays immediately.
+/// The overlay is clipped to the node bounds and HoverHighlightStyle::corner_radii.
 ///
 /// The modifier makes the node an input target so inert views can still respond; it does not consume pointer
 /// events, and it does not change layout or semantics.

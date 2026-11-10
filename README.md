@@ -8,9 +8,9 @@ Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI):
 - `Pressable` animates hover and press scale around one pivot, forwards activation through OnClick with keyboard Enter/Space support and a focus-visible ring, and shows the hand cursor.
 - `HoverLift` drifts and grows content while a hover-capable pointer targets it.
 - `Pulsing` oscillates scale or opacity with unbounded reverse repetition and no application state.
-- `Ripple` is a retained modifier painting an expanding, fading circle from each primary press without consuming clicks.
+- `Ripple` is a retained modifier painting an expanding, fading circle from each pointer or keyboard press without consuming clicks.
 - `Spotlight` is a retained modifier painting a pointer-following radial glow behind the content.
-- `HoverHighlight` is a retained modifier painting an interaction-driven tint driven by `InteractionState`.
+- `HoverHighlight` is a retained modifier painting hover, press, focus-visible, and disabled-aware tints driven by `InteractionState`.
 - `DragSpring` follows a drag gesture and springs the content back to rest on release, with grab and grabbing cursors.
 - `UseShake` / `Shaken` play decaying shake sequences from event handlers through a copyable trigger handle.
 - `LongPressable` recognizes a press-and-hold gesture, firing once at recognition with a subtle held scale and an optional circular progress ring.
@@ -64,7 +64,7 @@ View Gallery() {
 
 Invalid configuration throws `std::invalid_argument` at the call site: non-finite or non-positive scales, non-finite lifts, negative amplitudes, opacities outside [0, 1], non-positive durations, a `Pulsing` style with no participating channel, a `Ripple` with an invalid duration or opacity multiplier, a `Spotlight` with a non-positive diameter or negative fade, or a `Shake` with non-positive amplitude, fewer than one wobble, or non-positive duration.
 
-Press tracking follows pointer down, up, and cancel events for the primary button. Held-Space scale feedback and disabled-state recovery are not provided in this version; combine `OnClick` and `Enabled` at the call site as needed. `ShakeTrigger::Trigger()` must be called from event handlers or tasks, never during composition. See [docs/design.md](docs/design.md) for the component catalog and motion conventions, and [docs/open-questions.md](docs/open-questions.md) for reviewed design decisions.
+Press tracking follows pointer down, up, and cancel events for the primary button. Held-Space scale feedback clears on focus loss; general disabled-state recovery still relies on the framework cancel path, so combine `OnClick` and `Enabled` at the call site as needed. `ShakeTrigger::Trigger()` must be called from event handlers or tasks, never during composition. See [docs/design.md](docs/design.md) for the component catalog and motion conventions, and [docs/open-questions.md](docs/open-questions.md) for reviewed design decisions.
 
 ## Build and test
 
