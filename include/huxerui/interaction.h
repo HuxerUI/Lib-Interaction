@@ -1,7 +1,10 @@
 #pragma once
 
 #include <huxerui/interaction/contextmenu.h>
+#include <huxerui/interaction/draggable.h>
+#include <huxerui/interaction/dropzone.h>
 #include <huxerui/interaction/dragspring.h>
+#include <huxerui/interaction/filedropzone.h>
 #include <huxerui/interaction/fireworks.h>
 #include <huxerui/interaction/highlight.h>
 #include <huxerui/interaction/hover.h>

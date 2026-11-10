@@ -15,6 +15,7 @@ endif()
 huxerui_add_library(huxerui_interaction SOURCES
     src/contextmenu.cpp
     src/dragspring.cpp
+    src/filedropzone.cpp
     src/fireworks.cpp
     src/highlight.cpp
     src/hover.cpp

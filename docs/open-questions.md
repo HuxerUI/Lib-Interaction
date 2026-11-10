@@ -32,7 +32,7 @@ Decisions made while scaffolding Lib-Interaction that deserve review. Each item 
 
 12. **Preview app is a single scrolling gallery** (twelve keyed demo tiles, theme toggle, and click/hold/double-click counters). It exercises every widget and feeds the preview test. If the widget set grows further, consider a `Select`-based gallery like the other Lib previews.
 
-13. **Interaction tests cover dispatch, layout, and gesture behavior, but not painted pixels.** Click routing, PinchZoom wheel clamping, Reorderable indices, long-press recognition, double-tap recognition, swipe-action reveal/activation, and context-menu request delivery are asserted through `UiTest`; ripple/spotlight/shimmer painting is still verified only by the code paths executing without failure. Screenshot-level assertions need the UI testing library's snapshot or pixel facilities; check what `UiSnapshot` comparison supports before investing.
+13. **Interaction tests cover dispatch, layout, and gesture behavior, but not painted pixels.** Click routing, PinchZoom wheel clamping, Reorderable indices, long-press recognition, double-tap recognition, swipe-action reveal/activation, context-menu request delivery, typed drag/drop delivery, and file-drop-zone construction are asserted through `UiTest`; ripple/spotlight/shimmer painting is still verified only by the code paths executing without failure. Screenshot-level assertions need the UI testing library's snapshot or pixel facilities; check what `UiSnapshot` comparison supports before investing.
 
 ## Manual verification follow-ups
 

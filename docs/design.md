@@ -30,6 +30,9 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `Reorderable` | Function returning `View` | `DragGesture` + `DragEvents` per slot | Dragged item follows the pointer, displaced items ease aside | Per-scope session plus shared slot geometry recorded in `PrepareGeometry` |
 | `SwipeActions` | Function returning `View` | `DragGesture` + `DragEvents` | Content `Offset` follows the pointer; open/closed settles from distance and velocity | Per-scope offset and drag session |
 | `ContextMenuArea` | Function returning `View` | `ContextMenuRequested`, `LongPressGesture` | None | None |
+| `Draggable` | Function returning `View` | `DragSource` + `DragGesture` | Source opacity fade | Per-scope dragging cell |
+| `DropZone<T>` | Function returning `View` | `DropTarget` + `DropEvents<T>` | Highlight border while hovered | Per-scope hovered cell |
+| `FileDropZone` | Function returning `View` | `FileDropTarget` + `FileDropEvents` | Highlight border while hovered | Per-scope hovered cell |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
 
@@ -82,6 +85,14 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 ### SwipeActions
 
 `SwipeActions(content, actions, style)` composes an internal custom layout: the action strip is declared first, measured to the content height and the configured action extent, and placed behind the content at the trailing edge; the content is declared second and translated left by a `DragGesture`. The root clips descendants, so the action strip is revealed only as the content moves and remains clickable once exposed. An action builder receives a copyable `close` callback, letting action buttons dismiss the strip after performing their command. A release opens the strip when the exposed fraction reaches `activation_ratio` or the leftward velocity reaches `minimum_velocity`; otherwise it settles closed. A canceled drag always closes.
+
+### Draggable and typed drop zones
+
+`Draggable(content, payload, style, preview, gesture)` attaches the framework's `DragSource` with the exact payload type. The modifier supplies the typed drag session and optional preview; the wrapper adds a retained `Opacity` target that fades the source while `DragSourceEvents::Started` is active and restores it on `Ended` or `Canceled`. A non-default cursor is attached through `PointerCursor`.
+
+`DropZone<T>(content, on_drop, style)` attaches `DropTarget::Accepts<T>()` and listens for the typed `DropEvents<T>` lifecycle. Entered and Moved set a hovered cell, Exited clears it, and Dropped clears it before forwarding the borrowed payload. The border is always present in the modifier value: the highlight color and width are selected from the hovered state, with a zero-width transparent border at rest.
+
+`FileDropZone(content, options, on_dropped, style)` is the external-file counterpart. `FileDropTarget::Accepts(options)` is constructed before the composition scope so malformed filters throw at the call site. Entered and Moved highlight, Exited and Failed clear, and Dropped forwards the accepted file batch. Neither zone consumes pointer events or owns transferred data.
 
 ### ContextMenuArea
 

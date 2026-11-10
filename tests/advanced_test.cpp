@@ -75,6 +75,38 @@ View ContextGallery() {
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
+View DragDropGallery() {
+  auto drops = UseState(0);
+  auto payload = UseState(0);
+  return Column {
+    Draggable(Text("drag source")
+                  .With(Frame{.width = 160.0F, .height = 56.0F}, Background{Color::Rgb(70, 120, 160)},
+                        CornerRadius(10.0F)),
+              42)
+        .Key("drag-source"),
+    DropZone<int>(Text("drop zone")
+                      .With(Frame{.width = 220.0F, .height = 80.0F}, Background{Color::Rgb(90, 130, 100)},
+                            CornerRadius(10.0F)),
+                  [drops, payload](const int& value, const DropEvent&) {
+                    drops += 1;
+                    payload = value;
+                  })
+        .Key("drop-zone"),
+    Text("drops: " + std::to_string(drops.Get())).Key("drop-count"),
+    Text("payload: " + std::to_string(payload.Get())).Key("drop-payload"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
+View FileGallery() {
+  return Column {
+    FileDropZone(Text("file zone")
+                     .With(Frame{.width = 220.0F, .height = 80.0F}, Background{Color::Rgb(120, 90, 150)},
+                           CornerRadius(10.0F)),
+                 FileDropOptions{.extensions = {"png"}})
+        .Key("file-zone"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -172,6 +204,23 @@ int main() { return Run([] {
     CHECK(context.Find(UiSelector::Text("last x: " + std::to_string(static_cast<int>(target_point.x)))).Exists());
   }
 
+  {
+    Application drag_app(DragDropGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
+    UiTest drag(drag_app, {.viewport = {420, 320}});
+    const Rect source = drag.Find(UiSelector::Key("drag-source")).One().bounds;
+    const Rect target = drag.Find(UiSelector::Key("drop-zone")).One().bounds;
+    drag.Drag(Center(source), Center(target), {.duration = std::chrono::duration<double>(0.3), .segments = 12});
+    drag.PumpAndSettle();
+    CHECK(drag.Find(UiSelector::Text("drops: 1")).Exists());
+    CHECK(drag.Find(UiSelector::Text("payload: 42")).Exists());
+  }
+
+  {
+    Application file_app(FileGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
+    UiTest file(file_app, {.viewport = {420, 240}});
+    CHECK(file.Find(UiSelector::Key("file-zone")).Exists());
+  }
+
   Throws<std::invalid_argument>([] { (void)SwipeActions(Text("x"), {}, {}); });
   Throws<std::invalid_argument>([] {
     (void)SwipeActions(Text("x"), [](std::function<void()>) { return Text("action"); },
@@ -187,5 +236,11 @@ int main() { return Run([] {
   });
   Throws<std::invalid_argument>([] {
     (void)ContextMenuArea(Text("x"), {}, {.long_press_duration = std::chrono::duration<double>(0.0)});
+  });
+  Throws<std::invalid_argument>([] { (void)Draggable(Text("x"), 1, {.dragging_opacity = 1.5F}); });
+  Throws<std::invalid_argument>([] { (void)DropZone<int>(Text("x"), {}, {.border_width = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)FileDropZone(Text("x"), {.extensions = {"bad/name"}}); });
+  Throws<std::invalid_argument>([] {
+    (void)FileDropZone(Text("x"), {}, {}, {.border_width = -1.0F});
   });
 }); }
