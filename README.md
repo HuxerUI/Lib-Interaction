@@ -64,7 +64,7 @@ View Gallery() {
 
 Invalid configuration throws `std::invalid_argument` at the call site: non-finite or non-positive scales, non-finite lifts, negative amplitudes, opacities outside [0, 1], non-positive durations, a `Pulsing` style with no participating channel, a `Ripple` with an invalid duration or opacity multiplier, a `Spotlight` with a non-positive diameter or negative fade, or a `Shake` with non-positive amplitude, fewer than one wobble, or non-positive duration.
 
-Press tracking follows pointer down, up, and cancel events for the primary button. Keyboard activation, focus-visible press feedback, and disabled-state recovery are not provided in this version; combine `OnClick` and `Enabled` at the call site. `ShakeTrigger::Trigger()` must be called from event handlers or tasks, never during composition. See [docs/design.md](docs/design.md) for the component catalog and motion conventions, and [docs/open-questions.md](docs/open-questions.md) for reviewed design decisions.
+Press tracking follows pointer down, up, and cancel events for the primary button. Held-Space scale feedback and disabled-state recovery are not provided in this version; combine `OnClick` and `Enabled` at the call site as needed. `ShakeTrigger::Trigger()` must be called from event handlers or tasks, never during composition. See [docs/design.md](docs/design.md) for the component catalog and motion conventions, and [docs/open-questions.md](docs/open-questions.md) for reviewed design decisions.
 
 ## Build and test
 

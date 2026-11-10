@@ -30,13 +30,13 @@ Decisions made while scaffolding Lib-Interaction that deserve review. Each item 
 
 ## Preview and tests
 
-12. **Preview app is intentionally minimal** (four demo tiles, theme toggle, click counter). It exercises every widget and feeds the preview test. If the widget set grows, consider a `Select`-based gallery like the other Lib previews.
+12. **Preview app is a single scrolling gallery** (twelve keyed demo tiles, theme toggle, and click/hold/double-click counters). It exercises every widget and feeds the preview test. If the widget set grows further, consider a `Select`-based gallery like the other Lib previews.
 
-13. **Interaction tests only cover click dispatch and layout sizes.** Hover and ripple visuals are verified only by the code paths executing without failure inside `UiTest`. Screenshot-level assertions (ripple visible mid-animation, scale changes during hover) need the UI testing library's snapshot or pixel facilities; check what `UiSnapshot` comparison supports before investing.
+13. **Interaction tests cover dispatch, layout, and gesture behavior, but not painted pixels.** Click routing, PinchZoom wheel clamping, Reorderable indices, long-press recognition, and double-tap recognition are asserted through `UiTest`; ripple/spotlight/shimmer painting is still verified only by the code paths executing without failure. Screenshot-level assertions need the UI testing library's snapshot or pixel facilities; check what `UiSnapshot` comparison supports before investing.
 
-## Follow-ups for tomorrow
+## Manual verification follow-ups
 
-- Run the preview app (`example_interaction`) manually and eyeball all eight widgets, light and dark.
+- Run the preview app (`example_interaction`) manually and eyeball all fifteen widgets, light and dark.
 - Confirm `PointerResult::Observe` ripples on a `Button` do not interfere with the button's own press indication.
 - Review item 2 (naming) and item 3 (shared pinned revision) with the team.
 

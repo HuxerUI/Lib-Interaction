@@ -62,7 +62,7 @@ View Gallery() {
 
 无效配置在调用点抛出 `std::invalid_argument`：非有限或非正的缩放、非有限的位移、负的振幅、[0, 1] 之外的透明度、非正的时长、没有任何参与通道的 `Pulsing` 样式、时长／透明度乘数无效的 `Ripple`、直径非正或 fade 为负的 `Spotlight`，或振幅／摆动次数／时长无效的 `Shake`。
 
-按压跟踪遵循主键的按下、抬起与取消事件。键盘激活、焦点可见的按压反馈与禁用状态恢复在本版本中尚未提供；请在调用处按需组合 `OnClick` 与 `Enabled`。`ShakeTrigger::Trigger()` 只能从事件回调或任务中调用，不能在组合期间调用。组件目录与动效约定见 [docs/design.md](docs/design.md)，设计决策记录见 [docs/open-questions.md](docs/open-questions.md)。
+按压跟踪遵循主键的按下、抬起与取消事件。按住空格时的缩放反馈与禁用状态恢复在本版本中尚未提供；请在调用处按需组合 `OnClick` 与 `Enabled`。`ShakeTrigger::Trigger()` 只能从事件回调或任务中调用，不能在组合期间调用。组件目录与动效约定见 [docs/design.md](docs/design.md)，设计决策记录见 [docs/open-questions.md](docs/open-questions.md)。
 
 ## 构建与测试
 
