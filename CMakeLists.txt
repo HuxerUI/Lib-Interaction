@@ -18,9 +18,11 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/filedropzone.cpp
     src/fireworks.cpp
     src/highlight.cpp
+    src/inertialdrag.cpp
     src/hover.cpp
     src/longpress.cpp
     src/multitap.cpp
+    src/panzoom.cpp
     src/pinch.cpp
     src/pop.cpp
     src/pressable.cpp

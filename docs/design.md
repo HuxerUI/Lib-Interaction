@@ -33,6 +33,8 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `Draggable` | Function returning `View` | `DragSource` + `DragGesture` | Source opacity fade | Per-scope dragging cell |
 | `DropZone<T>` | Function returning `View` | `DropTarget` + `DropEvents<T>` | Highlight border while hovered | Per-scope hovered cell |
 | `FileDropZone` | Function returning `View` | `FileDropTarget` + `FileDropEvents` | Highlight border while hovered | Per-scope hovered cell |
+| `PanZoom` | Function returning `View` | `TransformGesture` + `TransformEvents`, `ScrollInput` | `Offset`, `Scale`, `Rotation` | Per-scope pan/scale/rotation and active cells |
+| `InertialDrag` | Function returning `View` | `DragGesture` + `DragEvents` | `Offset` follows drag; release settles at a projected target | Per-scope offset and dragging cell |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
 
@@ -101,6 +103,14 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 ### PinchZoom
 
 `PinchZoom(content, style)` attaches the framework's `TransformGesture` and one animated `Scale` modifier. Scale updates multiply the current zoom by the gesture's incremental spread change, clamped to the configured range; the zoom persists at the released value unless `PinchZoomStyle::spring_back` is set, in which case Ended swaps the motion description for the return spring while the target resets to rest — the same motion-swap trick `DragSpring` uses. On wheel and trackpad hosts, `ViewEvents::ScrollInput` with the control modifier held drives the same clamped zoom multiplicatively from the scroll delta and consumes the event only while the modifier is held, so surrounding scroll containers keep working; the fallback exists because desktop backends deliver no transform gestures. Pan and rotation updates are ignored in this version because the declarative presentation set has no rotation modifier; a rotation-capable version needs a framework rotate presentation modifier.
+
+### PanZoom
+
+`PanZoom(content, style)` accumulates `TransformEvent` deltas: `pan` is added to the current offset, `scale` is multiplied and clamped to the configured range, and `rotation` is converted from radians to the degrees consumed by the `Rotation` modifier. Its presentation chain applies `Scale`, optional `Rotation`, and `Offset` around the configured origin. The terminal deltas remain application-visible until a later gesture; `spring_back` resets all three on `Ended` or `Canceled` with `return_motion`. Ctrl+wheel input multiplies zoom by an exponential delta and consumes the event; unmodified scroll passes through. Unlike `PinchZoom`, which only accumulates scale, `PanZoom` owns the complete two-pointer transform and has no inertia.
+
+### InertialDrag
+
+`InertialDrag(content, style)` uses `DragEvent::translation` while the drag owns the pointer and, on `Ended`, computes `translation + velocity * projection_time` on each axis, clamps it to `maximum_projection`, and animates there with `settle_motion`. This is a velocity-projected target, not a velocity-continuous retained simulation; the declarative `AnimateTo` path has no initial-velocity input. Cancellation returns to rest. `DragSpring` remains the spring-back alternative; this widget is for surfaces that should keep the projected displacement.
 
 ### Spotlight
 

@@ -32,7 +32,7 @@ Decisions made while scaffolding Lib-Interaction that deserve review. Each item 
 
 12. **Preview app is a single scrolling gallery** (twelve keyed demo tiles, theme toggle, and click/hold/double-click counters). It exercises every widget and feeds the preview test. If the widget set grows further, consider a `Select`-based gallery like the other Lib previews.
 
-13. **Interaction tests cover dispatch, layout, and gesture behavior, but not painted pixels.** Click routing, PinchZoom wheel clamping, Reorderable indices, long-press recognition, double-tap recognition, swipe-action reveal/activation, context-menu request delivery, typed drag/drop delivery, and file-drop-zone construction are asserted through `UiTest`; ripple/spotlight/shimmer painting is still verified only by the code paths executing without failure. Screenshot-level assertions need the UI testing library's snapshot or pixel facilities; check what `UiSnapshot` comparison supports before investing.
+13. **Interaction tests cover dispatch, layout, and gesture behavior, but not painted pixels.** Click routing, PinchZoom wheel clamping, Reorderable indices, long-press recognition, double-tap recognition, swipe-action reveal/activation, context-menu request delivery, typed drag/drop delivery, file-drop-zone construction, PanZoom pan/scale/rotation, and InertialDrag velocity projection are asserted through `UiTest`; ripple/spotlight/shimmer painting is still verified only by the code paths executing without failure. Screenshot-level assertions need the UI testing library's snapshot or pixel facilities; check what `UiSnapshot` comparison supports before investing.
 
 ## Manual verification follow-ups
 
@@ -44,7 +44,7 @@ Decisions made while scaffolding Lib-Interaction that deserve review. Each item 
 
 14. **Entrance animations (FadeIn/slide-in on mount) are not implementable with public API yet.** `TransitionExtension` resolves an `Animated` progress to its target immediately on first mount (verified in the SDK source), so a `Transition{AnimateTo(1.0F)}.Opacity(0, 1)` appears fully settled. A proper appear transition needs either an SDK mount hook, an `Animated` "from" value, or an appearance policy. Recorded as a framework request; no Lib workaround is planned.
 
-15. **`DragSpring` does not hand terminal drag velocity to the return spring.** The declarative `Animated` target form has no velocity input (`MotionController::Seek` does, but that is retained-only). Follow-up options: a retained executor widget, or an SDK velocity parameter on `AnimateTo`.
+15. **`DragSpring` does not hand terminal drag velocity to the return spring.** The declarative `Animated` target form has no velocity input (`MotionController::Seek` does, but that is retained-only). `InertialDrag` now uses terminal velocity to project a target, but it is not velocity-continuous. Follow-up options: a retained executor widget, or an SDK velocity parameter on `AnimateTo`.
 
 16. **`Spotlight` invalidates the behind-content paint sequence on every hover move.** Repainting one gradient rect per pointer move is expected to be cheap, but confirm on the Windows backend that hover-move repaints do not visibly cost. If they do, throttle by distance or move the glow to the framework's per-frame paint path.
 

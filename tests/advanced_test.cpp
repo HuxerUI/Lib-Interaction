@@ -107,6 +107,28 @@ View FileGallery() {
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
+View TransformGallery() {
+  return Column {
+    PanZoom(Text("transform target")
+                .With(Frame{.width = 160.0F, .height = 80.0F}, Background{Color::Rgb(80, 120, 160)},
+                      CornerRadius(10.0F))
+                .Key("transform-content"),
+            {.minimum_scale = 0.5F, .maximum_scale = 3.0F})
+        .Key("panzoom"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
+View InertiaGallery() {
+  return Column {
+    InertialDrag(Text("inertial target")
+                     .With(Frame{.width = 160.0F, .height = 60.0F}, Background{Color::Rgb(150, 100, 70)},
+                           CornerRadius(10.0F))
+                     .Key("inertial-content"),
+                 {.projection_time = 0.2F, .maximum_projection = 300.0F})
+        .Key("inertial"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -221,6 +243,122 @@ int main() { return Run([] {
     CHECK(file.Find(UiSelector::Key("file-zone")).Exists());
   }
 
+  {
+    Application transform_app(TransformGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
+    UiTest transform(transform_app, {.viewport = {420, 320}});
+    const Rect initial = transform.Find(UiSelector::Key("transform-content")).One().bounds;
+    const Point center = Center(initial);
+    const Point left{center.x - 30.0F, center.y};
+    const Point right{center.x + 30.0F, center.y};
+    PointerEvent first{.type = PointerEventType::Down,
+                       .pointer_id = 21,
+                       .position = left,
+                       .device_kind = PointerDeviceKind::Touch,
+                       .changed_button = PointerButton::Primary,
+                       .pressed_buttons = PointerButton::Primary};
+    PointerEvent second = first;
+    second.pointer_id = 22;
+    second.position = right;
+    transform.SendPointer(first);
+    transform.SendPointer(second);
+    transform.Pump();
+    first.type = PointerEventType::Move;
+    first.position = {center.x - 60.0F, center.y};
+    second.type = PointerEventType::Move;
+    second.position = {center.x + 60.0F, center.y};
+    transform.SendPointer(first);
+    transform.SendPointer(second);
+    transform.PumpAndSettle();
+    const Rect scaled = transform.Find(UiSelector::Key("transform-content")).One().bounds;
+    CHECK(scaled.width > initial.width * 1.2F);
+    first.type = PointerEventType::Up;
+    first.changed_button = PointerButton::Primary;
+    first.pressed_buttons = PointerButton::None;
+    second.type = PointerEventType::Up;
+    second.changed_button = PointerButton::Primary;
+    second.pressed_buttons = PointerButton::None;
+    transform.SendPointer(first);
+    transform.SendPointer(second);
+    transform.PumpAndSettle();
+
+    // Pan with a fresh two-pointer sequence.
+    PointerEvent pan_first{.type = PointerEventType::Down,
+                           .pointer_id = 31,
+                           .position = left,
+                           .device_kind = PointerDeviceKind::Touch,
+                           .changed_button = PointerButton::Primary,
+                           .pressed_buttons = PointerButton::Primary};
+    PointerEvent pan_second = pan_first;
+    pan_second.pointer_id = 32;
+    pan_second.position = right;
+    transform.SendPointer(pan_first);
+    transform.SendPointer(pan_second);
+    transform.Pump();
+    pan_first.type = PointerEventType::Move;
+    pan_first.position = {left.x + 40.0F, left.y};
+    pan_second.type = PointerEventType::Move;
+    pan_second.position = {right.x + 40.0F, right.y};
+    transform.SendPointer(pan_first);
+    transform.SendPointer(pan_second);
+    transform.PumpAndSettle();
+    const Rect panned = transform.Find(UiSelector::Key("transform-content")).One().bounds;
+    CHECK(panned.x > scaled.x + 10.0F);
+    pan_first.type = PointerEventType::Up;
+    pan_first.changed_button = PointerButton::Primary;
+    pan_first.pressed_buttons = PointerButton::None;
+    pan_second.type = PointerEventType::Up;
+    pan_second.changed_button = PointerButton::Primary;
+    pan_second.pressed_buttons = PointerButton::None;
+    transform.SendPointer(pan_first);
+    transform.SendPointer(pan_second);
+    transform.PumpAndSettle();
+
+    // Rotate the accumulated transform by moving two pointers from horizontal to vertical.
+    const Point rotated_center = Center(panned);
+    PointerEvent rotate_first{.type = PointerEventType::Down,
+                              .pointer_id = 41,
+                              .position = {rotated_center.x - 60.0F, rotated_center.y},
+                              .device_kind = PointerDeviceKind::Touch,
+                              .changed_button = PointerButton::Primary,
+                              .pressed_buttons = PointerButton::Primary};
+    PointerEvent rotate_second = rotate_first;
+    rotate_second.pointer_id = 42;
+    rotate_second.position = {rotated_center.x + 60.0F, rotated_center.y};
+    transform.SendPointer(rotate_first);
+    transform.SendPointer(rotate_second);
+    transform.Pump();
+    rotate_first.type = PointerEventType::Move;
+    rotate_first.position = {rotated_center.x, rotated_center.y - 60.0F};
+    rotate_second.type = PointerEventType::Move;
+    rotate_second.position = {rotated_center.x, rotated_center.y + 60.0F};
+    transform.SendPointer(rotate_first);
+    transform.SendPointer(rotate_second);
+    transform.PumpAndSettle();
+    const Rect rotated = transform.Find(UiSelector::Key("transform-content")).One().bounds;
+    CHECK(rotated.height > panned.height + 20.0F);
+    rotate_first.type = PointerEventType::Up;
+    rotate_first.changed_button = PointerButton::Primary;
+    rotate_first.pressed_buttons = PointerButton::None;
+    rotate_second.type = PointerEventType::Up;
+    rotate_second.changed_button = PointerButton::Primary;
+    rotate_second.pressed_buttons = PointerButton::None;
+    transform.SendPointer(rotate_first);
+    transform.SendPointer(rotate_second);
+    transform.PumpAndSettle();
+  }
+
+  {
+    Application inertia_app(InertiaGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
+    UiTest inertia(inertia_app, {.viewport = {420, 240}});
+    const Rect initial = inertia.Find(UiSelector::Key("inertial-content")).One().bounds;
+    const Point start = Center(initial);
+    inertia.Drag(start, {start.x + 60.0F, start.y},
+                 {.duration = std::chrono::duration<double>(0.1), .segments = 5});
+    inertia.PumpAndSettle();
+    const Rect settled = inertia.Find(UiSelector::Key("inertial-content")).One().bounds;
+    CHECK(settled.x > initial.x + 60.0F);
+  }
+
   Throws<std::invalid_argument>([] { (void)SwipeActions(Text("x"), {}, {}); });
   Throws<std::invalid_argument>([] {
     (void)SwipeActions(Text("x"), [](std::function<void()>) { return Text("action"); },
@@ -243,4 +381,10 @@ int main() { return Run([] {
   Throws<std::invalid_argument>([] {
     (void)FileDropZone(Text("x"), {}, {}, {.border_width = -1.0F});
   });
+  Throws<std::invalid_argument>([] {
+    (void)PanZoom(Text("x"), {.minimum_scale = 2.0F, .maximum_scale = 1.0F});
+  });
+  Throws<std::invalid_argument>([] { (void)PanZoom(Text("x"), {.wheel_sensitivity = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)InertialDrag(Text("x"), {.projection_time = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)InertialDrag(Text("x"), {.maximum_projection = -1.0F}); });
 }); }

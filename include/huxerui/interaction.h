@@ -7,9 +7,11 @@
 #include <huxerui/interaction/filedropzone.h>
 #include <huxerui/interaction/fireworks.h>
 #include <huxerui/interaction/highlight.h>
+#include <huxerui/interaction/inertialdrag.h>
 #include <huxerui/interaction/hover.h>
 #include <huxerui/interaction/longpress.h>
 #include <huxerui/interaction/multitap.h>
+#include <huxerui/interaction/panzoom.h>
 #include <huxerui/interaction/pinch.h>
 #include <huxerui/interaction/pop.h>
 #include <huxerui/interaction/pressable.h>
