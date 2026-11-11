@@ -1,6 +1,7 @@
 #include <huxerui/interaction/rollingnumber.h>
 
 #include <huxerui/modifier.h>
+#include <huxerui/semantics.h>
 
 #include <algorithm>
 #include <array>
@@ -74,7 +75,10 @@ View RollingNumber(int value, RollingNumberStyle style) {
     for(char character : digits) {
       cells.push_back(DigitCell(character - '0', style, digit_width, height));
     }
-    return Row(std::move(cells)).With(Spacing(style.digit_gap));
+    return Row(std::move(cells)).With(
+        Spacing(style.digit_gap),
+        Semantics{.role = SemanticRole::Text, .label = std::to_string(value),
+                  .descendants = SemanticDescendantPolicy::Exclude});
   });
 }
 

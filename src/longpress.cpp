@@ -2,6 +2,7 @@
 
 #include <huxerui/modifier.h>
 #include <huxerui/paint.h>
+#include <huxerui/semantics.h>
 #include <huxerui/state.h>
 
 #include <chrono>
@@ -141,6 +142,9 @@ View LongPressable(View content, LongPressableStyle style, std::function<void()>
     if(style.show_progress) {
       interactive = std::move(interactive).With(
           HoldProgress{.color = style.progress_color, .duration = hold_duration.count()});
+    }
+    if(on_long_press) {
+      interactive = std::move(interactive).With(Semantics{.role = SemanticRole::Button});
     }
     if(style.cursor != PointerCursorKind::Default) {
       interactive = std::move(interactive).With(PointerCursor{style.cursor});

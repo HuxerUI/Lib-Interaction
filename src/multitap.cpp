@@ -1,6 +1,7 @@
 #include <huxerui/interaction/multitap.h>
 
 #include <huxerui/modifier.h>
+#include <huxerui/semantics.h>
 
 #include <cmath>
 #include <stdexcept>
@@ -35,6 +36,9 @@ View DoubleClickable(View content, DoubleClickableStyle style,
                     .On<MultiTapEvents::Recognized>([on_double_click](const MultiTapEvent& event) {
                       if(on_double_click) on_double_click(event);
                     });
+    if(on_double_click) {
+      clickable = std::move(clickable).With(Semantics{.role = SemanticRole::Button});
+    }
     if(style.cursor != PointerCursorKind::Default) {
       clickable = std::move(clickable).With(PointerCursor{style.cursor});
     }

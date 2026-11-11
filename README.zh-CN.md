@@ -4,6 +4,7 @@
 
 [HuxerUI](https://github.com/HuxerUI/HuxerUI) 的交互动画控件扩展：可按压表面、悬停抬升、持续脉冲、按压涟漪、拖拽回弹、摇晃序列、长按、双击、弹跳、指针跟随辉光和交互色调叠加，全部基于框架的保留式动画原语构建。使用 C++20，命名空间为 `huxerui::interaction`，CMake 目标为 `HuxerUI::Interaction`（`huxerui_interaction`）。
 
+- `Pressable`（Button 语义）、`LongPressable`（Button）、`DoubleClickable`（Button）在带回调时发布默认语义角色；`RollingNumber` 以 Text 发布数值。
 - `Pressable`：悬停与按压时围绕一个轴点缩放，并通过 OnClick 转发激活（支持键盘 Enter/Space 与焦点可见环），默认手型光标。
 - `HoverLift`：悬停时内容上浮并轻微放大。
 - `Pulsing`：以无限往复播放振荡缩放或透明度，不需要任何应用状态。

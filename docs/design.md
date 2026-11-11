@@ -56,7 +56,7 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 
 Pointer tracking accepts down, up, and cancel phases for the primary button. The hover binding treats every non-leave event as presence. Because a disabled node does not receive input, a press that is interrupted by becoming disabled relies on the framework delivering a cancel phase; this limitation is recorded in [open-questions.md](open-questions.md). The style carries a cursor kind applied through the framework's `PointerCursor` modifier when it is not `PointerCursorKind::Default`; the default shows the hand cursor over the composed surface.
 
-When `on_click` is provided and `keyboard_focusable` is set, the widget attaches the framework's `Focusable` modifier: the window-level keyboard activation handles Enter (immediate) and Space (press-then-release) activation, and the theme's focus-visible ring paints automatically while the surface holds keyboard focus. A `KeyIntercept` binding observes Space on the focused surface and applies `pressed_scale` while the key is held; `FocusChanged` clears that state when focus leaves, so the framework can cancel a keyboard activation without leaving the surface visually pressed.
+When `on_click` is provided, the surface publishes a Button semantic role. When `keyboard_focusable` is set, the widget attaches the framework's `Focusable` modifier: the window-level keyboard activation handles Enter (immediate) and Space (press-then-release) activation, and the theme's focus-visible ring paints automatically while the surface holds keyboard focus. A `KeyIntercept` binding observes Space on the focused surface and applies `pressed_scale` while the key is held; `FocusChanged` clears that state when focus leaves, so the framework can cancel a keyboard activation without leaving the surface visually pressed.
 
 ### HoverLift
 
@@ -151,6 +151,10 @@ Both modifiers take a `ScrollController` that must be bound to the same `ScrollV
 ### HoverCard
 
 `HoverCard` uses a scoped `PopupHandle` anchor. Hover Enter schedules a `TaskScope` delay and then updates or shows the anchored popup; Leave cancels a pending show and schedules dismissal after `hide_delay`, guarded by a generation token. Touch long press shows immediately and its Ended/Canceled lifecycle schedules the same grace-period hide. Repeated enters call `PopupHandle::Update` while the layer is live, so another popup is not stacked. The anchor remains ordinary content and keeps its other gestures.
+
+### Default semantics
+
+`Pressable`, `LongPressable`, and `DoubleClickable` attach `Semantics{.role = Button}` only when they have an activation callback, so a purely visual wrapper does not claim a command. `RollingNumber` publishes `Text` with the numeric label and excludes its ten digit windows from descendant semantics. Callers can override any field by applying `Semantics` after the widget.
 
 ### RovingFocus and RevealOnTap
 

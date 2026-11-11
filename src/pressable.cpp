@@ -1,6 +1,7 @@
 #include <huxerui/interaction/pressable.h>
 
 #include <huxerui/modifier.h>
+#include <huxerui/semantics.h>
 #include <huxerui/state.h>
 
 #include <cmath>
@@ -44,6 +45,7 @@ View Pressable(View content, PressableStyle style, std::function<void()> on_clic
                       });
     if(on_click) {
       interactive = std::move(interactive).OnClick(on_click);
+      interactive = std::move(interactive).With(Semantics{.role = SemanticRole::Button});
       interactive = std::move(interactive)
                         .On<ViewEvents::FocusChanged>([focused, keyboard_pressed](bool value) {
                           focused = value;
