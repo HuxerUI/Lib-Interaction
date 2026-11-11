@@ -18,6 +18,7 @@
 #include <huxerui/interaction/pressable.h>
 #include <huxerui/interaction/pulse.h>
 #include <huxerui/interaction/reorder.h>
+#include <huxerui/interaction/reordergrid.h>
 #include <huxerui/interaction/scrolledgefade.h>
 #include <huxerui/interaction/scrollprogress.h>
 #include <huxerui/interaction/ripple.h>

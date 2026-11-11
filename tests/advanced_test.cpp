@@ -296,6 +296,33 @@ View RevealGallery() {
   return root;
 }
 
+View GridGallery() {
+  auto order = UseState(std::vector<int>{1, 2, 3, 4, 5});
+  auto event = UseState(std::string("none"));
+  std::vector<View> cells;
+  for(int value : order.Get()) {
+    cells.push_back(Text("g " + std::to_string(value))
+                        .With(Background{Color::Rgb(80, 110, 160)}, CornerRadius(8.0F))
+                        .Key("g-" + std::to_string(value)));
+  }
+  View grid = ReorderableGrid(
+      std::move(cells), {.cell_width = 80.0F, .cell_height = 60.0F, .spacing = 8.0F},
+      [order, event](std::size_t from, std::size_t to) {
+        auto next = order.Get();
+        if(from >= next.size() || to >= next.size()) return;
+        const int value = next[from];
+        next.erase(next.begin() + static_cast<std::ptrdiff_t>(from));
+        next.insert(next.begin() + static_cast<std::ptrdiff_t>(to), value);
+        order = std::move(next);
+        event = std::to_string(from) + "->" + std::to_string(to);
+      });
+  grid = std::move(grid).With(Frame{.width = 360.0F, .height = 200.0F});
+  return Column {
+    std::move(grid).Key("grid"),
+    Text("grid event: " + event.Get()).Key("grid-event"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -576,6 +603,18 @@ int main() { return Run([] {
   }
 
   {
+    Application grid_app(GridGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
+    UiTest grid(grid_app, {.viewport = {420, 320}});
+    const Rect first = grid.Find(UiSelector::Key("g-1")).One().bounds;
+    const Rect third = grid.Find(UiSelector::Key("g-3")).One().bounds;
+    grid.Drag({first.x + first.width * 0.5F, first.y + first.height * 0.5F},
+              {third.x + third.width * 0.5F, third.y + third.height * 0.5F},
+              {.duration = std::chrono::duration<double>(0.3), .segments = 12});
+    grid.PumpAndSettle();
+    CHECK(grid.Find(UiSelector::Text("grid event: 0->2")).Exists());
+  }
+
+  {
     Application horizontal_app(HorizontalReorderGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
     UiTest horizontal(horizontal_app, {.viewport = {420, 240}});
     const Rect first = horizontal.Find(UiSelector::Key("h-1")).One().bounds;
@@ -708,5 +747,6 @@ int main() { return Run([] {
     (void)PanZoom(Text("x"), {.pan_bounds = Point{0.0F, 10.0F}});
   });
   Throws<std::invalid_argument>([] { (void)PanZoom(Text("x"), {.rotation_snap = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)ReorderableGrid({Text("a")}, {.cell_width = 0.0F}); });
   Throws<std::invalid_argument>([] { (void)HoverCard(Text("x"), {}, {}); });
 }); }
