@@ -28,6 +28,9 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/pressable.cpp
     src/pulse.cpp
     src/reorder.cpp
+    src/rollingnumber.cpp
+    src/scrolledgefade.cpp
+    src/scrollprogress.cpp
     src/ripple.cpp
     src/shake.cpp
     src/shimmer.cpp

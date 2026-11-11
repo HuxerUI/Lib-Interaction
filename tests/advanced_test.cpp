@@ -8,6 +8,7 @@
 #include <cmath>
 #include <functional>
 #include <string>
+#include <vector>
 
 using namespace huxerui;
 using namespace huxerui::interaction;
@@ -126,6 +127,29 @@ View InertiaGallery() {
                      .Key("inertial-content"),
                  {.projection_time = 0.2F, .maximum_projection = 300.0F})
         .Key("inertial"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
+View ScrollGallery() {
+  auto controller = UseScrollController();
+  std::vector<View> rows;
+  for(int index = 0; index < 24; ++index) {
+    rows.push_back(Text("scroll row " + std::to_string(index))
+                       .With(Frame{.height = 32.0F})
+                       .Key("scroll-row-" + std::to_string(index)));
+  }
+  return ScrollView(Column(std::move(rows)).With(Spacing(8.0F)))
+      .Controller(controller)
+      .With(ScrollProgress{controller, ScrollProgressStyle{}})
+      .With(ScrollEdgeFade{controller, ScrollEdgeFadeStyle{.color = Color::White()}})
+      .Key("scroll");
+}
+
+View RollingGallery() {
+  auto value = UseState(0);
+  return Column {
+    RollingNumber(value.Get(), {.motion = TweenSpec{.duration = 0.2}}).Key("rolling"),
+    Button("Increment").OnClick([value] { value += 1; }).Key("increment"),
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
@@ -359,6 +383,25 @@ int main() { return Run([] {
     CHECK(settled.x > initial.x + 60.0F);
   }
 
+  {
+    Application scroll_app(ScrollGallery, {.window = {.initial_size = {320, 240}}, .show_debug_overlay = false});
+    UiTest scroll(scroll_app, {.viewport = {320, 240}});
+    const float row_before = scroll.Find(UiSelector::Key("scroll-row-0")).One().bounds.y;
+    scroll.SendScroll({.position = {160.0F, 120.0F}, .delta_y = 160.0F});
+    scroll.PumpAndSettle();
+    CHECK(scroll.Find(UiSelector::Key("scroll-row-0")).One().bounds.y < row_before);
+  }
+
+  {
+    Application rolling_app(RollingGallery, {.window = {.initial_size = {320, 240}}, .show_debug_overlay = false});
+    UiTest rolling(rolling_app, {.viewport = {320, 240}});
+    const float zero_before = rolling.Find(UiSelector::Key("rolling")).Find(UiSelector::Text("0")).One().bounds.y;
+    rolling.Find(UiSelector::Key("increment")).Tap();
+    rolling.PumpAndSettle();
+    const float zero_after = rolling.Find(UiSelector::Key("rolling")).Find(UiSelector::Text("0")).One().bounds.y;
+    CHECK(zero_after < zero_before - 1.0F);
+  }
+
   Throws<std::invalid_argument>([] { (void)SwipeActions(Text("x"), {}, {}); });
   Throws<std::invalid_argument>([] {
     (void)SwipeActions(Text("x"), [](std::function<void()>) { return Text("action"); },
@@ -387,4 +430,8 @@ int main() { return Run([] {
   Throws<std::invalid_argument>([] { (void)PanZoom(Text("x"), {.wheel_sensitivity = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)InertialDrag(Text("x"), {.projection_time = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)InertialDrag(Text("x"), {.maximum_projection = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollProgress(ScrollController{}, {.thickness = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollEdgeFade(ScrollController{}, {.extent = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)RollingNumber(0, {.digit_gap = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)RollingNumber(0, {.minimum_digits = -1}); });
 }); }

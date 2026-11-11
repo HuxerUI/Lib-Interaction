@@ -35,6 +35,9 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `FileDropZone` | Function returning `View` | `FileDropTarget` + `FileDropEvents` | Highlight border while hovered | Per-scope hovered cell |
 | `PanZoom` | Function returning `View` | `TransformGesture` + `TransformEvents`, `ScrollInput` | `Offset`, `Scale`, `Rotation` | Per-scope pan/scale/rotation and active cells |
 | `InertialDrag` | Function returning `View` | `DragGesture` + `DragEvents` | `Offset` follows drag; release settles at a projected target | Per-scope offset and dragging cell |
+| `ScrollProgress` | Modifier applied with `With()` | `NodeExtension::OnScrollActivity` + `ScrollController::Metrics` | Track and thumb in `PaintAboveContent` | Retained per node, connected controller |
+| `ScrollEdgeFade` | Modifier applied with `With()` | `NodeExtension::OnScrollActivity` + `ScrollController::Metrics` | Edge gradients in `PaintAboveContent` | Retained per node, connected controller |
+| `RollingNumber` | Function returning `View` | None (value-driven) | Clipped digit-column `Offset` targets | Per-scope digit strips |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
 
@@ -112,6 +115,14 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 
 `InertialDrag(content, style)` uses `DragEvent::translation` while the drag owns the pointer and, on `Ended`, computes `translation + velocity * projection_time` on each axis, clamps it to `maximum_projection`, and animates there with `settle_motion`. This is a velocity-projected target, not a velocity-continuous retained simulation; the declarative `AnimateTo` path has no initial-velocity input. Cancellation returns to rest. `DragSpring` remains the spring-back alternative; this widget is for surfaces that should keep the projected displacement.
 
+### ScrollProgress and ScrollEdgeFade
+
+Both modifiers take a `ScrollController` that must be bound to the same `ScrollView`. They listen to `NodeExtension::OnScrollActivity` for invalidation and read `ScrollController::Metrics()` during paint, so they never recompose for scroll movement. `ScrollProgress` hides when the controller is disconnected or `maximum_offset` is zero, draws a track and a proportional thumb along the metrics axis, and clamps the thumb to the track. `ScrollEdgeFade` draws a start gradient only after the offset leaves zero and an end gradient only while offset remains below `maximum_offset`; the configured color should match the surface behind the scrollable content. Neither modifier mutates scroll state.
+
+### RollingNumber
+
+`RollingNumber(value, style)` builds one clipped digit window per character. `UseTextMeasurer` supplies digit advances and line height, so callers do not provide frame metrics. Each window contains a zero-through-nine column whose `Offset` target is `-digit * height`; a value change retargets the existing animation, which eases from the currently visible digit. A negative value gets a static sign cell, and `minimum_digits` pads the magnitude with leading zeros. The widget is value-driven and has no scroll or gesture state.
+
 ### Spotlight
 
 `Spotlight` is a retained modifier using the explicit descriptor form. The extension overrides `HoverHitTest` to receive hover entry, movement, and departure, stores the latest node-local pointer position, and repaints only the sequence behind node content: one `RadialGradient`-filled rect whose normalized center is the pointer position and whose radius fraction derives from `SpotlightStyle::diameter` over the node size. Presence is one `MotionController` fading in on enter and out on leave; reduced motion resolves it immediately. No application state and no recomposition are involved at any point.
@@ -152,7 +163,7 @@ Following the interface conventions of the other Lib projects, invalid caller co
 Not implemented in this version; see [open-questions.md](open-questions.md) for the pending decisions:
 
 - `Expandable`/`Collapse` with real height animation (requires an animated-size or clip-height primitive in the SDK).
-- `Marquee` and a rolling-digit counter (require a public rectangular clip modifier; only CornerRadius clips descendants today).
+- `Marquee` (the text rail still needs measured travel or a caller-supplied travel distance; `ClipChildren` provides the clipping primitive).
 - `Magnetic` pointer-following content (requires a composition-time node size hook or normalized hover positions; HoverEvent reports node-local coordinates only).
 - Shake and attention gestures driven by `MotionController` with velocity handoff.
 - Shared `InteractionCallbacks` type for widgets that need to mirror state into application models.

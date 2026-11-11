@@ -30,13 +30,13 @@ Decisions made while scaffolding Lib-Interaction that deserve review. Each item 
 
 ## Preview and tests
 
-12. **Preview app is a single scrolling gallery** (twelve keyed demo tiles, theme toggle, and click/hold/double-click counters). It exercises every widget and feeds the preview test. If the widget set grows further, consider a `Select`-based gallery like the other Lib previews.
+12. **Preview app is a single scrolling gallery** (twelve keyed demo tiles, theme toggle, and click/hold/double-click counters). It exercises the original widget gallery and feeds the preview test; the 2026-11 swipe, drag/drop, transform, scroll, and rolling-number widgets are covered by the advanced test target instead. If the preview set grows, consider a `Select`-based gallery like the other Lib previews.
 
-13. **Interaction tests cover dispatch, layout, and gesture behavior, but not painted pixels.** Click routing, PinchZoom wheel clamping, Reorderable indices, long-press recognition, double-tap recognition, swipe-action reveal/activation, context-menu request delivery, typed drag/drop delivery, file-drop-zone construction, PanZoom pan/scale/rotation, and InertialDrag velocity projection are asserted through `UiTest`; ripple/spotlight/shimmer painting is still verified only by the code paths executing without failure. Screenshot-level assertions need the UI testing library's snapshot or pixel facilities; check what `UiSnapshot` comparison supports before investing.
+13. **Interaction tests cover dispatch, layout, and gesture behavior, but not painted pixels.** Click routing, PinchZoom wheel clamping, Reorderable indices, long-press recognition, double-tap recognition, swipe-action reveal/activation, context-menu request delivery, typed drag/drop delivery, file-drop-zone construction, PanZoom pan/scale/rotation, InertialDrag velocity projection, scroll-container motion, and RollingNumber digit movement are asserted through `UiTest`; ripple/spotlight/shimmer painting is still verified only by the code paths executing without failure. Screenshot-level assertions need the UI testing library's snapshot or pixel facilities; check what `UiSnapshot` comparison supports before investing.
 
 ## Manual verification follow-ups
 
-- Run the preview app (`example_interaction`) manually and eyeball all fifteen widgets, light and dark.
+- Run the preview app (`example_interaction`) manually and eyeball the preview widget set, light and dark.
 - Confirm `PointerResult::Observe` ripples on a `Button` do not interfere with the button's own press indication.
 - Review item 2 (naming) and item 3 (shared pinned revision) with the team.
 
