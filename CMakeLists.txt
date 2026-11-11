@@ -43,6 +43,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/dismissible.cpp
     src/pressdraghandle.cpp
     src/hovercard.cpp
+    src/resizehandle.cpp
     src/revealontap.cpp
     src/swipe.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)

@@ -29,6 +29,7 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `Fireworks` | Modifier applied with `With()` | `FireworksBurst` ids delivered through modifier updates | Particle bursts in `PaintAboveContent` | Retained per node, bounded burst list |
 | `Reorderable` | Function returning `View` | `DragGesture` + `DragEvents` per slot | Dragged item follows the pointer, displaced items ease aside | Per-scope session plus shared slot geometry recorded in `PrepareGeometry` |
 | `ReorderableGrid` | Function returning `View` | `DragGesture` + `DragEvents` per cell | Dragged cell follows the pointer, displaced cells ease to the closest slot | Per-scope session plus shared cell geometry |
+| `ResizeHandle` | Function returning `View` | `DragGesture` + `DragEvents` | Pointer cursor and pressed color | Per-scope pressed cell |
 | `SwipeActions` | Function returning `View` | `DragGesture` + `DragEvents` | Content `Offset` follows the pointer; open/closed settles from distance and velocity | Per-scope offset and drag session |
 | `ContextMenuArea` | Function returning `View` | `ContextMenuRequested`, `LongPressGesture` | None | None |
 | `Draggable` | Function returning `View` | `DragSource` + `DragGesture` | Source opacity fade | Per-scope dragging cell |
@@ -113,6 +114,10 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 `ContextMenuArea(content, on_request, style)` binds the framework's `ContextMenuRequested` event, which already covers unchorded secondary taps, the Context Menu key, and Shift+F10. When touch long press is enabled it also attaches `LongPressGesture`; touch recognition forwards the event's window position because the framework intentionally does not convert touch long presses into context-menu events. The wrapper does not consume ordinary clicks or gestures and imposes no layout.
 
 Focused slots are `Focusable`; Alt+arrow moves the focused item one slot along the configured axis and calls `on_reordered` without starting a pointer drag. The root publishes a List semantic role and each slot a ListItem with its source index. When `auto_scroll_edge` and a connected `scroll_controller` are present, a drag update near the viewport edge requests one `auto_scroll_step` of scroll, so continuous pointer motion keeps revealing more of a long list. Auto-scroll is intentionally per drag update rather than a retained timer.
+
+### ResizeHandle
+
+`ResizeHandle(axis, on_resize, style)` is a fixed-thickness `Spacer` with a one-axis `DragGesture`. It reports each accepted incremental delta to the caller, who owns pane sizes and clamping, and switches to the resize cursor plus pressed color while the drag owns the pointer. Place it between panes in a Row or Column with cross-axis stretch. It complements rather than replaces `SplitLayout`: the core widget owns full split semantics and separators, while this primitive serves table columns, custom sidebars, and layouts whose sizing policy belongs to the application.
 
 ### ReorderableGrid
 

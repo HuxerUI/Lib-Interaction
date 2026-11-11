@@ -323,6 +323,25 @@ View GridGallery() {
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
+View ResizeGallery() {
+  auto width = UseState(100.0F);
+  auto deltas = UseState(0.0F);
+  View handle = ResizeHandle(Axis::Horizontal, [width, deltas](float delta) {
+    width = std::clamp(width.Get() + delta, 60.0F, 240.0F);
+    deltas = deltas.Get() + delta;
+  });
+  handle = std::move(handle).Key("resize-handle");
+  View row = Row {
+    Text("panel").With(Frame{.width = width.Get(), .height = 80.0F}, Background{Color::Rgb(80, 110, 160)},
+                        CornerRadius(8.0F)),
+    std::move(handle),
+  }.With(CrossAlign(CrossAxisAlignment::Stretch));
+  return Column {
+    std::move(row).Key("resize-row"),
+    Text("width: " + std::to_string(static_cast<int>(std::lround(width.Get())))).Key("resize-width"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -603,6 +622,17 @@ int main() { return Run([] {
   }
 
   {
+    Application resize_app(ResizeGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
+    UiTest resize(resize_app, {.viewport = {420, 320}});
+    const Rect handle = resize.Find(UiSelector::Key("resize-handle")).One().bounds;
+    resize.Drag({handle.x + handle.width * 0.5F, handle.y + handle.height * 0.5F},
+                {handle.x + handle.width * 0.5F + 40.0F, handle.y + handle.height * 0.5F},
+                {.duration = std::chrono::duration<double>(0.2), .segments = 8});
+    resize.PumpAndSettle();
+    CHECK(resize.Find(UiSelector::Text("width: 140")).Exists());
+  }
+
+  {
     Application grid_app(GridGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
     UiTest grid(grid_app, {.viewport = {420, 320}});
     const Rect first = grid.Find(UiSelector::Key("g-1")).One().bounds;
@@ -748,5 +778,6 @@ int main() { return Run([] {
   });
   Throws<std::invalid_argument>([] { (void)PanZoom(Text("x"), {.rotation_snap = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)ReorderableGrid({Text("a")}, {.cell_width = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)ResizeHandle(Axis::Horizontal, {}, {.thickness = 0.0F}); });
   Throws<std::invalid_argument>([] { (void)HoverCard(Text("x"), {}, {}); });
 }); }
