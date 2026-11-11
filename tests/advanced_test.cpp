@@ -240,6 +240,21 @@ View DismissGallery() {
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
+View HoverCardGallery() {
+  return HoverCard(Text("hover anchor")
+                       .With(Frame{.width = 200.0F, .height = 60.0F}, Background{Color::Rgb(80, 120, 160)},
+                             CornerRadius(8.0F)),
+                   [](PopupContext) {
+                     return Text("hover card").With(Frame{.width = 160.0F, .height = 60.0F},
+                                                   Background{Color::Rgb(40, 44, 52)},
+                                                   CornerRadius(8.0F));
+                   },
+                   {.show_delay = std::chrono::duration<double>(0.05),
+                    .hide_delay = std::chrono::duration<double>(0.05),
+                    .long_press = false})
+      .Key("hover-card");
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -520,6 +535,12 @@ int main() { return Run([] {
   }
 
   {
+    Application hover_app(HoverCardGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
+    UiTest hover(hover_app, {.viewport = {420, 320}});
+    CHECK(hover.Find(UiSelector::Key("hover-card")).Exists());
+  }
+
+  {
     Application press_drag_app(PressDragGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
     UiTest press_drag(press_drag_app, {.viewport = {360, 240}});
     const Point start = Center(press_drag.Find(UiSelector::Key("press-drag")).One().bounds);
@@ -616,4 +637,5 @@ int main() { return Run([] {
     (void)PressDragHandle(Text("x"), {.press_duration = std::chrono::duration<double>(0.0)});
   });
   Throws<std::invalid_argument>([] { (void)Dismissible(Text("x"), {}, {.dismiss_threshold = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)HoverCard(Text("x"), {}, {}); });
 }); }

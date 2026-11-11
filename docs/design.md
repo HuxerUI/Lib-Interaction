@@ -44,6 +44,7 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `SecondaryClickable` | Function returning `View` | `ViewEvents::Pointer`, `ContextMenuRequested` | None | None |
 | `PressDragHandle` | Function returning `View` | `DragGesture` with `minimum_press_duration` | None (callbacks only) | None |
 | `Dismissible` | Function returning `View` | `DragGesture` + `DragEvents` | `Offset` follows drag; exits past threshold | Per-scope offset, drag, and dismissal generation |
+| `HoverCard` | Function returning `View` | `ViewEvents::Hover`, `LongPressGesture` | Popup presentation | Per-scope popup layer and generation |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
 
@@ -142,6 +143,10 @@ Both modifiers take a `ScrollController` that must be bound to the same `ScrollV
 `PressDragHandle` attaches a `DragGesture` with `minimum_press_duration` and forwards Started/Changed/Ended/Canceled to caller callbacks. It owns no offset or model mutation, so a reorder or drag surface can treat the handle as its only drag origin.
 
 `Dismissible` places content over a `Background` inside a clipped `Stack`, translates the content with `Offset`, and dismisses when the axis displacement reaches `dismiss_threshold` or the matching-axis velocity reaches `minimum_velocity`. A dismissed item travels to `exit_distance` with `exit_motion`; a scoped `TaskScope` waits `exit_duration` before invoking `on_dismissed`, guarded by a generation so a newer drag or cancel suppresses the stale callback. Below threshold and on cancellation the content returns to rest.
+
+### HoverCard
+
+`HoverCard` uses a scoped `PopupHandle` anchor. Hover Enter schedules a `TaskScope` delay and then updates or shows the anchored popup; Leave cancels a pending show and schedules dismissal after `hide_delay`, guarded by a generation token. Touch long press shows immediately and its Ended/Canceled lifecycle schedules the same grace-period hide. Repeated enters call `PopupHandle::Update` while the layer is live, so another popup is not stacked. The anchor remains ordinary content and keeps its other gestures.
 
 ### Spotlight
 

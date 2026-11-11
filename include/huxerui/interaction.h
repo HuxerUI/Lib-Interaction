@@ -9,6 +9,7 @@
 #include <huxerui/interaction/highlight.h>
 #include <huxerui/interaction/inertialdrag.h>
 #include <huxerui/interaction/hover.h>
+#include <huxerui/interaction/hovercard.h>
 #include <huxerui/interaction/longpress.h>
 #include <huxerui/interaction/multitap.h>
 #include <huxerui/interaction/panzoom.h>
