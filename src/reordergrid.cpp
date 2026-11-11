@@ -135,14 +135,14 @@ View ReorderableGrid(std::vector<View> items, ReorderableGridStyle style,
         const auto target = shared_geometry->Find(displaced);
         if(own.has_value() && target.has_value()) offset = {target->x - own->x, target->y - own->y};
       }
-      View cell = std::move(items[index]);
+      View cell = items[index];
       cell = std::move(cell)
                  .With(Frame{.width = style.cell_width, .height = style.cell_height},
                        Offset(AnimateTo(offset, *motion)), GridSlotBounds{shared_geometry, index},
                        DragGesture{})
                  .On<DragEvents::Started>([drag, index](const DragEvent&) {
                    if(drag.Get().active) return;
-                   drag = GridDragSession{.active = true, .from = index, .target = index};
+                   drag = GridDragSession{.active = true, .from = index, .target = index, .translation = {}};
                  })
                  .On<DragEvents::Changed>([drag, index, shared_geometry, count](const DragEvent& event) {
                    GridDragSession next = drag.Get();
