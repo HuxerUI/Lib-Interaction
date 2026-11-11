@@ -45,7 +45,6 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `PressDragHandle` | Function returning `View` | `DragGesture` with `minimum_press_duration` | None (callbacks only) | None |
 | `Dismissible` | Function returning `View` | `DragGesture` + `DragEvents` | `Offset` follows drag; exits past threshold | Per-scope offset, drag, and dismissal generation |
 | `HoverCard` | Function returning `View` | `ViewEvents::Hover`, `LongPressGesture` | Popup presentation | Per-scope popup layer and generation |
-| `RovingFocus` | Function returning `View` | `Focusable`, `FocusTarget`, `KeyIntercept` | None | Per-item focus requesters |
 | `UseRevealOnTap` | Composition hook | `SceneTransitionHandle::RunFromCurrentInteraction` | Circular reveal | Composition-scoped handle |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
@@ -156,9 +155,7 @@ Both modifiers take a `ScrollController` that must be bound to the same `ScrollV
 
 `Pressable`, `LongPressable`, and `DoubleClickable` attach `Semantics{.role = Button}` only when they have an activation callback, so a purely visual wrapper does not claim a command. `RollingNumber` publishes `Text` with the numeric label and excludes its ten digit windows from descendant semantics. Callers can override any field by applying `Semantics` after the widget.
 
-### RovingFocus and RevealOnTap
-
-`RovingFocus(items, style)` attaches `Focusable` and one stable `FocusRequester` per item, tracks the focused index through `FocusChanged`, and handles Left/Right or Up/Down in a root `KeyIntercept`. Arrow keys request the adjacent item and wrap when configured; `FocusRequester::RequestFocus` keeps focus logical and does not synthesize pointer input.
+### RevealOnTap
 
 `UseRevealOnTap` returns a copyable handle for `SceneTransitionHandle::RunFromCurrentInteraction` with a default `CircularRevealTransition`. Call `Run` synchronously from a click, pointer, keyboard, or semantic callback; it inherits the exact interaction origin and reduced-motion policy. Asynchronous continuations must capture explicit geometry and use a SceneTransitionHandle directly.
 

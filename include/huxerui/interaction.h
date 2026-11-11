@@ -32,7 +32,6 @@
 #include <huxerui/interaction/dismissible.h>
 #include <huxerui/interaction/pressdraghandle.h>
 #include <huxerui/interaction/revealontap.h>
-#include <huxerui/interaction/rovingfocus.h>
 #include <huxerui/interaction/swipe.h>
 
 /// @file
