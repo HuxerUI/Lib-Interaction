@@ -255,6 +255,33 @@ View HoverCardGallery() {
       .Key("hover-card");
 }
 
+View HorizontalReorderGallery() {
+  auto order = UseState(std::vector<int>{1, 2, 3});
+  auto event = UseState(std::string("none"));
+  std::vector<View> slots;
+  for(int value : order.Get()) {
+    slots.push_back(Text("h " + std::to_string(value))
+                        .With(Frame{.width = 80.0F, .height = 60.0F}, Background{Color::Rgb(80, 110, 160)},
+                              CornerRadius(8.0F))
+                        .Key("h-" + std::to_string(value)));
+  }
+  View listed = Reorderable(
+      std::move(slots), {.axis = Axis::Horizontal},
+      [order, event](std::size_t from, std::size_t to) {
+        auto next = order.Get();
+        if(from >= next.size() || to >= next.size()) return;
+        const int value = next[from];
+        next.erase(next.begin() + static_cast<std::ptrdiff_t>(from));
+        next.insert(next.begin() + static_cast<std::ptrdiff_t>(to), value);
+        order = std::move(next);
+        event = std::to_string(from) + "->" + std::to_string(to);
+      });
+  return Column {
+    std::move(listed).Key("h-reorder"),
+    Text("h event: " + event.Get()).Key("h-event"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -535,6 +562,18 @@ int main() { return Run([] {
   }
 
   {
+    Application horizontal_app(HorizontalReorderGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
+    UiTest horizontal(horizontal_app, {.viewport = {420, 240}});
+    const Rect first = horizontal.Find(UiSelector::Key("h-1")).One().bounds;
+    const Rect third = horizontal.Find(UiSelector::Key("h-3")).One().bounds;
+    horizontal.Drag({first.x + first.width * 0.5F, first.y + first.height * 0.5F},
+                    {third.x + third.width * 0.5F, third.y + third.height * 0.5F},
+                    {.duration = std::chrono::duration<double>(0.3), .segments = 12});
+    horizontal.PumpAndSettle();
+    CHECK(horizontal.Find(UiSelector::Text("h event: 0->2")).Exists());
+  }
+
+  {
     Application hover_app(HoverCardGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
     UiTest hover(hover_app, {.viewport = {420, 320}});
     CHECK(hover.Find(UiSelector::Key("hover-card")).Exists());
@@ -637,5 +676,11 @@ int main() { return Run([] {
     (void)PressDragHandle(Text("x"), {.press_duration = std::chrono::duration<double>(0.0)});
   });
   Throws<std::invalid_argument>([] { (void)Dismissible(Text("x"), {}, {.dismiss_threshold = 0.0F}); });
+  Throws<std::invalid_argument>([] {
+    (void)Reorderable({Text("a")}, {.auto_scroll_edge = 0.0F});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)Reorderable({Text("a")}, {.auto_scroll_step = 0.0F});
+  });
   Throws<std::invalid_argument>([] { (void)HoverCard(Text("x"), {}, {}); });
 }); }

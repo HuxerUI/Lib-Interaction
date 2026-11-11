@@ -92,7 +92,7 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 
 ### Reorderable
 
-`Reorderable(items, style, on_reordered)` composes items in one column with drag-to-reorder, following the slot-recording pattern proven by Clash-Flux's profile grid. An internal retained modifier overrides `PrepareGeometry` to record each slot's undragged window-space bounds into a shared geometry map, so hit testing and preview targeting stay anchored to layout positions while displaced items animate. While a drag runs the layout stays in the original order — the dragged item follows the pointer with `follow_motion` from its own slot, the items between the source and the pointer's closest slot (point-to-rect distance, gap included) ease one position aside with `settle_motion`, and the closest slot draws the target highlight. Dropping fires `on_reordered(from, to)` once and resets the session; the model reorders at recomposition, which keeps the pointer session alive because no node is re-keyed mid-drag.
+`Reorderable(items, style, on_reordered)` composes items in a row or column, selected by `style.axis`, with drag-to-reorder following the slot-recording pattern proven by Clash-Flux's profile grid. An internal retained modifier overrides `PrepareGeometry` to record each slot's undragged window-space bounds into a shared geometry map, so hit testing and preview targeting stay anchored to layout positions while displaced items animate. While a drag runs the layout stays in the original order — the dragged item follows the pointer with `follow_motion` from its own slot, the items between the source and the pointer's closest slot (point-to-rect distance, gap included) ease one position aside with `settle_motion`, and the closest slot draws the target highlight. Dropping fires `on_reordered(from, to)` once and resets the session; the model reorders at recomposition, which keeps the pointer session alive because no node is re-keyed mid-drag.
 
 ### SwipeActions
 
@@ -109,6 +109,8 @@ With `show_progress`, the widget attaches an internal retained modifier that pai
 ### ContextMenuArea
 
 `ContextMenuArea(content, on_request, style)` binds the framework's `ContextMenuRequested` event, which already covers unchorded secondary taps, the Context Menu key, and Shift+F10. When touch long press is enabled it also attaches `LongPressGesture`; touch recognition forwards the event's window position because the framework intentionally does not convert touch long presses into context-menu events. The wrapper does not consume ordinary clicks or gestures and imposes no layout.
+
+Focused slots are `Focusable`; Alt+arrow moves the focused item one slot along the configured axis and calls `on_reordered` without starting a pointer drag. The root publishes a List semantic role and each slot a ListItem with its source index. When `auto_scroll_edge` and a connected `scroll_controller` are present, a drag update near the viewport edge requests one `auto_scroll_step` of scroll, so continuous pointer motion keeps revealing more of a long list. Auto-scroll is intentionally per drag update rather than a retained timer.
 
 ### PinchZoom
 

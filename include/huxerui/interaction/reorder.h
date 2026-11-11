@@ -1,11 +1,15 @@
 #pragma once
 
 #include <huxerui/animation.h>
+#include <huxerui/geometry.h>
+#include <huxerui/scroll.h>
+#include <huxerui/semantics.h>
 #include <huxerui/color.h>
 #include <huxerui/geometry.h>
 #include <huxerui/view.h>
 
 #include <functional>
+#include <optional>
 #include <vector>
 
 namespace huxerui::interaction {
@@ -13,6 +17,8 @@ namespace huxerui::interaction {
 /// Presentation configuration for Reorderable. Layout never changes while a drag runs: the dragged item follows
 /// the pointer, the items between ease one slot aside, and the model reorders only at drop.
 struct ReorderableStyle {
+  /// Layout and drag axis. Vertical composes Column; Horizontal composes Row.
+  Axis axis = Axis::Vertical;
   /// Space between consecutive slots, in logical pixels. Must be finite and non-negative.
   float spacing = 12.0F;
   /// Motion used by displaced items easing to their preview slots and by the dragged item settling back on drop.
@@ -24,6 +30,14 @@ struct ReorderableStyle {
   Color target_highlight = Color::Rgb(31, 111, 235, 0.9F);
   /// Outline width of the preview target highlight. Must be finite and non-negative.
   float target_highlight_width = 2.0F;
+  /// Enables Alt + arrow keyboard reordering on a focused slot.
+  bool keyboard_reorder = true;
+  /// Distance from a viewport edge that drives per-drag-update auto-scroll. Empty disables auto-scroll.
+  std::optional<float> auto_scroll_edge = 24.0F;
+  /// Scroll delta requested per drag update while near an edge. Must be finite and positive.
+  float auto_scroll_step = 24.0F;
+  /// Controller bound to the enclosing ScrollView. Auto-scroll is skipped when disconnected.
+  ScrollController scroll_controller{};
   bool operator==(const ReorderableStyle&) const = default;
 };
 

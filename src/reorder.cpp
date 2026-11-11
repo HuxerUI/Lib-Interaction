@@ -24,6 +24,13 @@ void ValidateStyle(const ReorderableStyle& style) {
     throw std::invalid_argument(
         "HuxerUI Interaction: Reorderable highlight width must be finite and non-negative");
   }
+  if(style.auto_scroll_edge.has_value()
+     && (!std::isfinite(*style.auto_scroll_edge) || *style.auto_scroll_edge <= 0.0F)) {
+    throw std::invalid_argument("HuxerUI Interaction: Reorderable auto-scroll edge must be finite and positive");
+  }
+  if(!std::isfinite(style.auto_scroll_step) || style.auto_scroll_step <= 0.0F) {
+    throw std::invalid_argument("HuxerUI Interaction: Reorderable auto-scroll step must be finite and positive");
+  }
 }
 
 /// Shared slot geometry recorded during layout preparation, keyed by slot index. Slots hold undragged layout
@@ -97,6 +104,33 @@ const detail::ModifierDescriptor& ReorderSlotBounds::Descriptor() {
   return detail::ModifierDescriptorFor<ReorderSlotBounds, ReorderSlotBounds::Extension>();
 }
 
+/// Records the root list bounds in window coordinates for per-drag-update edge auto-scroll.
+struct ReorderRootBounds {
+  class Extension;
+  static const detail::ModifierDescriptor& Descriptor();
+  std::shared_ptr<Rect> bounds;
+  bool operator==(const ReorderRootBounds&) const = default;
+};
+
+class ReorderRootBounds::Extension final : public NodeExtension {
+public:
+  Extension(ViewNode& node, const ReorderRootBounds& spec) { Update(node, spec); }
+
+  void Update(ViewNode&, const ReorderRootBounds& spec) { bounds_ = spec.bounds; }
+
+  [[nodiscard]] PaintInvalidation PrepareGeometry(ViewNode& node, TextMeasurer&) override {
+    if(bounds_) *bounds_ = node.LocalToWindowBounds(node.Bounds());
+    return PaintInvalidation::None;
+  }
+
+private:
+  std::shared_ptr<Rect> bounds_;
+};
+
+const detail::ModifierDescriptor& ReorderRootBounds::Descriptor() {
+  return detail::ModifierDescriptorFor<ReorderRootBounds, ReorderRootBounds::Extension>();
+}
+
 /// One-slot displacement while a drag previews a destination: the dragged item holds its slot and the items
 /// between the source and the target shift aside.
 std::size_t DisplacedIndex(std::size_t index, std::size_t from, std::size_t to) {
@@ -122,10 +156,12 @@ View Reorderable(std::vector<View> items, ReorderableStyle style,
   ValidateStyle(style);
   return Scope([items = std::move(items), style, on_reordered = std::move(on_reordered)]() -> View {
     auto geometry = UseState(std::make_shared<SlotGeometry>());
+    auto root_bounds = UseState(std::make_shared<Rect>());
     auto drag = UseState(DragSession{});
     const DragSession session = drag.Get();
     const std::size_t count = items.size();
     const auto shared_geometry = geometry.Get();
+    const auto shared_root_bounds = root_bounds.Get();
     std::vector<View> slots;
     slots.reserve(count);
     for(std::size_t index = 0; index < count; ++index) {
@@ -153,12 +189,33 @@ View Reorderable(std::vector<View> items, ReorderableStyle style,
                             drag = DragSession{.active = true, .from = index, .target = index};
                           })
                       .On<DragEvents::Changed>(
-                          [drag, index, shared_geometry, count](const DragEvent& event) {
+                          [drag, index, shared_geometry, shared_root_bounds, count, style](const DragEvent& event) {
                             DragSession next = drag.Get();
                             if(!next.active || next.from != index) return;
                             next.translation = event.translation;
                             if(const auto closest = shared_geometry->Closest(count, event.window_position)) {
                               next.target = *closest;
+                            }
+                            if(style.auto_scroll_edge.has_value() && style.scroll_controller.IsConnected()
+                               && shared_root_bounds) {
+                              const Rect root = *shared_root_bounds;
+                              const ScrollMetrics metrics = style.scroll_controller.Metrics();
+                              const float edge = std::min(*style.auto_scroll_edge,
+                                                          (metrics.axis == Axis::Vertical ? root.height : root.width)
+                                                              * 0.5F);
+                              if(metrics.axis == Axis::Vertical) {
+                                if(event.window_position.y < root.y + edge) {
+                                  (void)style.scroll_controller.ScrollBy(-style.auto_scroll_step);
+                                } else if(event.window_position.y > root.y + root.height - edge) {
+                                  (void)style.scroll_controller.ScrollBy(style.auto_scroll_step);
+                                }
+                              } else {
+                                if(event.window_position.x < root.x + edge) {
+                                  (void)style.scroll_controller.ScrollBy(-style.auto_scroll_step);
+                                } else if(event.window_position.x > root.x + root.width - edge) {
+                                  (void)style.scroll_controller.ScrollBy(style.auto_scroll_step);
+                                }
+                              }
                             }
                             drag = next;
                           })
@@ -176,13 +233,40 @@ View Reorderable(std::vector<View> items, ReorderableStyle style,
                             const DragSession finished = drag.Get();
                             if(finished.active && finished.from == index) drag = DragSession{};
                           });
+      if(style.keyboard_reorder) {
+        slot = std::move(slot)
+                   .With(Focusable{true})
+                   .On<ViewEvents::KeyIntercept>(
+                       [index, count, axis = style.axis, on_reordered](const KeyEvent& event) {
+                         if(event.type != KeyEventType::Down || event.repeat || !event.modifiers.alt) return false;
+                         std::optional<int> delta;
+                         if(axis == Axis::Vertical) {
+                           if(event.key == Key::ArrowUp) delta = -1;
+                           if(event.key == Key::ArrowDown) delta = 1;
+                         } else {
+                           if(event.key == Key::ArrowLeft) delta = -1;
+                           if(event.key == Key::ArrowRight) delta = 1;
+                         }
+                         if(!delta.has_value()) return false;
+                         const long target = static_cast<long>(index) + *delta;
+                         if(target < 0 || target >= static_cast<long>(count)) return false;
+                         if(on_reordered) on_reordered(index, static_cast<std::size_t>(target));
+                         return true;
+                       });
+      }
+      slot = std::move(slot).With(Semantics{.role = SemanticRole::ListItem,
+                                           .collection_item = SemanticCollectionItem{.index = index}});
       if(session.active && session.target == index && session.from != index) {
         slot = std::move(slot).With(
             Border{.color = style.target_highlight, .width = style.target_highlight_width});
       }
       slots.push_back(std::move(slot));
     }
-    return Column(std::move(slots)).With(Spacing(style.spacing));
+    View list = style.axis == Axis::Vertical ? View(Column(std::move(slots))) : View(Row(std::move(slots)));
+    return std::move(list)
+        .With(Spacing(style.spacing), ReorderRootBounds{root_bounds.Get()},
+              Semantics{.role = SemanticRole::List,
+                        .collection = SemanticCollection{.item_count = count}});
   });
 }
 
