@@ -100,7 +100,7 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Run `example_interaction` to try the widgets: pressable cards with spring and tween motion, a hover-lift tile, a pulsing status tile, and a ripple card, with icon toggles for the system, light, and dark themes (the system mode follows the platform preference). Like the other Lib projects, the demo lives in [`examples/preview`](examples/preview/README.md) and can also be configured independently:
+Run `example_interaction` to try the widgets: pressable cards with spring and tween motion, a hover-lift tile, a pulsing status tile, a ripple card, a `Reorderable` column, and a Layout section with `ReorderableGrid` and `ResizeHandle`, with icon toggles for the system, light, and dark themes (the system mode follows the platform preference). Like the other Lib projects, the demo lives in [`examples/preview`](examples/preview/README.md) and can also be configured independently:
 
 ```sh
 cmake -S examples/preview -B build-preview -DHUXERUI_HOME=/path/to/HuxerUI

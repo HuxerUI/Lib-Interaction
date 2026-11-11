@@ -2,7 +2,7 @@
 
 This demo follows the other HuxerUI Lib projects: `examples/preview`, an `example_interaction` target created by `huxerui_add_app`, and `huxerui_use_library` linked to the library's public target. Shared application content lives in `src/app.cpp`; `src/application.cpp` declares the application. Platform entry files under `platform/` call `RunApplication()`. `HuxerUIProject.cmake` describes the independent app plan and initializes its compiler.
 
-Features: a spring-driven pressable card with a click counter, a hover-lift tile, a pulsing status tile with opacity motion, a ripple card that observes presses without consuming clicks, and icon buttons that switch between the system, light, and dark themes (the system mode follows the platform preference). The gallery scrolls and wraps its tile sections responsively across viewport classes. All motion respects the framework's reduced-motion policy.
+Features: a spring-driven pressable card with a click counter, a hover-lift tile, a pulsing status tile with opacity motion, a ripple card that observes presses without consuming clicks, a reorderable column, and a Layout section with a wrapping `ReorderableGrid` and a live `ResizeHandle` sidebar; icon buttons switch between the system, light, and dark themes (the system mode follows the platform preference). The gallery scrolls and wraps its tile sections responsively across viewport classes. All motion respects the framework's reduced-motion policy.
 
 Build from the repository root:
 

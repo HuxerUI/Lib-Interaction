@@ -4,6 +4,7 @@
 #include <huxerui/environment.h>
 #include <huxerui/vector.h>
 
+#include <algorithm>
 #include <string>
 #include <utility>
 
@@ -98,6 +99,8 @@ View PreviewApp() {
   auto doubles = UseState(0);
   auto burst = UseState(FireworksBurst{});
   auto lastReorder = UseState(std::string{"drop to reorder"});
+  auto gridLast = UseState(std::string{"drop a cell"});
+  auto pane_width = UseState(164.0F);
   auto shake = UseShake();
   auto pop = UsePop();
   auto mode = UseState(ThemeMode::System);
@@ -114,6 +117,13 @@ View PreviewApp() {
       return Stack { Text(label, TextRole::Label)
                          .With(Foreground(theme.colors.on_primary_container)) }
           .With(Frame{.width = 240.0F, .height = 48.0F},
+                Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                Background{theme.colors.primary_container}, CornerRadius(12.0F));
+    };
+    const auto grid_tile = [&theme](const char* label) {
+      return Stack { Text(label, TextRole::Label)
+                         .With(Foreground(theme.colors.on_primary_container)) }
+          .With(Frame{.width = 96.0F, .height = 64.0F},
                 Align(HorizontalAlignment::Center, VerticalAlignment::Center),
                 Background{theme.colors.primary_container}, CornerRadius(12.0F));
     };
@@ -246,6 +256,40 @@ View PreviewApp() {
             .Key("reorder-demo"),
         Text("last: " + lastReorder.Get(), TextRole::Label)
             .With(Foreground(theme.colors.on_surface_variant)),
+      }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Start)),
+      Text("Layout", TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
+      Flow {
+        Column {
+          ReorderableGrid(
+              {grid_tile("A"), grid_tile("B"), grid_tile("C"), grid_tile("D"), grid_tile("E"), grid_tile("F")},
+              {.cell_width = 96.0F, .cell_height = 64.0F, .spacing = 12.0F},
+              [=](std::size_t from, std::size_t to) {
+                gridLast = "grid " + std::to_string(from) + " → " + std::to_string(to);
+              })
+              .With(Frame{.width = 320.0F})
+              .Key("grid-demo"),
+          Text("last: " + gridLast.Get(), TextRole::Label)
+              .With(Foreground(theme.colors.on_surface_variant))
+              .Key("grid-last"),
+        }.With(Spacing(8.0F)),
+        Column {
+          Row {
+            Stack { Text("Sidebar", TextRole::Label).With(card_label) }.With(
+                Frame{.width = pane_width.Get(), .height = 140.0F},
+                Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                Background{theme.colors.surface_container_low}, CornerRadius(12.0F)),
+            ResizeHandle(Axis::Horizontal, [pane_width](float delta) {
+              pane_width = std::clamp(pane_width.Get() + delta, 96.0F, 280.0F);
+            }).Key("resize-demo"),
+            Stack { Text("Fill", TextRole::Label).With(card_label) }.With(
+                Grow{}, Frame{.height = 140.0F},
+                Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                Background{theme.colors.surface_container_low}, CornerRadius(12.0F)),
+          }.With(CrossAlign(CrossAxisAlignment::Stretch), Frame{.width = 360.0F, .height = 140.0F}),
+          Text("pane: " + std::to_string(static_cast<int>(pane_width.Get())) + " px", TextRole::Label)
+              .With(Foreground(theme.colors.on_surface_variant))
+              .Key("resize-width"),
+        }.With(Spacing(8.0F)),
       }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Start)),
       Text("Drag", TextRole::Label).With(Foreground(theme.colors.on_surface_variant)),
       DragSpring(
