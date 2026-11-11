@@ -39,6 +39,8 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/secondaryclick.cpp
     src/semanticactions.cpp
     src/spotlight.cpp
+    src/dismissible.cpp
+    src/pressdraghandle.cpp
     src/swipe.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)
 if(HUXERUI_LIBRARY_GRAPH_ONLY)

@@ -28,6 +28,8 @@
 #include <huxerui/interaction/multiclick.h>
 #include <huxerui/interaction/secondaryclick.h>
 #include <huxerui/interaction/semanticactions.h>
+#include <huxerui/interaction/dismissible.h>
+#include <huxerui/interaction/pressdraghandle.h>
 #include <huxerui/interaction/swipe.h>
 
 /// @file

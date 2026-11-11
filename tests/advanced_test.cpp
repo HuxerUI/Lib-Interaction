@@ -203,6 +203,43 @@ View SecondaryGallery() {
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
+View PressDragGallery() {
+  auto started = UseState(0);
+  auto ended = UseState(0);
+  auto last = UseState(0);
+  return Column {
+    PressDragHandle(Text("handle")
+                        .With(Frame{.width = 160.0F, .height = 56.0F}, Background{Color::Rgb(120, 90, 150)},
+                              CornerRadius(8.0F)),
+                    {.press_duration = std::chrono::duration<double>(0.2)},
+                    {.on_started = [started](const DragEvent&) { started += 1; },
+                     .on_changed = [last](const DragEvent& event) {
+                       last = static_cast<int>(event.translation.x);
+                     },
+                     .on_ended = [ended](const DragEvent&) { ended += 1; }})
+        .Key("press-drag"),
+    Text("started: " + std::to_string(started.Get())).Key("pd-started"),
+    Text("ended: " + std::to_string(ended.Get())).Key("pd-ended"),
+    Text("last: " + std::to_string(last.Get())).Key("pd-last"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
+View DismissGallery() {
+  auto dismissed = UseState(0);
+  return Column {
+    Dismissible(Text("dismiss target")
+                    .With(Frame{.width = 200.0F, .height = 60.0F}, Background{Color::Rgb(80, 120, 160)},
+                          CornerRadius(8.0F)),
+                [dismissed] { dismissed += 1; },
+                {.dismiss_threshold = 80.0F,
+                 .minimum_velocity = 10000.0F,
+                 .exit_distance = 240.0F,
+                 .exit_duration = 0.2})
+        .Key("dismiss"),
+    Text("dismissed: " + std::to_string(dismissed.Get())).Key("dismissed"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -483,6 +520,43 @@ int main() { return Run([] {
   }
 
   {
+    Application press_drag_app(PressDragGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
+    UiTest press_drag(press_drag_app, {.viewport = {360, 240}});
+    const Point start = Center(press_drag.Find(UiSelector::Key("press-drag")).One().bounds);
+    PointerEvent hold{.type = PointerEventType::Down,
+                      .pointer_id = 61,
+                      .position = start,
+                      .device_kind = PointerDeviceKind::Touch,
+                      .changed_button = PointerButton::Primary,
+                      .pressed_buttons = PointerButton::Primary};
+    press_drag.SendPointer(hold);
+    press_drag.Pump(std::chrono::milliseconds(250));
+    hold.type = PointerEventType::Move;
+    hold.position = {start.x + 40.0F, start.y};
+    press_drag.SendPointer(hold);
+    press_drag.Pump();
+    hold.type = PointerEventType::Up;
+    hold.changed_button = PointerButton::Primary;
+    hold.pressed_buttons = PointerButton::None;
+    press_drag.SendPointer(hold);
+    press_drag.PumpAndSettle();
+    CHECK(press_drag.Find(UiSelector::Text("started: 1")).Exists());
+    CHECK(press_drag.Find(UiSelector::Text("ended: 1")).Exists());
+    CHECK(press_drag.Find(UiSelector::Text("last: 40")).Exists());
+  }
+
+  {
+    Application dismiss_app(DismissGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
+    UiTest dismiss(dismiss_app, {.viewport = {360, 240}});
+    const Rect initial = dismiss.Find(UiSelector::Key("dismiss")).One().bounds;
+    const Point start{initial.x + 40.0F, initial.y + initial.height * 0.5F};
+    dismiss.Drag(start, {start.x + 120.0F, start.y},
+                 {.duration = std::chrono::duration<double>(0.2), .segments = 8});
+    dismiss.PumpAndSettle();
+    CHECK(dismiss.Find(UiSelector::Text("dismissed: 1")).Exists());
+  }
+
+  {
     Application secondary_app(SecondaryGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
     UiTest secondary(secondary_app, {.viewport = {360, 240}});
     const Point point = Center(secondary.Find(UiSelector::Key("secondary")).One().bounds);
@@ -538,4 +612,8 @@ int main() { return Run([] {
   Throws<std::invalid_argument>([] {
     (void)SemanticActions{Semantics{}, SemanticActionMask(SemanticActionKind::Custom)};
   });
+  Throws<std::invalid_argument>([] {
+    (void)PressDragHandle(Text("x"), {.press_duration = std::chrono::duration<double>(0.0)});
+  });
+  Throws<std::invalid_argument>([] { (void)Dismissible(Text("x"), {}, {.dismiss_threshold = 0.0F}); });
 }); }
