@@ -23,6 +23,14 @@ void ValidateStyle(const PanZoomStyle& style) {
   if(!std::isfinite(style.wheel_sensitivity) || style.wheel_sensitivity < 0.0F) {
     throw std::invalid_argument("HuxerUI Interaction: PanZoom wheel sensitivity must be finite and non-negative");
   }
+  if(style.pan_bounds.has_value()
+     && (!std::isfinite(style.pan_bounds->x) || style.pan_bounds->x <= 0.0F
+         || !std::isfinite(style.pan_bounds->y) || style.pan_bounds->y <= 0.0F)) {
+    throw std::invalid_argument("HuxerUI Interaction: PanZoom pan bounds must be finite and positive");
+  }
+  if(!std::isfinite(style.rotation_snap) || style.rotation_snap < 0.0F) {
+    throw std::invalid_argument("HuxerUI Interaction: PanZoom rotation snap must be finite and non-negative");
+  }
 }
 
 } // namespace
@@ -53,6 +61,10 @@ View PanZoom(View content, PanZoomStyle style) {
                          Point next_pan = pan.Get();
                          next_pan.x += event.pan.x;
                          next_pan.y += event.pan.y;
+                         if(style.pan_bounds.has_value()) {
+                           next_pan.x = std::clamp(next_pan.x, -style.pan_bounds->x, style.pan_bounds->x);
+                           next_pan.y = std::clamp(next_pan.y, -style.pan_bounds->y, style.pan_bounds->y);
+                         }
                          pan = next_pan;
                          scale = std::clamp(scale.Get() * event.scale, style.minimum_scale,
                                             style.maximum_scale);
@@ -64,6 +76,8 @@ View PanZoom(View content, PanZoomStyle style) {
                        pan = Point{};
                        scale = 1.0F;
                        rotation = 0.0F;
+                     } else if(style.rotation_snap > 0.0F) {
+                       rotation = std::round(rotation.Get() / style.rotation_snap) * style.rotation_snap;
                      }
                    })
                    .On<TransformEvents::Canceled>([active, pan, scale, rotation, style](const TransformEvent&) {
@@ -74,6 +88,13 @@ View PanZoom(View content, PanZoomStyle style) {
                        rotation = 0.0F;
                      }
                    })
+                   .On<MultiTapEvents::Recognized>([pan, scale, rotation, style](const MultiTapEvent&) {
+                     if(!style.double_tap_reset) return;
+                     pan = Point{};
+                     scale = 1.0F;
+                     rotation = 0.0F;
+                   })
+                   .With(MultiTapGesture{.count = 2})
                    .On<ViewEvents::ScrollInput>([scale, style](const ScrollInputEvent& event) -> bool {
                      if(!style.wheel_zoom || !event.modifiers.control) return false;
                      scale = std::clamp(scale.Get() * std::exp(-event.delta_y * style.wheel_sensitivity),

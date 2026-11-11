@@ -45,6 +45,8 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `PressDragHandle` | Function returning `View` | `DragGesture` with `minimum_press_duration` | None (callbacks only) | None |
 | `Dismissible` | Function returning `View` | `DragGesture` + `DragEvents` | `Offset` follows drag; exits past threshold | Per-scope offset, drag, and dismissal generation |
 | `HoverCard` | Function returning `View` | `ViewEvents::Hover`, `LongPressGesture` | Popup presentation | Per-scope popup layer and generation |
+| `RovingFocus` | Function returning `View` | `Focusable`, `FocusTarget`, `KeyIntercept` | None | Per-item focus requesters |
+| `UseRevealOnTap` | Composition hook | `SceneTransitionHandle::RunFromCurrentInteraction` | Circular reveal | Composition-scoped handle |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
 
@@ -118,7 +120,7 @@ Focused slots are `Focusable`; Alt+arrow moves the focused item one slot along t
 
 ### PanZoom
 
-`PanZoom(content, style)` accumulates `TransformEvent` deltas: `pan` is added to the current offset, `scale` is multiplied and clamped to the configured range, and `rotation` is converted from radians to the degrees consumed by the `Rotation` modifier. Its presentation chain applies `Scale`, optional `Rotation`, and `Offset` around the configured origin. The terminal deltas remain application-visible until a later gesture; `spring_back` resets all three on `Ended` or `Canceled` with `return_motion`. Ctrl+wheel input multiplies zoom by an exponential delta and consumes the event; unmodified scroll passes through. Unlike `PinchZoom`, which only accumulates scale, `PanZoom` owns the complete two-pointer transform and has no inertia.
+`PanZoom(content, style)` accumulates `TransformEvent` deltas: `pan` is added to the current offset, `scale` is multiplied and clamped to the configured range, and `rotation` is converted from radians to the degrees consumed by the `Rotation` modifier. Its presentation chain applies `Scale`, optional `Rotation`, and `Offset` around the configured origin. The terminal deltas remain application-visible until a later gesture; `spring_back` resets all three on `Ended` or `Canceled` with `return_motion`. Ctrl+wheel input multiplies zoom by an exponential delta and consumes the event; unmodified scroll passes through. `pan_bounds` clamps accumulated pan per axis, `rotation_snap` rounds rotation on release, and `double_tap_reset` restores rest through the shared MultiTapGesture. Unlike `PinchZoom`, which only accumulates scale, `PanZoom` owns the complete two-pointer transform and has no inertia.
 
 ### InertialDrag
 
@@ -149,6 +151,12 @@ Both modifiers take a `ScrollController` that must be bound to the same `ScrollV
 ### HoverCard
 
 `HoverCard` uses a scoped `PopupHandle` anchor. Hover Enter schedules a `TaskScope` delay and then updates or shows the anchored popup; Leave cancels a pending show and schedules dismissal after `hide_delay`, guarded by a generation token. Touch long press shows immediately and its Ended/Canceled lifecycle schedules the same grace-period hide. Repeated enters call `PopupHandle::Update` while the layer is live, so another popup is not stacked. The anchor remains ordinary content and keeps its other gestures.
+
+### RovingFocus and RevealOnTap
+
+`RovingFocus(items, style)` attaches `Focusable` and one stable `FocusRequester` per item, tracks the focused index through `FocusChanged`, and handles Left/Right or Up/Down in a root `KeyIntercept`. Arrow keys request the adjacent item and wrap when configured; `FocusRequester::RequestFocus` keeps focus logical and does not synthesize pointer input.
+
+`UseRevealOnTap` returns a copyable handle for `SceneTransitionHandle::RunFromCurrentInteraction` with a default `CircularRevealTransition`. Call `Run` synchronously from a click, pointer, keyboard, or semantic callback; it inherits the exact interaction origin and reduced-motion policy. Asynchronous continuations must capture explicit geometry and use a SceneTransitionHandle directly.
 
 ### Spotlight
 

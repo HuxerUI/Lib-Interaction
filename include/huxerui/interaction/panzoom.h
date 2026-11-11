@@ -5,6 +5,8 @@
 #include <huxerui/gesture.h>
 #include <huxerui/view.h>
 
+#include <optional>
+
 namespace huxerui::interaction {
 
 /// Transform configuration for PanZoom.
@@ -17,6 +19,12 @@ struct PanZoomStyle {
   bool rotation = true;
   /// Whether a completed or canceled gesture returns pan, scale, and rotation to rest.
   bool spring_back = false;
+  /// Optional absolute pan limit on each axis. Components must be finite and positive.
+  std::optional<Point> pan_bounds = std::nullopt;
+  /// Whether a double tap resets pan, scale, and rotation.
+  bool double_tap_reset = false;
+  /// Rotation snap step in degrees; zero disables snapping. Must be finite and non-negative.
+  float rotation_snap = 0.0F;
   /// Whether Ctrl + wheel/trackpad updates zoom the content. Other scroll input passes through.
   bool wheel_zoom = true;
   /// Exponential zoom response to wheel delta, in inverse logical pixels. Must be finite and non-negative.

@@ -282,6 +282,30 @@ View HorizontalReorderGallery() {
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
+View RovingGallery() {
+  return RovingFocus(
+      {
+          Button("one").Key("rf-1"),
+          Button("two").Key("rf-2"),
+          Button("three").Key("rf-3"),
+      },
+      {.axis = Axis::Horizontal, .wrap = true, .spacing = 8.0F});
+}
+
+View RevealGallery() {
+  auto reveals = UseState(0);
+  auto reveal = UseRevealOnTap();
+  View root = Column {
+    Button("Reveal")
+        .OnClick([reveal, reveals] {
+          reveal.Run([reveals] { reveals += 1; });
+        })
+        .Key("reveal-button"),
+    Text("reveals: " + std::to_string(reveals.Get())).Key("reveals"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+  return root;
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -574,6 +598,31 @@ int main() { return Run([] {
   }
 
   {
+    Application roving_app(RovingGallery, {.window = {.initial_size = {360, 200}}, .show_debug_overlay = false});
+    UiTest roving(roving_app, {.viewport = {360, 200}});
+    roving.PressKey(Key::Tab);
+    roving.PumpAndSettle();
+    CHECK(roving.Find(UiSelector::Key("rf-1")).One().focused);
+    roving.PressKey(Key::ArrowRight);
+    roving.PumpAndSettle();
+    CHECK(roving.Find(UiSelector::Key("rf-2")).One().focused);
+    roving.PressKey(Key::ArrowRight);
+    roving.PumpAndSettle();
+    CHECK(roving.Find(UiSelector::Key("rf-3")).One().focused);
+    roving.PressKey(Key::ArrowRight);
+    roving.PumpAndSettle();
+    CHECK(roving.Find(UiSelector::Key("rf-1")).One().focused);
+  }
+
+  {
+    Application reveal_app(RevealGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
+    UiTest reveal(reveal_app, {.viewport = {360, 240}});
+    reveal.Find(UiSelector::Key("reveal-button")).Tap();
+    reveal.Pump(std::chrono::milliseconds(400));
+    CHECK(reveal.Find(UiSelector::Text("reveals: 1")).Exists());
+  }
+
+  {
     Application hover_app(HoverCardGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
     UiTest hover(hover_app, {.viewport = {420, 320}});
     CHECK(hover.Find(UiSelector::Key("hover-card")).Exists());
@@ -682,5 +731,10 @@ int main() { return Run([] {
   Throws<std::invalid_argument>([] {
     (void)Reorderable({Text("a")}, {.auto_scroll_step = 0.0F});
   });
+  Throws<std::invalid_argument>([] { (void)RovingFocus({Text("a")}, {.spacing = -1.0F}); });
+  Throws<std::invalid_argument>([] {
+    (void)PanZoom(Text("x"), {.pan_bounds = Point{0.0F, 10.0F}});
+  });
+  Throws<std::invalid_argument>([] { (void)PanZoom(Text("x"), {.rotation_snap = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)HoverCard(Text("x"), {}, {}); });
 }); }
