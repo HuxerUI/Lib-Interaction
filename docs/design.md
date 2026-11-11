@@ -38,6 +38,10 @@ The layering matches the framework's animation design: `TimingCurve`/`AnimationS
 | `ScrollProgress` | Modifier applied with `With()` | `NodeExtension::OnScrollActivity` + `ScrollController::Metrics` | Track and thumb in `PaintAboveContent` | Retained per node, connected controller |
 | `ScrollEdgeFade` | Modifier applied with `With()` | `NodeExtension::OnScrollActivity` + `ScrollController::Metrics` | Edge gradients in `PaintAboveContent` | Retained per node, connected controller |
 | `RollingNumber` | Function returning `View` | None (value-driven) | Clipped digit-column `Offset` targets | Per-scope digit strips |
+| `SemanticActions` | Modifier applied with `With()` | `NodeExtension::BuildSemantics`, `OnSemanticAction` | None | Retained per node |
+| `KeyboardShortcut` | Function returning `View` | `ViewEvents::KeyIntercept` | None | None |
+| `MultiClickable` | Function returning `View` | `MultiTapGesture` + `MultiTapEvents` | None (callback/cursor only) | Per-scope binding |
+| `SecondaryClickable` | Function returning `View` | `ViewEvents::Pointer`, `ContextMenuRequested` | None | None |
 | `PinchZoom` | Function returning `View` | `TransformGesture` + `TransformEvents` | `Scale` following the gesture's spread changes | Per-scope zoom and gesture cells |
 | `HoverHighlight` | Modifier applied with `With()` | `NodeExtension::OnInteraction`, `HitTest` | Hover/press/focus tint in `PaintAboveContent` | Retained per node |
 
@@ -122,6 +126,14 @@ Both modifiers take a `ScrollController` that must be bound to the same `ScrollV
 ### RollingNumber
 
 `RollingNumber(value, style)` builds one clipped digit window per character. `UseTextMeasurer` supplies digit advances and line height, so callers do not provide frame metrics. Each window contains a zero-through-nine column whose `Offset` target is `-digit * height`; a value change retargets the existing animation, which eases from the currently visible digit. A negative value gets a static sign cell, and `minimum_digits` pads the magnitude with leading zeros. The widget is value-driven and has no scroll or gesture state.
+
+### SemanticActions, KeyboardShortcut, and repeated input
+
+`SemanticActions` is a retained modifier that merges owner `Semantics`, advertises each standard `SemanticActionKind` in its mask through `SemanticBuilder::AddAction`, and routes `OnSemanticAction` back to the supplied callback. The Custom action is intentionally rejected because it needs an extension-local custom action ID; use a dedicated NodeExtension for that case.
+
+`KeyboardShortcut` attaches `ViewEvents::KeyIntercept` with an exact `KeyChord`. On the focus-scope root it acts as an application shortcut; around a focused control it acts locally. The initial non-repeat Down invokes the callback and optionally consumes the event.
+
+`MultiClickable` wraps `MultiTapGesture` with a configurable count of two or more; the existing `DoubleClickable` remains the fixed two-tap convenience. `SecondaryClickable` adds a raw pointer binding so an otherwise inert surface participates in hit testing, then routes `ContextMenuRequested`; it does not synthesize touch long press.
 
 ### Spotlight
 

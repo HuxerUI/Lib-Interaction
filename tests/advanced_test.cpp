@@ -153,6 +153,56 @@ View RollingGallery() {
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
+View SemanticsGallery() {
+  auto count = UseState(0);
+  View target = Text("semantic target")
+                    .With(Frame{.width = 220.0F, .height = 48.0F}, Background{Color::Rgb(80, 110, 160)},
+                          CornerRadius(8.0F));
+  target = std::move(target)
+               .With(Semantics{.role = SemanticRole::Button, .label = "Semantic target"},
+                     SemanticActions{Semantics{},
+                                     SemanticActionMask(SemanticActionKind::Activate),
+                                     [count](SemanticActionKind) { count += 1; }});
+  return Column {
+    std::move(target).Key("semantic"),
+    Text("semantic count: " + std::to_string(count.Get())).Key("semantic-count"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
+View KeyboardGallery() {
+  auto count = UseState(0);
+  View root = Column {
+    Button("Focus me").Key("focus-target"),
+    Text("shortcut count: " + std::to_string(count.Get())).Key("shortcut-count"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+  return KeyboardShortcut(std::move(root), {.key = Key::K, .modifiers = KeyModifiers{.control = true}},
+                          [count] { count += 1; });
+}
+
+View MultiGallery() {
+  auto count = UseState(0);
+  return Column {
+    MultiClickable(Text("triple target")
+                       .With(Frame{.width = 200.0F, .height = 48.0F}, Background{Color::Rgb(120, 90, 150)},
+                             CornerRadius(8.0F)),
+                   {.count = 3}, [count](const MultiTapEvent&) { count += 1; })
+        .Key("triple"),
+    Text("triples: " + std::to_string(count.Get())).Key("triples"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
+View SecondaryGallery() {
+  auto count = UseState(0);
+  return Column {
+    SecondaryClickable(Text("secondary target")
+                           .With(Frame{.width = 220.0F, .height = 48.0F}, Background{Color::Rgb(90, 130, 100)},
+                                 CornerRadius(8.0F)),
+                       [count](Point) { count += 1; })
+        .Key("secondary"),
+    Text("secondaries: " + std::to_string(count.Get())).Key("secondaries"),
+  }.With(Padding(16.0F), Spacing(16.0F));
+}
+
 } // namespace
 
 int main() { return Run([] {
@@ -402,6 +452,55 @@ int main() { return Run([] {
     CHECK(zero_after < zero_before - 1.0F);
   }
 
+  {
+    Application semantic_app(SemanticsGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
+    UiTest semantic(semantic_app, {.viewport = {360, 240}});
+    semantic.FindSemantics(UiSemanticSelector::Label("Semantic target"))
+        .PerformSemanticAction({SemanticActionKind::Activate, std::monostate{}});
+    semantic.PumpAndSettle();
+    CHECK(semantic.Find(UiSelector::Text("semantic count: 1")).Exists());
+  }
+
+  {
+    Application keyboard_app(KeyboardGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
+    UiTest keyboard(keyboard_app, {.viewport = {360, 240}});
+    keyboard.Find(UiSelector::Key("focus-target")).Tap();
+    keyboard.PumpAndSettle();
+    keyboard.PressKey(Key::K, KeyModifiers{.control = true});
+    keyboard.PumpAndSettle();
+    CHECK(keyboard.Find(UiSelector::Text("shortcut count: 1")).Exists());
+  }
+
+  {
+    Application multi_app(MultiGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
+    UiTest multi(multi_app, {.viewport = {360, 240}});
+    for(int tap = 0; tap < 3; ++tap) {
+      multi.Find(UiSelector::Key("triple")).Tap();
+      multi.Pump(std::chrono::milliseconds(50));
+    }
+    multi.PumpAndSettle();
+    CHECK(multi.Find(UiSelector::Text("triples: 1")).Exists());
+  }
+
+  {
+    Application secondary_app(SecondaryGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
+    UiTest secondary(secondary_app, {.viewport = {360, 240}});
+    const Point point = Center(secondary.Find(UiSelector::Key("secondary")).One().bounds);
+    PointerEvent click{.type = PointerEventType::Down,
+                       .pointer_id = 51,
+                       .position = point,
+                       .device_kind = PointerDeviceKind::Mouse,
+                       .changed_button = PointerButton::Secondary,
+                       .pressed_buttons = PointerButton::Secondary};
+    secondary.SendPointer(click);
+    click.type = PointerEventType::Up;
+    click.changed_button = PointerButton::Secondary;
+    click.pressed_buttons = PointerButton::None;
+    secondary.SendPointer(click);
+    secondary.PumpAndSettle();
+    CHECK(secondary.Find(UiSelector::Text("secondaries: 1")).Exists());
+  }
+
   Throws<std::invalid_argument>([] { (void)SwipeActions(Text("x"), {}, {}); });
   Throws<std::invalid_argument>([] {
     (void)SwipeActions(Text("x"), [](std::function<void()>) { return Text("action"); },
@@ -434,4 +533,9 @@ int main() { return Run([] {
   Throws<std::invalid_argument>([] { (void)ScrollEdgeFade(ScrollController{}, {.extent = 0.0F}); });
   Throws<std::invalid_argument>([] { (void)RollingNumber(0, {.digit_gap = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)RollingNumber(0, {.minimum_digits = -1}); });
+  Throws<std::invalid_argument>([] { (void)MultiClickable(Text("x"), {.count = 1}); });
+  Throws<std::invalid_argument>([] { (void)KeyboardShortcut(Text("x"), {}, [] {}); });
+  Throws<std::invalid_argument>([] {
+    (void)SemanticActions{Semantics{}, SemanticActionMask(SemanticActionKind::Custom)};
+  });
 }); }

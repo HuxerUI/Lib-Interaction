@@ -24,6 +24,10 @@
 #include <huxerui/interaction/shake.h>
 #include <huxerui/interaction/shimmer.h>
 #include <huxerui/interaction/spotlight.h>
+#include <huxerui/interaction/keyboardshortcut.h>
+#include <huxerui/interaction/multiclick.h>
+#include <huxerui/interaction/secondaryclick.h>
+#include <huxerui/interaction/semanticactions.h>
 #include <huxerui/interaction/swipe.h>
 
 /// @file

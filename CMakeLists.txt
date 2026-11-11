@@ -34,6 +34,10 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/ripple.cpp
     src/shake.cpp
     src/shimmer.cpp
+    src/keyboardshortcut.cpp
+    src/multiclick.cpp
+    src/secondaryclick.cpp
+    src/semanticactions.cpp
     src/spotlight.cpp
     src/swipe.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)
