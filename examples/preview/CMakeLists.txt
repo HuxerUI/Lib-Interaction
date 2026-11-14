@@ -14,7 +14,17 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../.." "${CMAKE_BINARY_DIR}/lib-interaction")
 endif()
 
-set(_preview_sources src/app.cpp src/application.cpp)
+set(_preview_sources
+    src/app.cpp
+    src/application.cpp
+    src/demos/bloom_paw.cpp
+    src/demos/drag.cpp
+    src/demos/gesture.cpp
+    src/demos/layout.cpp
+    src/demos/paint.cpp
+    src/demos/press.cpp
+    src/demos/reorder.cpp
+    src/demos/status.cpp)
 if(NOT HUXERUI_LIBRARY_GRAPH_ONLY)
     if(WIN32)
         list(APPEND _preview_sources platform/windows/main.cpp)

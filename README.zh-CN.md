@@ -63,7 +63,7 @@ View Gallery() {
 
 无效配置在调用点抛出 `std::invalid_argument`：非有限或非正的缩放、非有限的位移、负的振幅、[0, 1] 之外的透明度、非正的时长、没有任何参与通道的 `Pulsing` 样式、时长／透明度乘数无效的 `Ripple`、直径非正或 fade 为负的 `Spotlight`，或振幅／摆动次数／时长无效的 `Shake`。`Reorderable` 拒绝非法的自动滚动边缘或步长。`ReorderableGrid` 拒绝非法的单元尺寸、间距或高亮宽度；`ResizeHandle` 拒绝非正厚度。`SwipeActions` 拒绝非正的宽度、[0, 1] 之外的激活比例、负速度或空的操作构建器；`ContextMenuArea` 拒绝非正的长按时长。`Draggable` 拒绝 [0, 1] 之外的透明度，`DropZone` / `FileDropZone` 拒绝负的边框宽度；`FileDropZone` 还会拒绝非法的文件过滤规则。`PanZoom` 拒绝非法缩放范围或负的滚轮灵敏度；`InertialDrag` 拒绝负的投影时长或投影上限。`ScrollProgress` 拒绝非正厚度或负内边距；`ScrollEdgeFade` 拒绝非正范围；`RollingNumber` 拒绝负间距或负最小位数。`SemanticActions` 拒绝 Custom 或非法动作位；`KeyboardShortcut` 拒绝 `Key::Unknown`；`MultiClickable` 拒绝小于 2 的次数或非法的间隔/位移。`PressDragHandle` 拒绝非正的按住时长；`Dismissible` 拒绝非法的阈值、速度、距离或时长。`HoverCard` 拒绝负延迟或空的卡片构建器。`PanZoom` 拒绝非法的平移边界或旋转吸附。
 
-按压跟踪遵循主键的按下、抬起与取消事件。按住空格的缩放反馈会在焦点丢失时清除；通用禁用状态恢复仍依赖框架的取消路径，请在调用处按需组合 `OnClick` 与 `Enabled`。`ShakeTrigger::Trigger()` 只能从事件回调或任务中调用，不能在组合期间调用。组件目录与动效约定见 [docs/design.md](docs/design.md)，设计决策记录见 [docs/open-questions.md](docs/open-questions.md)。
+按压跟踪遵循主键的按下、抬起与取消事件。按住空格的缩放反馈会在焦点丢失时清除；通用禁用状态恢复仍依赖框架的取消路径，请在调用处按需组合 `OnClick` 与 `Enabled`。`ShakeTrigger::Trigger()` 只能从事件回调或任务中调用，不能在组合期间调用。组件目录与动效约定见 [docs/design.md](docs/design.md)，仓库结构与依赖规则见 [docs/structure.md](docs/structure.md)，测试分层见 [docs/testing.md](docs/testing.md)，设计决策记录见 [docs/open-questions.md](docs/open-questions.md)。
 
 ## 构建与测试
 
@@ -78,7 +78,7 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-运行 `example_interaction` 体验控件：弹簧／补间按压卡片、悬停抬升、脉冲状态与涟漪卡片，右上角提供跟随系统／浅色／深色三个图标按钮切换主题（跟随系统模式取平台偏好）。与其他 Lib 项目一样，演示位于 [`examples/preview`](examples/preview/README.md)，也可以独立配置：
+运行 `example_interaction` 体验控件：奶油色肉垫上的四颗果冻质感脚趾垫与掌心垫在悬停时张开、点击时弹跳并迸发粒子的猫爪，弹簧／补间按压卡片、悬停抬升、脉冲状态与涟漪卡片，右上角提供跟随系统／浅色／深色三个图标按钮切换主题（跟随系统模式取平台偏好）。与其他 Lib 项目一样，演示位于 [`examples/preview`](examples/preview/README.md)，也可以独立配置：
 
 ```sh
 cmake -S examples/preview -B build-preview -DHUXERUI_HOME=/path/to/HuxerUI

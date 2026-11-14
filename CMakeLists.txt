@@ -13,39 +13,48 @@ if(HUXERUI_PROJECT_PLAN_ONLY)
 endif()
 
 huxerui_add_library(huxerui_interaction SOURCES
-    src/contextmenu.cpp
-    src/dragspring.cpp
-    src/filedropzone.cpp
-    src/fireworks.cpp
-    src/highlight.cpp
-    src/inertialdrag.cpp
-    src/hover.cpp
-    src/longpress.cpp
-    src/multitap.cpp
-    src/panzoom.cpp
-    src/pinch.cpp
-    src/pop.cpp
-    src/pressable.cpp
-    src/pulse.cpp
-    src/reorder.cpp
-    src/reordergrid.cpp
-    src/rollingnumber.cpp
-    src/scrolledgefade.cpp
-    src/scrollprogress.cpp
-    src/ripple.cpp
-    src/shake.cpp
-    src/shimmer.cpp
-    src/keyboardshortcut.cpp
-    src/multiclick.cpp
-    src/secondaryclick.cpp
-    src/semanticactions.cpp
-    src/spotlight.cpp
-    src/dismissible.cpp
-    src/pressdraghandle.cpp
-    src/hovercard.cpp
-    src/resizehandle.cpp
-    src/revealontap.cpp
-    src/swipe.cpp)
+    # press
+    src/press/multiclick.cpp
+    src/press/multitap.cpp
+    src/press/longpress.cpp
+    src/press/pressable.cpp
+    src/press/ripple.cpp
+    src/press/secondaryclick.cpp
+    # hover
+    src/hover/highlight.cpp
+    src/hover/hover.cpp
+    src/hover/hovercard.cpp
+    src/hover/spotlight.cpp
+    # motion
+    src/motion/fireworks.cpp
+    src/motion/pop.cpp
+    src/motion/pulse.cpp
+    src/motion/revealontap.cpp
+    src/motion/rollingnumber.cpp
+    src/motion/shake.cpp
+    src/motion/shimmer.cpp
+    # gesture
+    src/gesture/dismissible.cpp
+    src/gesture/dragspring.cpp
+    src/gesture/inertialdrag.cpp
+    src/gesture/panzoom.cpp
+    src/gesture/pinch.cpp
+    src/gesture/pressdraghandle.cpp
+    src/gesture/resizehandle.cpp
+    src/gesture/swipe.cpp
+    # reorder
+    src/reorder/reorder.cpp
+    src/reorder/reordergrid.cpp
+    # drag and drop
+    src/dragdrop/filedropzone.cpp
+    # scroll
+    src/scroll/scrolledgefade.cpp
+    src/scroll/scrollprogress.cpp
+    # overlay
+    src/overlay/contextmenu.cpp
+    # accessibility
+    src/accessibility/keyboardshortcut.cpp
+    src/accessibility/semanticactions.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)
 if(HUXERUI_LIBRARY_GRAPH_ONLY)
     return()
