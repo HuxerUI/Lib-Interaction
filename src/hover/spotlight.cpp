@@ -1,29 +1,22 @@
 #include <huxerui/interaction/hover/spotlight.h>
 
+#include "../internal/validate.h"
+
 #include <huxerui/modifier.h>
 #include <huxerui/paint.h>
 
-#include <algorithm>
-#include <cmath>
-#include <stdexcept>
 #include <utility>
 
 namespace huxerui::interaction {
 namespace {
 
 void ValidateStyle(const SpotlightStyle& style) {
-  if(!std::isfinite(style.diameter) || style.diameter <= 0.0F) {
-    throw std::invalid_argument("HuxerUI Interaction: Spotlight diameter must be finite and positive");
-  }
-  if(!std::isfinite(style.fade) || style.fade < 0.0) {
-    throw std::invalid_argument("HuxerUI Interaction: Spotlight fade must be finite and non-negative");
-  }
+  internal::RequirePositive(style.diameter, "HuxerUI Interaction: Spotlight diameter must be finite and positive");
+  internal::RequireNonNegative(style.fade, "HuxerUI Interaction: Spotlight fade must be finite and non-negative");
 }
 
 } // namespace
 
-/// Retained paint behavior for the Spotlight modifier. The framework preserves this extension across recomposition
-/// and calls Update() with the latest modifier value.
 class Spotlight::Extension final : public NodeExtension {
 public:
   Extension(ViewNode& node, const Spotlight& value) { Update(node, value); }
@@ -33,7 +26,6 @@ public:
     InvalidatePaint(PaintInvalidation::Content);
   }
 
-  /// Lets the extension receive hover entry, movement, and departure within the node bounds.
   [[nodiscard]] bool HoverHitTest(ViewNode& node, Point position) const override {
     return node.Bounds().Contains(position);
   }
@@ -83,8 +75,8 @@ private:
   Point position_;
 };
 
-const detail::ModifierDescriptor& Spotlight::Descriptor() {
-  return detail::ModifierDescriptorFor<Spotlight, Spotlight::Extension>();
+const huxerui::detail::ModifierDescriptor& Spotlight::Descriptor() {
+  return huxerui::detail::ModifierDescriptorFor<Spotlight, Spotlight::Extension>();
 }
 
 Spotlight::Spotlight(SpotlightStyle style) {

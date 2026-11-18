@@ -4,7 +4,7 @@ namespace interaction_demo {
 using namespace huxerui;
 using namespace huxerui::interaction;
 
-View DragSection(const DemoState&, const DemoContext& context) {
+View DragSection(const DemoContext& context) {
   return Column {
     SectionLabel(context, "Drag"),
     DragSpring(

@@ -1,59 +1,55 @@
 #include <huxerui/interaction/press/longpress.h>
 
+#include "../internal/validate.h"
+
 #include <huxerui/modifier.h>
 #include <huxerui/paint.h>
 #include <huxerui/semantics.h>
 #include <huxerui/state.h>
 
+#include <algorithm>
 #include <chrono>
-#include <cmath>
+#include <cstdint>
 #include <optional>
-#include <stdexcept>
 #include <utility>
 
 namespace huxerui::interaction {
 namespace {
 
-// Matches GestureSettings::long_press_duration's default; used when the style leaves the duration unset.
 constexpr std::chrono::duration<double> kDefaultHoldDuration{0.5};
 
-void ValidateStyle(const LongPressableStyle& style) {
-  if(style.minimum_duration.has_value() && style.minimum_duration->count() <= 0.0) {
-    throw std::invalid_argument("HuxerUI Interaction: LongPressable duration must be positive");
-  }
-  if(style.maximum_movement.has_value()
-     && (!std::isfinite(*style.maximum_movement) || *style.maximum_movement <= 0.0F)) {
-    throw std::invalid_argument("HuxerUI Interaction: LongPressable movement tolerance must be finite and positive");
-  }
-  if(!std::isfinite(style.held_scale) || style.held_scale <= 0.0F) {
-    throw std::invalid_argument("HuxerUI Interaction: LongPressable held scale must be finite and positive");
-  }
+void ValidateHoldProgressStyle(const HoldProgressStyle& style) {
+  internal::RequirePositive(style.duration, "HuxerUI Interaction: HoldProgressRing duration must be finite and positive");
+  internal::RequirePositive(style.stroke_width,
+                            "HuxerUI Interaction: HoldProgressRing stroke width must be finite and positive");
+  internal::RequireNonNegative(style.inset,
+                               "HuxerUI Interaction: HoldProgressRing inset must be finite and non-negative");
 }
 
-/// Circular hold progress ring painted above the content. The extension observes the pointer sequence without
-/// consuming it and advances one MotionController across the hold duration.
-struct HoldProgress {
-  /// Retained extension created by the framework when the modifier is attached through With().
-  class Extension;
+void ValidateStyle(const LongPressableStyle& style) {
+  internal::RequireOptionalPositiveDuration(style.minimum_duration,
+                                            "HuxerUI Interaction: LongPressable duration must be finite and positive");
+  internal::RequireOptionalPositive(
+      style.maximum_movement, "HuxerUI Interaction: LongPressable movement tolerance must be finite and positive");
+  internal::RequirePositive(style.held_scale,
+                            "HuxerUI Interaction: LongPressable held scale must be finite and positive");
+  internal::RequirePositive(style.progress_stroke_width,
+                            "HuxerUI Interaction: LongPressable progress stroke width must be finite and positive");
+  internal::RequireNonNegative(style.progress_inset,
+                               "HuxerUI Interaction: LongPressable progress inset must be finite and non-negative");
+}
 
-  static const detail::ModifierDescriptor& Descriptor();
+} // namespace
 
-  Color color = Color::Rgb(255, 255, 255, 0.9F);
-  double duration = 0.5;
-
-  bool operator==(const HoldProgress&) const = default;
-};
-
-class HoldProgress::Extension final : public NodeExtension {
+class HoldProgressRing::Extension final : public NodeExtension {
 public:
-  Extension(ViewNode& node, const HoldProgress& value) { Update(node, value); }
+  Extension(ViewNode& node, const HoldProgressRing& value) { Update(node, value); }
 
-  void Update(ViewNode&, const HoldProgress& value) {
-    style_ = value;
+  void Update(ViewNode&, const HoldProgressRing& value) {
+    style_ = value.style;
     InvalidatePaint(PaintInvalidation::Foreground);
   }
 
-  /// Lets the extension observe pointer sequences routed over the node without consuming them.
   [[nodiscard]] bool HitTest(ViewNode& node, Point position) const override {
     return node.Bounds().Contains(position);
   }
@@ -89,10 +85,10 @@ public:
     const Rect bounds = node.Bounds();
     if(bounds.IsEmpty() || bounds.width <= 0.0F || bounds.height <= 0.0F) return;
     const float diameter = std::min(bounds.width, bounds.height);
-    const float radius = diameter * 0.5F - 8.0F;
+    const float radius = diameter * 0.5F - style_.inset;
     if(radius <= 0.0F) return;
     const Point center{bounds.x + bounds.width * 0.5F, bounds.y + bounds.height * 0.5F};
-    const StrokeStyle ring_stroke{.width = 3.0F, .cap = StrokeCap::Round};
+    const StrokeStyle ring_stroke{.width = style_.stroke_width, .cap = StrokeCap::Round};
     Color track = style_.color;
     track.alpha *= 0.2F;
     context.DrawArc(center, radius, 0.0F, 3.14159265F, track, ring_stroke);
@@ -103,45 +99,61 @@ public:
   }
 
 private:
-  HoldProgress style_;
+  HoldProgressStyle style_;
   MotionController ring_{0.0F};
   std::optional<std::int64_t> pointer_;
 };
 
-const detail::ModifierDescriptor& HoldProgress::Descriptor() {
-  return detail::ModifierDescriptorFor<HoldProgress, HoldProgress::Extension>();
+const huxerui::detail::ModifierDescriptor& HoldProgressRing::Descriptor() {
+  return huxerui::detail::ModifierDescriptorFor<HoldProgressRing, HoldProgressRing::Extension>();
 }
 
-} // namespace
+HoldProgressRing::HoldProgressRing(HoldProgressStyle style) {
+  ValidateHoldProgressStyle(style);
+  this->style = std::move(style);
+}
 
-View LongPressable(View content, LongPressableStyle style, std::function<void()> on_long_press) {
+namespace detail {
+
+View LongPressableImpl(View content, std::function<void()> on_long_press, LongPressableStyle style,
+                       std::function<void(bool)> on_holding_changed) {
   ValidateStyle(style);
   const std::chrono::duration<double> hold_duration =
       style.minimum_duration.value_or(kDefaultHoldDuration);
   return Scope([content = std::move(content), style, on_long_press = std::move(on_long_press),
-                hold_duration]() -> View {
+                on_holding_changed = std::move(on_holding_changed), hold_duration]() -> View {
     auto holding = UseState(false);
     std::optional<std::chrono::duration<double>> minimum_duration = style.minimum_duration;
     if(style.show_progress && !minimum_duration.has_value()) {
-      // Pin the gesture to the ring's duration so recognition and the visual progress stay synchronized.
       minimum_duration = hold_duration;
     }
     View interactive = content;
     interactive = std::move(interactive)
-                      .With(Scale(AnimateTo(holding ? style.held_scale : 1.0F, style.animation), style.origin))
+                      .With(Scale(AnimateTo(holding.Get() ? style.held_scale : 1.0F, style.animation), style.origin))
                       .With(LongPressGesture{
                           .minimum_duration = minimum_duration,
                           .maximum_movement = style.maximum_movement,
                       })
-                      .On<LongPressEvents::Started>([holding, on_long_press](const LongPressEvent&) {
+                      .On<LongPressEvents::Started>([holding, on_long_press, on_holding_changed](const LongPressEvent&) {
                         holding = true;
+                        if(on_holding_changed) on_holding_changed(true);
                         if(on_long_press) on_long_press();
                       })
-                      .On<LongPressEvents::Ended>([holding](const LongPressEvent&) { holding = false; })
-                      .On<LongPressEvents::Canceled>([holding](const LongPressEvent&) { holding = false; });
+                      .On<LongPressEvents::Ended>([holding, on_holding_changed](const LongPressEvent&) {
+                        if(holding.Get() && on_holding_changed) on_holding_changed(false);
+                        holding = false;
+                      })
+                      .On<LongPressEvents::Canceled>([holding, on_holding_changed](const LongPressEvent&) {
+                        if(holding.Get() && on_holding_changed) on_holding_changed(false);
+                        holding = false;
+                      });
     if(style.show_progress) {
-      interactive = std::move(interactive).With(
-          HoldProgress{.color = style.progress_color, .duration = hold_duration.count()});
+      interactive = std::move(interactive).With(HoldProgressRing{HoldProgressStyle{
+          .color = style.progress_color,
+          .duration = hold_duration.count(),
+          .stroke_width = style.progress_stroke_width,
+          .inset = style.progress_inset,
+      }});
     }
     if(on_long_press) {
       interactive = std::move(interactive).With(Semantics{.role = SemanticRole::Button});
@@ -153,4 +165,5 @@ View LongPressable(View content, LongPressableStyle style, std::function<void()>
   });
 }
 
+} // namespace detail
 } // namespace huxerui::interaction

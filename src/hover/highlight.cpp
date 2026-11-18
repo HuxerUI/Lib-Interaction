@@ -1,5 +1,7 @@
 #include <huxerui/interaction/hover/highlight.h>
 
+#include "../internal/motion_group.h"
+
 #include <huxerui/modifier.h>
 #include <huxerui/paint.h>
 
@@ -8,8 +10,6 @@
 
 namespace huxerui::interaction {
 
-/// Retained paint behavior for the HoverHighlight modifier. The framework preserves this extension across
-/// recomposition and calls Update() with the latest modifier value.
 class HoverHighlight::Extension final : public NodeExtension {
 public:
   Extension(ViewNode& node, const HoverHighlight& value) { Update(node, value); }
@@ -19,7 +19,6 @@ public:
     InvalidatePaint(PaintInvalidation::Foreground);
   }
 
-  /// Lets the node become an input and hover target so inert views still respond to interaction.
   [[nodiscard]] bool HitTest(ViewNode& node, Point position) const override {
     return node.Bounds().Contains(position);
   }
@@ -33,18 +32,13 @@ public:
   }
 
   FrameResult OnFrame(ViewNode&, const FrameInfo& frame) override {
-    const MotionAdvanceResult presence_result = presence_.Advance(frame);
-    const MotionAdvanceResult focus_result = focus_.Advance(frame);
-    if(presence_result.changed || focus_result.changed) {
+    internal::FrameAccumulator acc;
+    acc.Add(presence_.Advance(frame));
+    acc.Add(focus_.Advance(frame));
+    if(acc.changed) {
       InvalidatePaint(PaintInvalidation::Foreground);
     }
-    std::optional<double> wake_after;
-    if(presence_result.wake_after.has_value()) wake_after = presence_result.wake_after;
-    if(focus_result.wake_after.has_value()) {
-      wake_after = wake_after.has_value() ? std::min(*wake_after, *focus_result.wake_after)
-                                          : focus_result.wake_after;
-    }
-    return {presence_result.needs_frame || focus_result.needs_frame, wake_after};
+    return acc.Result();
   }
 
   void PaintAboveContent(const ViewNode& node, PaintContext& context) const override {
@@ -97,8 +91,8 @@ private:
   MotionController focus_{0.0F};
 };
 
-const detail::ModifierDescriptor& HoverHighlight::Descriptor() {
-  return detail::ModifierDescriptorFor<HoverHighlight, HoverHighlight::Extension>();
+const huxerui::detail::ModifierDescriptor& HoverHighlight::Descriptor() {
+  return huxerui::detail::ModifierDescriptorFor<HoverHighlight, HoverHighlight::Extension>();
 }
 
 HoverHighlight::HoverHighlight(HoverHighlightStyle style) : style(std::move(style)) {}

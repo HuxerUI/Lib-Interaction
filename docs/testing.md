@@ -1,28 +1,30 @@
 # Testing
 
-Tests are organized by the surface they exercise, mirroring the source layout. `CHECK` and `Throws` throw on
-the first failure; `Run` reports the number of checks and returns a process status. Every test executable is
-registered with CTest.
+Tests mirror the library's family architecture and layer boundaries. `CHECK` and `Throws` fail immediately on the first
+broken invariant; `Run` reports check counts and returns a process exit code. Every test executable is registered with
+CTest and compiled with `-Wall -Wextra -Wpedantic` (or `/W4` on MSVC).
 
 ## Layers
 
-| Layer | Target | Covers |
-| --- | --- | --- |
-| Validation | `interaction.widget` | Documented ranges and throw sites, without a composition context where possible |
-| Widget contracts | `interaction.widget` | `UiTest` fixtures for press, hover, motion, reorder, and gesture composition |
-| Advanced flows | `interaction.advanced` | Cross-widget sequences: keyboard activation, transform gestures, drag/drop, swipe, scroll, semantics |
-| Gallery smoke | `interaction.preview` | The full preview composition, theme buttons, key lookup, hover, click, and scroll-to-section |
-| Public API | `interaction.api` | Includes the umbrella header, constructs one symbol from each family, and links the result |
+| Layer | CTest Name | Target | Covers |
+| --- | --- | --- | --- |
+| Public API & Static Contracts | `interaction.api` | `interaction_api_tests` | Umbrella include, `std::equality_comparable` static assertions on all modifiers/controllers/triggers, runtime-free default handle equality, and link smoke across all families |
+| Validation & Family Contracts | `interaction.widget` | `interaction_widget_tests` | Centralized constructor/range throw checks plus per-family `UiTest` behavioral suites |
+| Cross-Widget Integration | `interaction.advanced` | `interaction_advanced_tests` | Multi-stage `operator|` pipelines, mutually exclusive `SwipeController` list rows, `Reorderable` (`handle_only`) + `ReorderHandle` + child button isolation, and external `PanZoomController` toolbars |
+| Gallery Smoke | `interaction.preview` | `interaction_preview_tests` | Full preview app linked via shared `interaction_preview_views`, testing hover bloom, boop counter, theme toggles, and scrolling |
 
-`tests/widget/` is split by family:
+`tests/widget/` is organized by responsibility:
 
-- `validation_test.cpp`: cross-family constructor validation.
-- `press_test.cpp`: press, hover, paint modifiers, and trigger feedback.
-- `gesture_test.cpp`: pinch, long press, double click, and reorder.
-
-`tests/advanced/` is intentionally one cross-widget suite. It exercises interactions that only make sense
-together, such as focus traversal, multi-pointer transforms, and drag/drop routing. Add new advanced cases to
-that suite until a family grows enough to justify another translation unit.
+- `validation_test.cpp`: cross-family invalid-argument contracts without an active composition context.
+- `press_test.cpp`: `InteractiveSurface`, `Pressable` (primary-button filter, keyboard Space & focus-loss recovery),
+  `LongPressable` + `HoldProgressRing`, `DoubleClickable`, `MultiClickable`, `ContextMenuArea`, `SecondaryClickable`, `Ripple`.
+- `hover_overlay_test.cpp`: `Hoverable`, `HoverLift`, `Spotlight`, `HoverHighlight`, `HoverCard` + `HoverCardController`.
+- `gesture_test.cpp`: `PinchZoom`, `PanZoom`, `InertialDrag`, `SwipeActions` + `SwipeActionContext`, `Dismissible`
+  (custom background builder), `PressDragHandle`, `ResizeHandle`.
+- `reorder_dragdrop_test.cpp`: vertical/horizontal `Reorderable`, `ReorderableGrid`, `Draggable<T>`, headless
+  `DropZone<T>`, `FileDropZone`.
+- `scroll_a11y_visual_test.cpp`: `ScrollProgress`, `ScrollEdgeFade`, `SemanticActions`, `KeyboardShortcut`, `Pulsing`,
+  `Shimmer`, `RollingNumber`, `UsePop`/`Popped`, `UseShake`/`Shaken`, `UseRevealOnTap`.
 
 ## Running
 
@@ -33,19 +35,3 @@ cmake -S . -B build -DHUXERUI_HOME=/path/to/HuxerUI \
 cmake --build build --parallel
 ctest --test-dir build --output-on-failure
 ```
-
-The preview test needs packaged resources; it receives `INTERACTION_TEST_RESOURCES` from
-`HuxerUI::huxerui` in `tests/CMakeLists.txt`. Widget and API tests work without the testing library, but the
-composed-widget and preview tests are enabled only when `HuxerUI::testing` exists.
-
-## Conventions
-
-- Use stable `Key` identities for anything the test queries or taps.
-- Prefer `UiTest` interactions (`Tap`, `Drag`, `SendPointer`, `SendScroll`, `PressKey`) over direct state
-  mutation so the real routing path is covered.
-- Use `PumpAndSettle` for animations and explicit `Pump(duration)` only when a gesture requires a hold.
-- Test observable geometry, text, enabled state, or callbacks. Do not assert implementation details such as
-  node counts or animation internals.
-- A regression test must fail for a plausible consumer-visible bug. Do not add tests that merely restate
-  source text or default values.
-- Keep test helpers in `tests/support/test.h`; family files should only contain their fixtures and checks.

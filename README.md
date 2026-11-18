@@ -2,48 +2,22 @@
 
 [简体中文](README.zh-CN.md)
 
-Interactive animation widgets for [HuxerUI](https://github.com/HuxerUI/HuxerUI): pressable surfaces, hover lifts, continuous pulses, press ripples, drag-and-spring motion, shake sequences, long presses, double clicks, pop bursts, pointer-following spotlights, and interaction tints — all composed from the framework's retained motion primitives.
+Interactive primitives, headless state builders, controllers, retained feedback modifiers, and visual motion effects for [HuxerUI](https://github.com/HuxerUI/HuxerUI) — built in C++20 under namespace `huxerui::interaction` and CMake target `HuxerUI::Interaction` (`huxerui_interaction`).
 
-- C++20; namespace `huxerui::interaction`, CMake target `HuxerUI::Interaction` (`huxerui_interaction`).
-- `Pressable` (Button semantics), `LongPressable` (Button), and `DoubleClickable` (Button) publish default semantic roles when they have callbacks; `RollingNumber` publishes its value as Text.
-- `Pressable` animates hover and press scale around one pivot, forwards activation through OnClick with keyboard Enter/Space support and a focus-visible ring, and shows the hand cursor.
-- `HoverLift` drifts and grows content while a hover-capable pointer targets it.
-- `Pulsing` oscillates scale or opacity with unbounded reverse repetition and no application state.
-- `Ripple` is a retained modifier painting an expanding, fading circle from each pointer or keyboard press without consuming clicks.
-- `Spotlight` is a retained modifier painting a pointer-following radial glow behind the content.
-- `HoverHighlight` is a retained modifier painting hover, press, focus-visible, and disabled-aware tints driven by `InteractionState`.
-- `DragSpring` follows a drag gesture and springs the content back to rest on release, with grab and grabbing cursors.
-- `UseShake` / `Shaken` play decaying shake sequences from event handlers through a copyable trigger handle.
-- `LongPressable` recognizes a press-and-hold gesture, firing once at recognition with a subtle held scale and an optional circular progress ring.
-- `DoubleClickable` recognizes double taps through the platform multi-tap recognizer without replacing ordinary Click handling.
-- `UsePop` / `Popped` play one out-and-back scale burst through a copyable trigger handle.
-- `Shimmer` is a retained, paint-only modifier sweeping a looping highlight band over placeholder content.
-- `Fireworks` is a retained, paint-only modifier playing value-driven particle bursts at composed positions.
-- `ReorderableGrid` composes fixed-size cells in a wrapping grid with the same slot-recording drag reorder geometry.
-- `ResizeHandle` reports incremental drag deltas for custom row/column pane resizing; core `SplitLayout` remains the higher-level split-pane solution.
-- `Reorderable` composes a drag-to-reorder column or row: slots record their layout geometry, displaced items ease one slot aside, the model reorders at drop, Alt+arrow reorders the focused slot, and optional edge auto-scroll uses a connected `ScrollController`.
-- `SwipeActions` reveals a trailing action strip through a horizontal drag, settles open or closed from distance and velocity, and closes from builder-provided action callbacks.
-- `ContextMenuArea` unifies desktop secondary-click requests and touch long presses into one window-position callback.
-- `Draggable` wraps content as a typed in-process drag source with an optional preview, source fade, and configurable drag gesture.
-- `DropZone<T>` accepts an exact typed payload, highlights while it is over the zone, and forwards the dropped payload and event.
-- `FileDropZone` accepts external files with extension/MIME/batch filters and highlights while an eligible offer targets it.
-- `PanZoom` accumulates two-pointer pan, scale, and rotation with a clamped scale range, optional pan bounds, double-tap reset, rotation snap, spring-back, and Ctrl+wheel zoom.
-- `InertialDrag` drags content and settles at a velocity-projected offset, with a configurable projection window and clamp.
-- `ScrollProgress` paints a scrollbar-like thumb from a connected `ScrollController`.
-- `ScrollEdgeFade` paints edge gradients when a connected scroll container has scrolled or has remaining content.
-- `RollingNumber` renders an integer through clipped, vertically rolling digit windows using measured typography.
-- `SemanticActions` advertises standard accessibility actions and routes them to a callback.
-- `KeyboardShortcut` binds an exact key chord on the active focus route.
-- `MultiClickable` generalizes repeated-tap recognition to any count of two or more.
-- `SecondaryClickable` routes secondary-click and context-menu-key requests to a callback.
-- `PressDragHandle` requires a hold before forwarding drag lifecycle events, for reorder grips and press-drag surfaces.
-- `Dismissible` drags content along one axis and exits past a distance or velocity threshold.
-- `HoverCard` presents arbitrary popup content after hover intent or touch long press, with a dismissal grace period.
-- `UseRevealOnTap` runs a synchronous mutation through a circular-reveal scene transition from the current interaction origin.
-- `PinchZoom` zooms content with a two-pointer pinch or Ctrl + scroll wheel, clamped to a configured range, with optional spring back.
-- All motion flows through the HuxerUI animation system (`AnimateTo`, `MotionController`, `TaskScope::Delay`), so reduced motion, frame scheduling, and background throttling follow the framework policy.
+## Architecture highlights
 
-The widgets use no platform-specific APIs. Windows builds and tests are verified locally; CI covers native widget and preview tests on Windows. Other HuxerUI backends require their normal SDK/toolchain and have not been verified here.
+- **Headless state & controllers (Layer 1)**:
+  - `InteractiveSurface` & `Hoverable` run hover, primary-button press, keyboard Space/Enter activation, and focus tracking while delegating visuals to caller builders (`InteractionSnapshot`).
+  - `SwipeController` (`UseSwipeController`), `PanZoomController` (`UsePanZoomController`), and `HoverCardController` (`UseHoverCardController`) support external observation and programmatic control (e.g., mutually exclusive swipe rows and zoom toolbars).
+  - `ReorderHandle` connects to its enclosing `Reorderable` or `ReorderableGrid` slot via `Environment` when `handle_only = true`, isolating drag initiation from interactive child controls.
+  - `ViewAdaptor` (`operator|`) chains decorators left-to-right without deeply nested wrapper calls.
+- **Styled interaction presets & retained modifiers (Layer 2)**:
+  - **Press & Hover**: `Pressable`, `LongPressable`, `HoldProgressRing`, `MultiClickable`, `DoubleClickable`, `ContextMenuArea`, `SecondaryClickable`, `Ripple`, `HoverLift`, `HoverHighlight`, `Spotlight`.
+  - **Gesture, Reorder & Drag/Drop**: `DragSpring`, `InertialDrag`, `PanZoom`, `PinchZoom`, `SwipeActions`, `Dismissible`, `PressDragHandle`, `ResizeHandle`, `Reorderable`, `ReorderableGrid`, `Draggable<T>`, `DropZone<T>`, `FileDropZone`.
+  - **Overlay, Scroll & Accessibility**: `HoverCard`, `ScrollProgress`, `ScrollEdgeFade`, `KeyboardShortcut`, `SemanticActions`.
+- **Visual motion domain (`visual/`)**:
+  - Non-interactive and value-driven effects isolated from input recognizers: `Pulsing`, `Shimmer`, `Fireworks`, `RollingNumber`, `UsePop` / `Popped`, `UseShake` / `Shaken`, `UseRevealOnTap`.
+- **Framework-native motion**: Every animation runs through `AnimateTo`, `MotionController`, or `TaskScope::Delay`, automatically honoring system reduced-motion preferences and frame scheduling.
 
 ## Add to a HuxerUI app
 
@@ -64,32 +38,43 @@ using namespace huxerui::interaction;
 View Gallery() {
   auto clicks = UseState(0);
   auto shake = UseShake();
+  auto swipe = UseSwipeController();
+
   return Column {
-    Pressable(Card(),
-              {.animation = SpringSpec{.stiffness = 320.0F, .damping_ratio = 0.7F}},
-              [clicks] { clicks += 1; })
-        .With(Frame{.width = 240.0F, .height = 120.0F}),
-    HoverLift(Card(), {.lift = {0.0F, -6.0F}}).With(Frame{.width = 240.0F, .height = 120.0F}),
-    Pulsing(StatusDot(), {.scale_amplitude = 0.08F, .animate_opacity = true, .minimum_opacity = 0.4F})
-        .With(Frame{.width = 12.0F, .height = 12.0F}),
-    Card().With(Ripple{RippleStyle{.color = Color::Rgb(255, 255, 255, 0.14F)}}),
-    Card().With(Spotlight{SpotlightStyle{.diameter = 200.0F}}),
-    DragSpring(Chip(), {.axis = Axis::Horizontal}).With(Frame{.width = 320.0F, .height = 56.0F}),
+    // Pipeline syntax: stateless decorators precede stateful Scope wrappers on the same node
+    Card()
+        .With(Frame{.width = 240.0F, .height = 120.0F}, Ripple{}, Spotlight{})
+        | ContextMenuArea([](Point p) { /* open menu at p */ })
+        | Pressable([clicks] { clicks += 1; },
+                    {.animation = SpringSpec{.stiffness = 320.0F, .damping_ratio = 0.7F}}),
+
+    // Headless InteractiveSurface driving custom visuals from {hovered, pressed, focused}
+    InteractiveSurface(
+        [](const InteractionSnapshot& s) {
+          return Text(s.pressed ? "Pressed" : (s.hovered ? "Hovered" : "Idle"))
+              .With(Frame{.width = 240.0F, .height = 56.0F});
+        },
+        [clicks] { clicks += 1; }),
+
+    // Controlled SwipeActions
+    SwipeActions(
+        ListRow(),
+        [](SwipeActionContext ctx) {
+          return Button("Delete").OnClick(ctx.close).With(Opacity(ctx.progress));
+        },
+        {.controller = swipe}),
+
     Shaken(FormError(), shake),
     Button("Retry").OnClick([shake] { shake.Trigger(); }),
   }.With(Spacing(16.0F));
 }
 ```
 
-`Pressable` and `HoverLift` are composition widgets: each call creates an independent state scope, and recomposition with equal arguments preserves the mounted state by scope position. They impose no intrinsic frame; supply bounded layout through a parent or `.With(Frame{...})`. `Pulsing` is stateless declarative motion. `Ripple` is a modifier applied through `View::With()`; it paints above content, clips to the node bounds and resolved corner radii, and observes pointer sequences with `PointerResult::Observe` so sibling gestures and OnClick continue to work.
-
-Invalid configuration throws `std::invalid_argument` at the call site: non-finite or non-positive scales, non-finite lifts, negative amplitudes, opacities outside [0, 1], non-positive durations, a `Pulsing` style with no participating channel, a `Ripple` with an invalid duration or opacity multiplier, a `Spotlight` with a non-positive diameter or negative fade, or a `Shake` with non-positive amplitude, fewer than one wobble, or non-positive duration. `Reorderable` rejects an invalid auto-scroll edge or step. `ReorderableGrid` rejects invalid cell dimensions, spacing, or highlight width; `ResizeHandle` rejects a non-positive thickness. `SwipeActions` rejects a non-positive extent, an activation ratio outside [0, 1], a negative velocity, or an empty action builder; `ContextMenuArea` rejects a non-positive long-press duration. `Draggable` rejects an opacity outside [0, 1], and `DropZone` / `FileDropZone` reject a negative border width; `FileDropZone` also rejects malformed file filters. `PanZoom` rejects an invalid scale range or negative wheel sensitivity; `InertialDrag` rejects negative projection time or maximum projection. `ScrollProgress` rejects a non-positive thickness or negative inset; `ScrollEdgeFade` rejects a non-positive extent; `RollingNumber` rejects a negative gap or minimum digit count. `SemanticActions` rejects a Custom or invalid action bit; `KeyboardShortcut` rejects `Key::Unknown`; `MultiClickable` rejects a count below two or an invalid interval/movement. `PressDragHandle` rejects a non-positive hold duration; `Dismissible` rejects invalid threshold, velocity, distance, or duration values. `HoverCard` rejects negative delays or an empty card factory. `PanZoom` rejects invalid pan bounds or rotation snap.
-
-Press tracking follows pointer down, up, and cancel events for the primary button. Held-Space scale feedback clears on focus loss; general disabled-state recovery still relies on the framework cancel path, so combine `OnClick` and `Enabled` at the call site as needed. `ShakeTrigger::Trigger()` must be called from event handlers or tasks, never during composition. See [docs/design.md](docs/design.md) for the component catalog and motion conventions, [docs/structure.md](docs/structure.md) for the repository layout and dependency rules, [docs/testing.md](docs/testing.md) for the test layers, and [docs/open-questions.md](docs/open-questions.md) for reviewed design decisions.
+Invalid configuration throws `std::invalid_argument` at the call site. Views impose no intrinsic frame; supply bounded layout through a parent or `.With(Frame{...})`. See [docs/design.md](docs/design.md) for the layered architecture and component catalog, [docs/structure.md](docs/structure.md) for repository boundaries, [docs/testing.md](docs/testing.md) for the test suite, and [docs/open-questions.md](docs/open-questions.md) for design history.
 
 ## Build and test
 
-Requires CMake 3.20+ and C++20. The widgets use the HuxerUI source or SDK; the verified framework revision is `56eb5ab225997cffc83ce8f2736d1fd52c530b70`.
+Requires CMake 3.20+ and C++20, plus HuxerUI source or SDK (`56eb5ab225997cffc83ce8f2736d1fd52c530b70` verified in CI).
 
 ```sh
 cmake -S . -B build -DHUXERUI_HOME=/path/to/HuxerUI \
@@ -100,14 +85,12 @@ cmake --build build --config Release --parallel
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-Run `example_interaction` to try the widgets: a glossy bloom cat paw whose four jelly toe beans and palm pad spread open on a cream cushion when hovered and spring with a particle burst on click, pressable cards with spring and tween motion, a hover-lift tile, a pulsing status tile, a ripple card, a `Reorderable` column, and a Layout section with `ReorderableGrid` and `ResizeHandle`, with icon toggles for the system, light, and dark themes (the system mode follows the platform preference). Like the other Lib projects, the demo lives in [`examples/preview`](examples/preview/README.md) and can also be configured independently:
+The preview gallery in [`examples/preview`](examples/preview/README.md) can also be built standalone:
 
 ```sh
 cmake -S examples/preview -B build-preview -DHUXERUI_HOME=/path/to/HuxerUI
 cmake --build build-preview --config Release --parallel
 ```
-
-The library requires the HuxerUI view system; there is no standalone core in this version. HuxerUI library-graph and project-plan discovery do not compile widget sources. There is no standalone install/export package in this version; consume it through `add_subdirectory` or `huxerui_use_library`.
 
 ## License
 

@@ -4,7 +4,7 @@ namespace interaction_demo {
 using namespace huxerui;
 using namespace huxerui::interaction;
 
-View PaintSection(const DemoState&, const DemoContext& context) {
+View PaintSection(const DemoContext& context) {
   const auto card_label = Foreground(context.colors.on_primary_container);
   const auto card = Frame{.width = 240.0F, .height = 96.0F};
 

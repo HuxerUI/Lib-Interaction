@@ -2,6 +2,7 @@
 
 #include <huxerui/vector.h>
 
+#include <string>
 #include <utility>
 
 namespace interaction_demo {
@@ -10,7 +11,6 @@ using namespace huxerui::interaction;
 
 namespace {
 
-/// Appends a closed elliptic contour to a path; multiple contours fill as a union under NonZero.
 void AppendEllipse(Path& path, Point center, Size radii) {
   constexpr float kCircle = 0.5522847498F;
   const float horizontal = radii.width * kCircle;
@@ -27,7 +27,6 @@ void AppendEllipse(Path& path, Point center, Size radii) {
   path.Close();
 }
 
-/// Teardrop toe bean shared by the silhouette and jelly assets.
 Path ToeBeanPath() {
   Path bean;
   bean.MoveTo({50.0F, 4.0F});
@@ -39,7 +38,6 @@ Path ToeBeanPath() {
   return bean;
 }
 
-/// Wide metacarpal pad with a soft notch between the two upper lobes.
 Path PalmPadPath() {
   Path pad;
   pad.MoveTo({12.0F, 24.0F});
@@ -54,7 +52,6 @@ Path PalmPadPath() {
   return pad;
 }
 
-/// Plain bean silhouette used for tinted wells and the hover gloss.
 const VectorAsset& ToeBeanAsset() {
   static const VectorAsset asset = VectorAsset::Create({100.0F, 100.0F}, [](VectorBuilder& builder) {
     builder.FillPath(ToeBeanPath(), Color::White());
@@ -62,7 +59,6 @@ const VectorAsset& ToeBeanAsset() {
   return asset;
 }
 
-/// Plain palm silhouette used for tinted wells and the hover gloss.
 const VectorAsset& PalmPadAsset() {
   static const VectorAsset asset = VectorAsset::Create({100.0F, 100.0F}, [](VectorBuilder& builder) {
     builder.FillPath(PalmPadPath(), Color::White());
@@ -70,7 +66,6 @@ const VectorAsset& PalmPadAsset() {
   return asset;
 }
 
-/// Soft bubblegum-pink jelly shading, light from the upper left.
 Brush JellyBrush() {
   return RadialGradient{
       .center = {0.36F, 0.28F},
@@ -82,7 +77,6 @@ Brush JellyBrush() {
   };
 }
 
-/// Glossy toe bean with a baked radial gradient, specular swoosh, and a small reflection.
 const VectorAsset& ToeBeanJellyAsset() {
   static const VectorAsset asset = VectorAsset::Create({100.0F, 100.0F}, [](VectorBuilder& builder) {
     const Path bean = ToeBeanPath();
@@ -107,7 +101,6 @@ const VectorAsset& ToeBeanJellyAsset() {
   return asset;
 }
 
-/// Glossy palm pad with a wider specular swoosh and a lower-right reflection.
 const VectorAsset& PalmPadJellyAsset() {
   static const VectorAsset asset = VectorAsset::Create({100.0F, 100.0F}, [](VectorBuilder& builder) {
     const Path pad = PalmPadPath();
@@ -132,7 +125,6 @@ const VectorAsset& PalmPadJellyAsset() {
   return asset;
 }
 
-/// Builds the fluffy paw cushion silhouette in stage coordinates.
 Path PawBaseUnion(Point shift, float grow) {
   Path path;
   AppendEllipse(path, {120.0F + shift.x, 141.0F + shift.y}, {112.0F + grow, 85.0F + grow});
@@ -144,7 +136,6 @@ Path PawBaseUnion(Point shift, float grow) {
   return path;
 }
 
-/// Cream cushion behind the pads, with a baked pink under-rim.
 const VectorAsset& PawBaseAsset() {
   static const VectorAsset asset = VectorAsset::Create({240.0F, 230.0F}, [](VectorBuilder& builder) {
     builder.FillPath(PawBaseUnion({0.0F, 2.0F}, 1.0F), Color::Rgb(255, 223, 233));
@@ -160,7 +151,6 @@ const VectorAsset& PawBaseAsset() {
   return asset;
 }
 
-/// Four-point sparkle that twinkles while the paw is hovered.
 const VectorAsset& SparkleAsset() {
   static const VectorAsset asset = VectorAsset::Create({100.0F, 100.0F}, [](VectorBuilder& builder) {
     Path star;
@@ -180,146 +170,155 @@ const VectorAsset& SparkleAsset() {
 
 } // namespace
 
-View BloomSection(const DemoState& state, const DemoContext& context) {
-  const bool paw_blooming = state.paw_hovered.Get();
-  const Color paw_well = context.dark ? Color::Rgb(211, 123, 150) : Color::Rgb(237, 149, 173);
-  const Color paw_base_shade = context.dark ? Color::Rgb(198, 111, 139) : Color::Rgb(239, 147, 174);
-  const Color paw_glow = context.dark ? Color::Rgb(255, 154, 186, 0.44F) : Color::Rgb(255, 146, 177, 0.36F);
-  const Color paw_glow_soft = context.dark ? Color::Rgb(255, 154, 186, 0.16F)
-                                           : Color::Rgb(255, 146, 177, 0.12F);
-  const Color paw_ink = context.dark ? Color::Rgb(255, 205, 219) : Color::Rgb(141, 63, 85);
-  const Color paw_muted = context.dark ? Color::Rgb(213, 164, 180) : Color::Rgb(176, 108, 128);
-  const Color paw_card_top = context.dark ? Color::Rgb(52, 38, 46) : Color::Rgb(255, 249, 251);
-  const Color paw_card_bottom = context.dark ? Color::Rgb(42, 31, 38) : Color::Rgb(255, 236, 242);
-  const Color paw_border = context.dark ? Color::Rgb(255, 176, 199, 0.16F) : Color::Rgb(232, 126, 157, 0.34F);
-  const Color paw_shadow = context.dark ? Color::Rgb(0, 0, 0, 0.34F) : Color::Rgb(190, 92, 124, 0.18F);
-  const SpringSpec bloom_motion{.stiffness = 300.0F, .damping_ratio = 0.55F};
-  const TweenSpec fade{.duration = 0.24, .easing = Easing::EaseOut};
-  const TweenSpec sparkle_motion{.duration = 0.32, .easing = Easing::EaseOut};
+View BloomSection(const DemoContext& context) {
+  return Scope([context]() -> View {
+    auto boops = UseState(0);
+    auto paw_burst = UseState(FireworksBurst{});
+    auto paw_pop = UsePop(PopStyle{.amplitude = 0.08F, .duration = 0.1});
 
-  const auto pad = [&](const VectorAsset& silhouette, const VectorAsset& jelly, Size size, Point rest, Point drift,
-                       float rest_angle, float hover_angle, float hover_scale) -> View {
-    return Stack {
-      Image(silhouette).Tint(paw_well).With(Frame{.width = size.width, .height = size.height},
-                                            Scale(1.14F),
-                                            Offset(Point{0.0F, 4.0F}),
-                                            Opacity(0.26F)),
-      Image(jelly).With(Frame{.width = size.width, .height = size.height}),
-      Image(silhouette).Tint(Color::White()).With(
-          Frame{.width = size.width, .height = size.height},
-          Opacity(AnimateTo(paw_blooming ? 0.16F : 0.0F, fade))),
-    }.With(Frame{.width = size.width, .height = size.height},
-           Align(HorizontalAlignment::Center, VerticalAlignment::Center),
-           Rotation(AnimateTo(paw_blooming ? hover_angle : rest_angle, bloom_motion)),
-           Scale(AnimateTo(paw_blooming ? hover_scale : 1.0F, bloom_motion)),
-           Offset(AnimateTo(paw_blooming ? rest + drift : rest, bloom_motion)));
-  };
-  const auto sparkle = [&](Point position, float size, float rest_angle, float hover_angle,
-                           double delay) -> View {
-    return Image(SparkleAsset())
-        .Tint(Color::White())
-        .With(Frame{.width = size, .height = size},
-              Rotation(AnimateTo(paw_blooming ? hover_angle : rest_angle, sparkle_motion,
-                                 AnimationPlayback{.delay = paw_blooming ? delay : 0.0})),
-              Scale(AnimateTo(paw_blooming ? 1.0F : 0.35F, sparkle_motion)),
-              Opacity(AnimateTo(paw_blooming ? 0.92F : 0.0F, sparkle_motion)),
-              Offset(position));
-  };
-  View halo = Stack{}.With(
-      Frame{.width = 232.0F, .height = 232.0F},
-      Background{RadialGradient{
-          .center = {0.5F, 0.5F},
-          .radius = {0.5F, 0.5F},
-          .stops = {{0.0F, paw_glow}, {0.58F, paw_glow_soft}, {1.0F, Color::Rgb(255, 170, 195, 0.0F)}},
-      }},
-      Scale(AnimateTo(paw_blooming ? 1.0F : 0.72F, bloom_motion)),
-      Opacity(AnimateTo(paw_blooming ? 1.0F : 0.0F, fade)),
-      Offset(Point{4.0F, 6.0F}));
-  View base_shadow = Image(PawBaseAsset())
-                         .Tint(paw_base_shade)
-                         .With(Frame{.width = 240.0F, .height = 230.0F},
-                               Scale(1.015F),
-                               Offset(Point{0.0F, 4.0F}),
-                               Opacity(0.14F));
-  View base = Image(PawBaseAsset()).With(Frame{.width = 240.0F, .height = 230.0F});
-  View stage = Stack {
-    halo,
-    base_shadow,
-    base,
-    pad(PalmPadAsset(), PalmPadJellyAsset(), {122.0F, 90.0F}, {59.0F, 124.0F}, {0.0F, 2.0F}, 0.0F, 0.0F, 1.04F),
-    pad(ToeBeanAsset(), ToeBeanJellyAsset(), {52.0F, 68.0F}, {8.0F, 76.0F}, {-10.0F, -6.0F}, -26.0F, -35.0F, 1.07F),
-    pad(ToeBeanAsset(), ToeBeanJellyAsset(), {56.0F, 72.0F}, {62.0F, 33.0F}, {-5.0F, -14.0F}, -10.0F, -15.0F, 1.07F)
-        .Key("catpaw-toe"),
-    pad(ToeBeanAsset(), ToeBeanJellyAsset(), {56.0F, 72.0F}, {122.0F, 33.0F}, {5.0F, -14.0F}, 10.0F, 15.0F, 1.07F),
-    pad(ToeBeanAsset(), ToeBeanJellyAsset(), {52.0F, 68.0F}, {180.0F, 76.0F}, {10.0F, -6.0F}, 26.0F, 35.0F, 1.07F),
-    sparkle({14.0F, 22.0F}, 22.0F, 0.0F, 40.0F, 0.04),
-    sparkle({198.0F, 12.0F}, 16.0F, 15.0F, -20.0F, 0.10),
-    sparkle({212.0F, 168.0F}, 14.0F, -12.0F, 25.0F, 0.16),
-  }.With(Frame{.width = 240.0F, .height = 230.0F});
-  View card = Column {
-    stage,
-    Text("boops: " + std::to_string(state.boops.Get()), TextRole::Label)
-        .With(Foreground(paw_ink))
-        .Key("catpaw-count"),
-    Text("hover to bloom · click to boop", TextRole::Label).With(Foreground(paw_muted)),
-  }.With(Frame{.width = 280.0F, .height = 324.0F},
-         Padding(18.0F),
-         Spacing(6.0F),
-         CrossAlign(CrossAxisAlignment::Center),
-         Background{LinearGradient{
-             .start = {0.0F, 0.0F},
-             .end = {0.0F, 1.0F},
-             .stops = {{0.0F, paw_card_top}, {1.0F, paw_card_bottom}},
-         }},
-         Border{.color = paw_border, .width = 1.0F},
-         CornerRadius(24.0F),
-         Shadow{.color = paw_shadow, .offset = {0.0F, 8.0F}, .blur_radius = 18.0F});
-  View paw = Popped(
-      Pressable(
-          std::move(card),
-          {.hovered_scale = 1.015F,
-           .pressed_scale = 0.965F,
-           .animation = SpringSpec{.stiffness = 360.0F, .damping_ratio = 0.62F}},
-          [boops = state.boops, burst = state.paw_burst, pop = state.paw_pop] {
-            boops += 1;
-            burst = FireworksBurst{.id = burst.Get().id + 1, .local_position = {140.0F, 150.0F}};
-            pop.Trigger();
-          }),
-      state.paw_pop);
-  paw = std::move(paw)
-            .On<ViewEvents::Hover>([hovered = state.paw_hovered](const HoverEvent& event) {
-              hovered = event.type != HoverEventType::Leave;
-            })
-            .With(Fireworks{
-                FireworksStyle{
-                    .palette = {Color::Rgb(255, 255, 255, 0.95F), Color::Rgb(255, 178, 198, 0.95F),
-                                Color::Rgb(255, 130, 160, 0.95F), Color::Rgb(255, 216, 158, 0.95F)},
-                    .particle_count = 22,
-                    .duration = 0.85,
-                    .spread_radius = 66.0F,
-                    .gravity = 30.0F,
-                    .corner_radii = 24.0F,
-                },
-                state.paw_burst.Get(),
-            })
-            .Key("catpaw-demo");
+    const Color paw_well = context.dark ? Color::Rgb(211, 123, 150) : Color::Rgb(237, 149, 173);
+    const Color paw_base_shade = context.dark ? Color::Rgb(198, 111, 139) : Color::Rgb(239, 147, 174);
+    const Color paw_glow = context.dark ? Color::Rgb(255, 154, 186, 0.44F) : Color::Rgb(255, 146, 177, 0.36F);
+    const Color paw_glow_soft = context.dark ? Color::Rgb(255, 154, 186, 0.16F)
+                                             : Color::Rgb(255, 146, 177, 0.12F);
+    const Color paw_ink = context.dark ? Color::Rgb(255, 205, 219) : Color::Rgb(141, 63, 85);
+    const Color paw_muted = context.dark ? Color::Rgb(213, 164, 180) : Color::Rgb(176, 108, 128);
+    const Color paw_card_top = context.dark ? Color::Rgb(52, 38, 46) : Color::Rgb(255, 249, 251);
+    const Color paw_card_bottom = context.dark ? Color::Rgb(42, 31, 38) : Color::Rgb(255, 236, 242);
+    const Color paw_border = context.dark ? Color::Rgb(255, 176, 199, 0.16F) : Color::Rgb(232, 126, 157, 0.34F);
+    const Color paw_shadow = context.dark ? Color::Rgb(0, 0, 0, 0.34F) : Color::Rgb(190, 92, 124, 0.18F);
+    const SpringSpec bloom_motion{.stiffness = 300.0F, .damping_ratio = 0.55F};
+    const SpringSpec press_motion{.stiffness = 360.0F, .damping_ratio = 0.62F};
+    const TweenSpec fade{.duration = 0.24, .easing = Easing::EaseOut};
+    const TweenSpec sparkle_motion{.duration = 0.32, .easing = Easing::EaseOut};
 
-  return Column {
-    SectionLabel(context, "Bloom"),
-    Flow {
-      std::move(paw),
-      Column {
-        Text("Bloom cat paw", TextRole::Title),
-        Text("Hover the card to spread the four toe beans and the palm pad. Click to boop the paw: it springs, "
-             "and a particle burst flies out over the card.",
-             TextRole::Label)
-            .With(Foreground(context.colors.on_surface_variant)),
-        Text("The pads, halo, and sparkles are vector assets driven by declarative animation targets.",
-             TextRole::Label)
-            .With(Foreground(context.colors.on_surface_variant)),
-      }.With(Frame{.width = context.compact ? 240.0F : 320.0F}, Spacing(8.0F)),
-    }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Center)),
-  }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
+    View surface = InteractiveSurface(
+        [=](const InteractionSnapshot& snapshot) -> View {
+          const bool paw_blooming = snapshot.hovered;
+          const float card_scale = snapshot.pressed ? 0.965F : (snapshot.hovered ? 1.015F : 1.0F);
+          const auto pad = [&](const VectorAsset& silhouette, const VectorAsset& jelly, Size size, Point rest,
+                               Point drift, float rest_angle, float hover_angle, float hover_scale) -> View {
+            return Stack {
+              Image(silhouette).Tint(paw_well).With(Frame{.width = size.width, .height = size.height},
+                                                    Scale(1.14F),
+                                                    Offset(Point{0.0F, 4.0F}),
+                                                    Opacity(0.26F)),
+              Image(jelly).With(Frame{.width = size.width, .height = size.height}),
+              Image(silhouette).Tint(Color::White()).With(
+                  Frame{.width = size.width, .height = size.height},
+                  Opacity(AnimateTo(paw_blooming ? 0.16F : 0.0F, fade))),
+            }.With(Frame{.width = size.width, .height = size.height},
+                   Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                   Rotation(AnimateTo(paw_blooming ? hover_angle : rest_angle, bloom_motion)),
+                   Scale(AnimateTo(paw_blooming ? hover_scale : 1.0F, bloom_motion)),
+                   Offset(AnimateTo(paw_blooming ? rest + drift : rest, bloom_motion)));
+          };
+          const auto sparkle = [&](Point position, float size, float rest_angle, float hover_angle,
+                                   double delay) -> View {
+            return Image(SparkleAsset())
+                .Tint(Color::White())
+                .With(Frame{.width = size, .height = size},
+                      Rotation(AnimateTo(paw_blooming ? hover_angle : rest_angle, sparkle_motion,
+                                         AnimationPlayback{.delay = paw_blooming ? delay : 0.0})),
+                      Scale(AnimateTo(paw_blooming ? 1.0F : 0.35F, sparkle_motion)),
+                      Opacity(AnimateTo(paw_blooming ? 0.92F : 0.0F, sparkle_motion)),
+                      Offset(position));
+          };
+          View halo = Stack{}.With(
+              Frame{.width = 232.0F, .height = 232.0F},
+              Background{RadialGradient{
+                  .center = {0.5F, 0.5F},
+                  .radius = {0.5F, 0.5F},
+                  .stops = {{0.0F, paw_glow}, {0.58F, paw_glow_soft}, {1.0F, Color::Rgb(255, 170, 195, 0.0F)}},
+              }},
+              Scale(AnimateTo(paw_blooming ? 1.0F : 0.72F, bloom_motion)),
+              Opacity(AnimateTo(paw_blooming ? 1.0F : 0.0F, fade)),
+              Offset(Point{4.0F, 6.0F}));
+          View base_shadow = Image(PawBaseAsset())
+                                 .Tint(paw_base_shade)
+                                 .With(Frame{.width = 240.0F, .height = 230.0F},
+                                       Scale(1.015F),
+                                       Offset(Point{0.0F, 4.0F}),
+                                       Opacity(0.14F));
+          View base = Image(PawBaseAsset()).With(Frame{.width = 240.0F, .height = 230.0F});
+          View stage = Stack {
+            halo,
+            base_shadow,
+            base,
+            pad(PalmPadAsset(), PalmPadJellyAsset(), {122.0F, 90.0F}, {59.0F, 124.0F}, {0.0F, 2.0F}, 0.0F, 0.0F, 1.04F),
+            pad(ToeBeanAsset(), ToeBeanJellyAsset(), {52.0F, 68.0F}, {8.0F, 76.0F}, {-10.0F, -6.0F}, -26.0F, -35.0F,
+                1.07F),
+            pad(ToeBeanAsset(), ToeBeanJellyAsset(), {56.0F, 72.0F}, {62.0F, 33.0F}, {-5.0F, -14.0F}, -10.0F, -15.0F,
+                1.07F)
+                .Key("catpaw-toe"),
+            pad(ToeBeanAsset(), ToeBeanJellyAsset(), {56.0F, 72.0F}, {122.0F, 33.0F}, {5.0F, -14.0F}, 10.0F, 15.0F,
+                1.07F),
+            pad(ToeBeanAsset(), ToeBeanJellyAsset(), {52.0F, 68.0F}, {180.0F, 76.0F}, {10.0F, -6.0F}, 26.0F, 35.0F,
+                1.07F),
+            sparkle({14.0F, 22.0F}, 22.0F, 0.0F, 40.0F, 0.04),
+            sparkle({198.0F, 12.0F}, 16.0F, 15.0F, -20.0F, 0.10),
+            sparkle({212.0F, 168.0F}, 14.0F, -12.0F, 25.0F, 0.16),
+          }.With(Frame{.width = 240.0F, .height = 230.0F});
+
+          return Column {
+            stage,
+            Text("boops: " + std::to_string(boops.Get()), TextRole::Label)
+                .With(Foreground(paw_ink))
+                .Key("catpaw-count"),
+            Text("hover to bloom · click to boop", TextRole::Label).With(Foreground(paw_muted)),
+          }.With(Frame{.width = 280.0F, .height = 324.0F},
+                 Padding(18.0F),
+                 Spacing(6.0F),
+                 CrossAlign(CrossAxisAlignment::Center),
+                 Background{LinearGradient{
+                     .start = {0.0F, 0.0F},
+                     .end = {0.0F, 1.0F},
+                     .stops = {{0.0F, paw_card_top}, {1.0F, paw_card_bottom}},
+                 }},
+                 Border{.color = paw_border, .width = 1.0F},
+                 CornerRadius(24.0F),
+                 Shadow{.color = paw_shadow, .offset = {0.0F, 8.0F}, .blur_radius = 18.0F},
+                 Scale(AnimateTo(card_scale, press_motion)));
+        },
+        [boops, paw_burst, paw_pop] {
+          boops += 1;
+          paw_burst = FireworksBurst{.id = paw_burst.Get().id + 1, .local_position = {140.0F, 150.0F}};
+          paw_pop.Trigger();
+        });
+
+    View paw = std::move(surface) | Popped(paw_pop);
+    paw = std::move(paw)
+              .With(Fireworks{
+                  FireworksStyle{
+                      .palette = {Color::Rgb(255, 255, 255, 0.95F), Color::Rgb(255, 178, 198, 0.95F),
+                                  Color::Rgb(255, 130, 160, 0.95F), Color::Rgb(255, 216, 158, 0.95F)},
+                      .particle_count = 22,
+                      .duration = 0.85,
+                      .spread_radius = 66.0F,
+                      .gravity = 30.0F,
+                      .corner_radii = 24.0F,
+                  },
+                  paw_burst.Get(),
+              })
+              .Key("catpaw-demo");
+
+    return Column {
+      SectionLabel(context, "Bloom"),
+      Flow {
+        std::move(paw),
+        Column {
+          Text("Bloom cat paw", TextRole::Title),
+          Text("Hover the card to spread the four toe beans and the palm pad via headless InteractiveSurface. "
+               "Click to boop the paw: it springs, and a particle burst flies out over the card.",
+               TextRole::Label)
+              .With(Foreground(context.colors.on_surface_variant)),
+          Text("Section-local state keeps hover and boop updates isolated from the rest of the gallery.",
+               TextRole::Label)
+              .With(Foreground(context.colors.on_surface_variant)),
+        }.With(Frame{.width = context.compact ? 240.0F : 320.0F}, Spacing(8.0F)),
+      }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Center)),
+    }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
+  });
 }
 
 } // namespace interaction_demo

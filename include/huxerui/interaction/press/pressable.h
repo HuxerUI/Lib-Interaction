@@ -3,52 +3,68 @@
 #include <huxerui/animation.h>
 #include <huxerui/event.h>
 #include <huxerui/geometry.h>
+#include <huxerui/interaction/pipe.h>
 #include <huxerui/view.h>
+
+#include <concepts>
 #include <functional>
+#include <type_traits>
+#include <utility>
 
 namespace huxerui::interaction {
 
 /// Motion configuration for Pressable. Defaults produce a subtle hover emphasis and a light press-in.
-/// The style controls only presentation; activation is configured separately through the on_click callback.
 struct PressableStyle {
   /// Scale applied while a hover-capable pointer targets the content. Rest state is 1.0.
   float hovered_scale = 1.03F;
-  /// Scale applied while a primary pointer press is owned by the content. Rest state is 1.0.
+  /// Scale applied while a primary pointer press or focused Space press is active. Rest state is 1.0.
   float pressed_scale = 0.97F;
   /// Motion used when the effective scale target changes, including the return to rest.
   AnimationSpec animation = TweenSpec{.duration = 0.16, .easing = Easing::EaseOut};
   /// Pivot used by the scale transform. Defaults to the center of the content.
   TransformOrigin origin = {};
-  /// Cursor shown over the content. Default keeps the platform cursor.
+  /// Cursor shown over the content. Default shows the hand cursor.
   PointerCursorKind cursor = PointerCursorKind::Hand;
-  /// Whether a composed on_click surface participates in keyboard focus. When set, the framework's keyboard
-  /// activation handles Enter (immediate) and Space (press-then-release) activation, paints the theme's
-  /// focus-visible ring, and applies pressed_scale while Space is held.
+  /// Whether an actionable surface participates in keyboard focus and Space/Enter activation.
   bool keyboard_focusable = true;
+
   bool operator==(const PressableStyle&) const = default;
 };
 
-/// Composes content that responds to hover and press with an animated scale around one pivot.
-///
-/// Hover is tracked through ViewEvents::Hover; press is tracked through ViewEvents::Pointer down, up, and cancel
-/// phases. The effective scale target is 1.0 at rest, hovered_scale while hovered, and pressed_scale while pressed;
-/// target changes animate with the configured motion without recomposing the content. With an on_click callback the
-/// surface is keyboard-focusable: the framework's keyboard activation handles Enter and Space activation, paints the
-/// focus-visible ring, and held Space applies pressed_scale. Focus loss clears the held keyboard press, and a
-/// framework pointer cancel clears the pointer press.
-///
-/// Call during composition. Each call creates an independent state scope; recomposition with equal arguments
-/// preserves the mounted hover and press state by scope position.
+namespace detail {
+View PressableImpl(View content, std::function<void()> on_click, PressableStyle style);
+} // namespace detail
+
+/// Composes content that responds to hover and primary press with an animated scale around one pivot (visual-only).
+/// @throws std::invalid_argument If either scale is non-finite or not positive.
+inline View Pressable(View content, PressableStyle style = {}) {
+  return detail::PressableImpl(std::move(content), {}, style);
+}
+
+/// Composes an actionable pressable surface with click, keyboard Enter/Space activation, and Button semantics.
 /// @param content Content displayed inside the interactive surface. The view imposes no intrinsic frame.
-/// @param style Scale targets, motion, and pivot. Must satisfy the documented ranges.
-/// @param on_click Optional activation callback invoked by the built-in Click event, or an empty function to
-///     compose a purely visual pressable surface.
+/// @param on_click Activation callback invoked on primary click or keyboard Enter/Space.
+/// @param style Scale targets, motion, cursor, and focus configuration.
 /// @return A View whose mounted instance owns the hover and press presentation state.
 /// @throws std::invalid_argument If either scale is non-finite or not positive.
-/// @code
-/// Pressable(Card{...}, {.hovered_scale = 1.02F, .animation = SpringSpec{}})
-///     .With(Frame{.width = 280.0F, .height = 160.0F});
-/// @endcode
-View Pressable(View content, PressableStyle style = {}, std::function<void()> on_click = {});
+template <std::invocable F>
+View Pressable(View content, F&& on_click, PressableStyle style = {}) {
+  return detail::PressableImpl(std::move(content), std::function<void()>(std::forward<F>(on_click)), style);
+}
+
+/// Pipeable adaptor for visual-only Pressable.
+[[nodiscard]] inline ViewAdaptor Pressable(PressableStyle style = {}) {
+  return ViewAdaptor([style](View content) { return detail::PressableImpl(std::move(content), {}, style); });
+}
+
+/// Pipeable adaptor for actionable Pressable.
+template <std::invocable F>
+  requires(!std::convertible_to<std::remove_cvref_t<F>, View>)
+[[nodiscard]] ViewAdaptor Pressable(F&& on_click, PressableStyle style = {}) {
+  std::function<void()> callback(std::forward<F>(on_click));
+  return ViewAdaptor([callback = std::move(callback), style](View content) {
+    return detail::PressableImpl(std::move(content), callback, style);
+  });
+}
 
 } // namespace huxerui::interaction

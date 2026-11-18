@@ -5,7 +5,7 @@ if(CMAKE_HOST_APPLE AND NOT CMAKE_SYSTEM_NAME AND NOT CMAKE_TOOLCHAIN_FILE
 endif()
 
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    project(example_interaction VERSION 0.1.0 LANGUAGES NONE)
+    project(example_interaction VERSION 0.2.0 LANGUAGES NONE)
     include("${CMAKE_CURRENT_SOURCE_DIR}/HuxerUIProject.cmake")
     if(HUXERUI_PROJECT_PLAN_ONLY)
         return()
@@ -14,17 +14,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../.." "${CMAKE_BINARY_DIR}/lib-interaction")
 endif()
 
-set(_preview_sources
-    src/app.cpp
-    src/application.cpp
-    src/demos/bloom_paw.cpp
-    src/demos/drag.cpp
-    src/demos/gesture.cpp
-    src/demos/layout.cpp
-    src/demos/paint.cpp
-    src/demos/press.cpp
-    src/demos/reorder.cpp
-    src/demos/status.cpp)
+include("${CMAKE_CURRENT_SOURCE_DIR}/PreviewViews.cmake")
+
+set(_preview_sources src/application.cpp)
 if(NOT HUXERUI_LIBRARY_GRAPH_ONLY)
     if(WIN32)
         list(APPEND _preview_sources platform/windows/main.cpp)
@@ -43,5 +35,8 @@ huxerui_add_app(example_interaction
     BUNDLE_IDENTIFIER "org.huxerui.lib.interaction.preview")
 huxerui_use_library(example_interaction TARGET HuxerUI::Interaction)
 if(NOT HUXERUI_LIBRARY_GRAPH_ONLY)
-    target_compile_options(example_interaction PRIVATE "$<$<CXX_COMPILER_ID:MSVC>:/utf-8;/W4;/permissive->")
+    target_link_libraries(example_interaction PRIVATE interaction_preview_views)
+    target_compile_options(example_interaction PRIVATE
+        "$<$<CXX_COMPILER_ID:MSVC>:/utf-8;/W4;/permissive->"
+        "$<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall;-Wextra;-Wpedantic>")
 endif()

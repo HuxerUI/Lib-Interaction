@@ -3,7 +3,7 @@ if(CMAKE_HOST_APPLE AND NOT CMAKE_SYSTEM_NAME AND NOT CMAKE_TOOLCHAIN_FILE
         AND NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET AND "$ENV{MACOSX_DEPLOYMENT_TARGET}" STREQUAL "")
     set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS deployment target")
 endif()
-project(lib_interaction VERSION 0.1.0 LANGUAGES NONE)
+project(lib_interaction VERSION 0.2.0 LANGUAGES NONE)
 
 option(HUXERUI_INTERACTION_BUILD_TESTS "Build interaction widget tests" OFF)
 option(HUXERUI_INTERACTION_BUILD_EXAMPLES "Build the interaction preview demo" OFF)
@@ -13,48 +13,49 @@ if(HUXERUI_PROJECT_PLAN_ONLY)
 endif()
 
 huxerui_add_library(huxerui_interaction SOURCES
+    # internal shared infrastructure
+    src/internal/reorder_core.cpp
     # press
-    src/press/multiclick.cpp
-    src/press/multitap.cpp
+    src/press/contextmenu.cpp
     src/press/longpress.cpp
+    src/press/multiclick.cpp
     src/press/pressable.cpp
     src/press/ripple.cpp
-    src/press/secondaryclick.cpp
+    src/press/surface.cpp
     # hover
     src/hover/highlight.cpp
-    src/hover/hover.cpp
-    src/hover/hovercard.cpp
+    src/hover/hoverlift.cpp
     src/hover/spotlight.cpp
-    # motion
-    src/motion/fireworks.cpp
-    src/motion/pop.cpp
-    src/motion/pulse.cpp
-    src/motion/revealontap.cpp
-    src/motion/rollingnumber.cpp
-    src/motion/shake.cpp
-    src/motion/shimmer.cpp
     # gesture
     src/gesture/dismissible.cpp
     src/gesture/dragspring.cpp
     src/gesture/inertialdrag.cpp
-    src/gesture/panzoom.cpp
-    src/gesture/pinch.cpp
     src/gesture/pressdraghandle.cpp
     src/gesture/resizehandle.cpp
     src/gesture/swipe.cpp
+    src/gesture/transform.cpp
     # reorder
     src/reorder/reorder.cpp
     src/reorder/reordergrid.cpp
+    src/reorder/reorderhandle.cpp
     # drag and drop
     src/dragdrop/filedropzone.cpp
+    # overlay
+    src/overlay/hovercard.cpp
     # scroll
     src/scroll/scrolledgefade.cpp
     src/scroll/scrollprogress.cpp
-    # overlay
-    src/overlay/contextmenu.cpp
     # accessibility
     src/accessibility/keyboardshortcut.cpp
-    src/accessibility/semanticactions.cpp)
+    src/accessibility/semanticactions.cpp
+    # visual
+    src/visual/fireworks.cpp
+    src/visual/pop.cpp
+    src/visual/pulse.cpp
+    src/visual/revealontap.cpp
+    src/visual/rollingnumber.cpp
+    src/visual/shake.cpp
+    src/visual/shimmer.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)
 if(HUXERUI_LIBRARY_GRAPH_ONLY)
     return()

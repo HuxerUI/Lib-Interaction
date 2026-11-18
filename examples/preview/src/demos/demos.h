@@ -3,30 +3,19 @@
 #include <huxerui/huxerui.h>
 #include <huxerui/interaction.h>
 
-#include <string>
-
 namespace interaction_demo {
 
-/// State and triggers shared by the gallery sections so cross-demo counters stay in one place.
+/// Counters genuinely shared across gallery sections and displayed in the footer StatusSection.
+/// Section-local state lives inside each section's own Scope so local interactions do not recompose the whole gallery.
 struct DemoState {
   huxerui::State<int> clicks;
   huxerui::State<int> holds;
   huxerui::State<int> doubles;
-  huxerui::State<huxerui::interaction::FireworksBurst> burst;
-  huxerui::State<std::string> last_reorder;
-  huxerui::State<std::string> grid_last;
-  huxerui::State<float> pane_width;
-  huxerui::State<int> boops;
-  huxerui::State<bool> paw_hovered;
-  huxerui::State<huxerui::interaction::FireworksBurst> paw_burst;
-  huxerui::interaction::ShakeTrigger shake;
-  huxerui::interaction::PopTrigger pop;
-  huxerui::interaction::PopTrigger paw_pop;
 };
 
-/// Read-only theme and viewport values resolved once by the gallery.
+/// Value-owned theme and viewport snapshot safe to capture into section-local composition scopes.
 struct DemoContext {
-  const huxerui::ColorScheme& colors;
+  huxerui::ColorScheme colors;
   bool compact = false;
   bool expanded = false;
   bool dark = false;
@@ -38,13 +27,13 @@ inline huxerui::View SectionLabel(const DemoContext& context, const char* text) 
       .With(huxerui::Foreground(context.colors.on_surface_variant));
 }
 
-huxerui::View BloomSection(const DemoState& state, const DemoContext& context);
+huxerui::View BloomSection(const DemoContext& context);
 huxerui::View PressSection(const DemoState& state, const DemoContext& context);
-huxerui::View PaintSection(const DemoState& state, const DemoContext& context);
+huxerui::View PaintSection(const DemoContext& context);
 huxerui::View GestureSection(const DemoState& state, const DemoContext& context);
-huxerui::View ReorderSection(const DemoState& state, const DemoContext& context);
-huxerui::View LayoutSection(const DemoState& state, const DemoContext& context);
-huxerui::View DragSection(const DemoState& state, const DemoContext& context);
+huxerui::View ReorderSection(const DemoContext& context);
+huxerui::View LayoutSection(const DemoContext& context);
+huxerui::View DragSection(const DemoContext& context);
 huxerui::View StatusSection(const DemoState& state, const DemoContext& context);
 
 } // namespace interaction_demo

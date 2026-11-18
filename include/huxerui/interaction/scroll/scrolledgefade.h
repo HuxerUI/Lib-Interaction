@@ -17,38 +17,25 @@ struct ScrollEdgeFadeStyle {
   bool fade_start = true;
   /// Whether the trailing edge fades when more content remains.
   bool fade_end = true;
+
   bool operator==(const ScrollEdgeFadeStyle&) const = default;
 };
 
 /// Paints translucent edge fades over a connected scroll container.
-///
-/// Attach through View::With() to the ScrollView that owns controller. The extension reads
-/// ScrollController::Metrics() on NodeExtension::OnScrollActivity and paints a gradient only when the corresponding
-/// edge is scrollable and has been passed. The fade follows the scroll axis automatically.
-/// @code
-/// auto controller = UseScrollController();
-/// return ScrollView(content)
-///     .Controller(controller)
-///     .With(ScrollEdgeFade{controller, ScrollEdgeFadeStyle{.color = Color::White()}});
-/// @endcode
 class ScrollEdgeFade {
 public:
-  /// Retained extension created by the framework when the modifier is attached through With().
   class Extension;
 
-  /// Returns the retained-modifier descriptor used by View::With().
-  static const detail::ModifierDescriptor& Descriptor();
+  static const huxerui::detail::ModifierDescriptor& Descriptor();
 
   /// Validates and stores the connected controller and appearance.
-  /// @param controller Controller bound to the same scroll container.
-  /// @param style Fade appearance.
-  /// @throws std::invalid_argument If extent is invalid.
+  /// @throws std::invalid_argument If extent is non-finite or not positive.
   explicit ScrollEdgeFade(ScrollController controller = ScrollController{}, ScrollEdgeFadeStyle style = {});
 
-  /// Controller whose metrics decide whether each edge is active.
   ScrollController controller;
-  /// Fade appearance.
   ScrollEdgeFadeStyle style;
+
+  bool operator==(const ScrollEdgeFade&) const = default;
 };
 
 } // namespace huxerui::interaction

@@ -3,24 +3,55 @@
 #include <huxerui/animation.h>
 #include <huxerui/color.h>
 #include <huxerui/event.h>
-#include <huxerui/gesture.h>
 #include <huxerui/geometry.h>
+#include <huxerui/gesture.h>
+#include <huxerui/interaction/pipe.h>
 #include <huxerui/view.h>
 
 #include <chrono>
+#include <concepts>
 #include <functional>
 #include <optional>
+#include <type_traits>
+#include <utility>
 
 namespace huxerui::interaction {
 
-/// Presentation configuration for LongPressable. Recognition follows the platform GestureSettings unless overridden
-/// per widget; the presentation fields control only the hold feedback.
+/// Paint configuration for HoldProgressRing.
+struct HoldProgressStyle {
+  /// Foreground arc color; the background track uses this color at reduced alpha.
+  Color color = Color::Rgb(255, 255, 255, 0.9F);
+  /// Seconds required for a primary pointer hold to fill the full circle. Must be finite and positive.
+  double duration = 0.5;
+  /// Ring stroke width in logical pixels. Must be finite and positive.
+  float stroke_width = 3.0F;
+  /// Radial inset from the half-min-dimension of the host node bounds. Must be finite and non-negative.
+  float inset = 8.0F;
+
+  bool operator==(const HoldProgressStyle&) const = default;
+};
+
+/// A retained modifier that paints a circular hold-progress ring above node content without consuming pointer events.
+class HoldProgressRing {
+public:
+  class Extension;
+
+  static const huxerui::detail::ModifierDescriptor& Descriptor();
+
+  /// Validates and stores the progress ring configuration.
+  /// @throws std::invalid_argument If duration or stroke_width is not positive, or inset is negative.
+  explicit HoldProgressRing(HoldProgressStyle style = {});
+
+  HoldProgressStyle style;
+
+  bool operator==(const HoldProgressRing&) const = default;
+};
+
+/// Presentation configuration for LongPressable.
 struct LongPressableStyle {
-  /// Time the pointer must remain within the movement tolerance before recognition. An empty value uses the
-  /// platform default long press duration. Must be positive when set.
+  /// Time the pointer must remain within movement tolerance before recognition. Empty uses platform default.
   std::optional<std::chrono::duration<double>> minimum_duration = std::nullopt;
-  /// Node-local movement tolerance override in logical pixels. An empty value uses the platform pointer slop.
-  /// Must be finite and positive when set.
+  /// Node-local movement tolerance override in logical pixels. Empty uses platform pointer slop.
   std::optional<float> maximum_movement = std::nullopt;
   /// Scale applied while a recognized long press owns the pointer. Rest state is 1.0. Must be finite and positive.
   float held_scale = 0.97F;
@@ -28,38 +59,53 @@ struct LongPressableStyle {
   AnimationSpec animation = TweenSpec{.duration = 0.16, .easing = Easing::EaseOut};
   /// Pivot used by the scale transform. Defaults to the center of the content.
   TransformOrigin origin = {};
-  /// Cursor shown over the content. Default keeps the platform cursor.
+  /// Cursor shown over the content.
   PointerCursorKind cursor = PointerCursorKind::Default;
-  /// Whether to draw a circular progress ring over the content while the hold runs. The ring fills across the
-  /// resolved hold duration — minimum_duration when set, otherwise the framework's 0.5 s default — and the same
-  /// resolved value is applied to the gesture so the ring and recognition stay synchronized.
+  /// Whether to attach a HoldProgressRing while the hold runs.
   bool show_progress = false;
-  /// Ring color; the background track uses this color at reduced alpha. Used only when show_progress is set.
+  /// Ring color used when `show_progress` is true.
   Color progress_color = Color::Rgb(255, 255, 255, 0.9F);
+  /// Ring stroke width used when `show_progress` is true. Must be finite and positive.
+  float progress_stroke_width = 3.0F;
+  /// Ring inset used when `show_progress` is true. Must be finite and non-negative.
+  float progress_inset = 8.0F;
+
   bool operator==(const LongPressableStyle&) const = default;
 };
 
-/// Composes content that recognizes a press-and-hold gesture and reports recognition through the callback.
-///
-/// The gesture wins the pointer sequence once the hold duration elapses within the movement tolerance; the callback
-/// fires at recognition, the content scales to held_scale while the press is owned, and the sequence ends on
-/// pointer up or cancel. With LongPressableStyle::show_progress the widget also paints a circular ring that fills
-/// across the hold duration and drains on early release. OnClick and other gestures stay composable at the call
-/// site.
-///
-/// Call during composition. Each call creates an independent state scope; recomposition with equal arguments
-/// preserves the mounted hold state by scope position. The widget imposes no intrinsic frame.
-/// @param content Content displayed inside the interactive surface.
-/// @param style Recognition overrides and hold presentation. Must satisfy the documented ranges.
-/// @param on_long_press Callback invoked once when the long press is recognized, or an empty function to compose a
-///     purely visual hold surface.
-/// @return A View whose mounted instance owns the hold state.
-/// @throws std::invalid_argument If the duration override is not positive, the movement override is not finite and
-///     positive, or the held scale is non-finite or not positive.
-/// @code
-/// LongPressable(Card(), {.minimum_duration = std::chrono::duration<double>(0.4)}, onDelete)
-///     .With(Frame{.width = 120.0F, .height = 120.0F});
-/// @endcode
-View LongPressable(View content, LongPressableStyle style = {}, std::function<void()> on_long_press = {});
+namespace detail {
+View LongPressableImpl(View content, std::function<void()> on_long_press, LongPressableStyle style,
+                       std::function<void(bool)> on_holding_changed = {});
+} // namespace detail
+
+/// Visual-only LongPressable overload.
+inline View LongPressable(View content, LongPressableStyle style = {}) {
+  return detail::LongPressableImpl(std::move(content), {}, style);
+}
+
+/// Composes content that recognizes a press-and-hold gesture and invokes `on_long_press` once at recognition.
+template <std::invocable F>
+View LongPressable(View content, F&& on_long_press, LongPressableStyle style = {},
+                   std::function<void(bool)> on_holding_changed = {}) {
+  return detail::LongPressableImpl(std::move(content), std::function<void()>(std::forward<F>(on_long_press)), style,
+                                   std::move(on_holding_changed));
+}
+
+/// Pipeable adaptor for visual-only LongPressable.
+[[nodiscard]] inline ViewAdaptor LongPressable(LongPressableStyle style = {}) {
+  return ViewAdaptor([style](View content) { return detail::LongPressableImpl(std::move(content), {}, style); });
+}
+
+/// Pipeable adaptor for actionable LongPressable.
+template <std::invocable F>
+  requires(!std::convertible_to<std::remove_cvref_t<F>, View>)
+[[nodiscard]] ViewAdaptor LongPressable(F&& on_long_press, LongPressableStyle style = {},
+                                        std::function<void(bool)> on_holding_changed = {}) {
+  std::function<void()> callback(std::forward<F>(on_long_press));
+  return ViewAdaptor(
+      [callback = std::move(callback), style, on_holding = std::move(on_holding_changed)](View content) {
+        return detail::LongPressableImpl(std::move(content), callback, style, on_holding);
+      });
+}
 
 } // namespace huxerui::interaction

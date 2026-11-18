@@ -4,7 +4,6 @@
 #include <huxerui/environment.h>
 #include <huxerui/vector.h>
 
-#include <string>
 #include <utility>
 
 namespace interaction_demo {
@@ -13,12 +12,10 @@ using namespace huxerui::interaction;
 
 namespace {
 
-/// The three theme modes offered by the preview header buttons.
 enum class ThemeMode { System, Light, Dark };
 
 const StrokeStyle kIconStroke{.width = 1.6F, .cap = StrokeCap::Round, .join = StrokeJoin::Round};
 
-/// Circle outline with the filled right half, marking the follow-system theme mode.
 const VectorAsset& ThemeSystemIcon() {
   static const VectorAsset icon = VectorAsset::Create({24.0F, 24.0F}, [](VectorBuilder& builder) {
     const Color ink = Color::Black();
@@ -38,7 +35,6 @@ const VectorAsset& ThemeSystemIcon() {
   return icon;
 }
 
-/// Sun with eight round-capped rays, marking the light theme mode.
 const VectorAsset& ThemeLightIcon() {
   static const VectorAsset icon = VectorAsset::Create({24.0F, 24.0F}, [](VectorBuilder& builder) {
     const Color ink = Color::Black();
@@ -66,7 +62,6 @@ const VectorAsset& ThemeLightIcon() {
   return icon;
 }
 
-/// Crescent moon opening toward the top-right, marking the dark theme mode.
 const VectorAsset& ThemeDarkIcon() {
   static const VectorAsset icon = VectorAsset::Create({24.0F, 24.0F}, [](VectorBuilder& builder) {
     Path moon;
@@ -79,7 +74,6 @@ const VectorAsset& ThemeDarkIcon() {
   return icon;
 }
 
-/// Material's baseline palette is purple; override the primary family with the framework's blue roles.
 ThemeSpec BlueThemeSpec(bool dark) {
   ThemeSpec spec = dark ? MaterialDarkThemeSpec() : MaterialLightThemeSpec();
   spec.colors.primary = dark ? Color::Rgb(168, 200, 250) : Color::Rgb(31, 111, 235);
@@ -95,21 +89,11 @@ ThemeSpec BlueThemeSpec(bool dark) {
 View PreviewApp() {
   auto mode = UseState(ThemeMode::System);
   const bool dark = mode.Get() == ThemeMode::Dark
-      || (mode.Get() == ThemeMode::System && UseSystemThemeBrightness() == ThemeBrightness::Dark);
+                    || (mode.Get() == ThemeMode::System && UseSystemThemeBrightness() == ThemeBrightness::Dark);
   DemoState state{
       .clicks = UseState(0),
       .holds = UseState(0),
       .doubles = UseState(0),
-      .burst = UseState(FireworksBurst{}),
-      .last_reorder = UseState(std::string{"drop to reorder"}),
-      .grid_last = UseState(std::string{"drop a cell"}),
-      .pane_width = UseState(164.0F),
-      .boops = UseState(0),
-      .paw_hovered = UseState(false),
-      .paw_burst = UseState(FireworksBurst{}),
-      .shake = UseShake(),
-      .pop = UsePop(),
-      .paw_pop = UsePop(PopStyle{.amplitude = 0.08F, .duration = 0.1}),
   };
   return MaterialTheme(BlueThemeSpec(dark), Scope([=] {
     const auto& theme = UseTheme();
@@ -129,21 +113,20 @@ View PreviewApp() {
       Row {
         Column {
           Text("Interaction", TextRole::Title),
-          Text("Interactive animation widgets for HuxerUI: presses, hovers, blooms, pulses, ripples, drags, and "
-               "shakes.",
+          Text("Headless interaction primitives, controllers, and visual feedback for HuxerUI.",
                TextRole::Label),
         }.With(Grow{}, Spacing(6.0F)),
         theme_button(ThemeSystemIcon(), "Follow system theme", ThemeMode::System).Key("theme-system"),
         theme_button(ThemeLightIcon(), "Light theme", ThemeMode::Light).Key("theme-light"),
         theme_button(ThemeDarkIcon(), "Dark theme", ThemeMode::Dark).Key("theme-dark"),
       }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Center)),
-      BloomSection(state, context),
+      BloomSection(context),
       PressSection(state, context),
-      PaintSection(state, context),
+      PaintSection(context),
       GestureSection(state, context),
-      ReorderSection(state, context),
-      LayoutSection(state, context),
-      DragSection(state, context),
+      ReorderSection(context),
+      LayoutSection(context),
+      DragSection(context),
       StatusSection(state, context),
     }.With(Padding(compact ? 16.0F : 24.0F), Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch)))
         .With(Background{theme.colors.background}, ScrollBar())

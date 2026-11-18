@@ -1,28 +1,26 @@
 #include <huxerui/interaction/press/ripple.h>
 
+#include "../internal/motion_group.h"
+#include "../internal/validate.h"
+
 #include <huxerui/event.h>
 #include <huxerui/modifier.h>
 
 #include <algorithm>
 #include <cmath>
 #include <optional>
-#include <stdexcept>
 #include <utility>
 #include <vector>
 
 namespace huxerui::interaction {
 namespace {
 
-// Bounds the per-frame cost of many simultaneous touches.
 constexpr std::size_t kMaximumRipples = 4;
 
 void ValidateStyle(const RippleStyle& style) {
-  if(!std::isfinite(style.duration) || style.duration <= 0.0) {
-    throw std::invalid_argument("HuxerUI Interaction: Ripple duration must be finite and positive");
-  }
-  if(!std::isfinite(style.maximum_opacity) || style.maximum_opacity < 0.0F || style.maximum_opacity > 1.0F) {
-    throw std::invalid_argument("HuxerUI Interaction: Ripple maximum opacity must be finite and in [0, 1]");
-  }
+  internal::RequirePositive(style.duration, "HuxerUI Interaction: Ripple duration must be finite and positive");
+  internal::RequireUnitInterval(style.maximum_opacity,
+                                "HuxerUI Interaction: Ripple maximum opacity must be finite and in [0, 1]");
 }
 
 float MaximumRadius(Point origin, const Rect& bounds) {
@@ -33,8 +31,6 @@ float MaximumRadius(Point origin, const Rect& bounds) {
 
 } // namespace
 
-/// Retained paint behavior for the Ripple modifier. The framework preserves this extension across recomposition
-/// and calls Update() with the latest modifier value. Each active pointer owns one independent ripple.
 class Ripple::Extension final : public NodeExtension {
 public:
   Extension(ViewNode& node, const Ripple& value) { Update(node, value); }
@@ -44,13 +40,10 @@ public:
     InvalidatePaint(PaintInvalidation::Foreground);
   }
 
-  /// Lets the extension observe pointer sequences routed over the node without consuming them.
   [[nodiscard]] bool HitTest(ViewNode& node, Point position) const override {
     return node.Bounds().Contains(position);
   }
 
-  /// Observe remains necessary so an otherwise inert view still becomes the interaction target that publishes
-  /// Press events to OnInteraction.
   PointerResult OnPointer(ViewNode&, const PointerEvent& event) override {
     if(event.type == PointerEventType::Down && event.changed_button == PointerButton::Primary) {
       return PointerResult::Observe;
@@ -58,8 +51,6 @@ public:
     return PointerResult::Ignored;
   }
 
-  /// Press events carry both pointer and keyboard origins. Pointer presses use their node-local position; keyboard
-  /// presses have no coordinate and start at the center.
   void OnInteraction(ViewNode& node, const InteractionState& state,
                      const std::optional<InteractionEvent>& event) override {
     if(!state.enabled) {
@@ -75,28 +66,19 @@ public:
   }
 
   FrameResult OnFrame(ViewNode&, const FrameInfo& frame) override {
-    bool changed = false;
-    bool needs_frame = false;
-    std::optional<double> wake_after;
+    internal::FrameAccumulator acc;
     for(auto& ripple : ripples_) {
-      const MotionAdvanceResult result = ripple.controller.Advance(frame);
-      changed |= result.changed;
-      needs_frame |= result.needs_frame;
-      if(result.wake_after.has_value()) {
-        wake_after = wake_after.has_value() ? std::min(*wake_after, *result.wake_after) : *result.wake_after;
-      }
+      acc.Add(ripple.controller.Advance(frame));
     }
-    const auto settled = std::remove_if(ripples_.begin(), ripples_.end(),
-                                        [](const ActiveRipple& ripple) {
-                                          return !ripple.controller.IsRunning()
-                                              && ripple.controller.Value() >= 1.0F;
-                                        });
+    const auto settled = std::remove_if(ripples_.begin(), ripples_.end(), [](const ActiveRipple& ripple) {
+      return !ripple.controller.IsRunning() && ripple.controller.Value() >= 1.0F;
+    });
     if(settled != ripples_.end()) {
       ripples_.erase(settled, ripples_.end());
-      changed = true;
+      acc.changed = true;
     }
-    if(changed) InvalidatePaint(PaintInvalidation::Foreground);
-    return {needs_frame || !ripples_.empty(), wake_after};
+    if(acc.changed) InvalidatePaint(PaintInvalidation::Foreground);
+    return acc.Result(!ripples_.empty());
   }
 
   void PaintAboveContent(const ViewNode& node, PaintContext& context) const override {
@@ -164,8 +146,8 @@ private:
   std::vector<ActiveRipple> ripples_;
 };
 
-const detail::ModifierDescriptor& Ripple::Descriptor() {
-  return detail::ModifierDescriptorFor<Ripple, Ripple::Extension>();
+const huxerui::detail::ModifierDescriptor& Ripple::Descriptor() {
+  return huxerui::detail::ModifierDescriptorFor<Ripple, Ripple::Extension>();
 }
 
 Ripple::Ripple(RippleStyle style) {

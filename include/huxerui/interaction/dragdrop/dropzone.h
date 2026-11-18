@@ -3,6 +3,7 @@
 #include <huxerui/color.h>
 #include <huxerui/geometry.h>
 #include <huxerui/gesture.h>
+#include <huxerui/interaction/pipe.h>
 #include <huxerui/modifier.h>
 #include <huxerui/state.h>
 #include <huxerui/view.h>
@@ -20,39 +21,59 @@ struct DropZoneStyle {
   Color highlight_color = Color::Rgb(31, 111, 235, 0.9F);
   /// Border width while highlighted, in logical pixels. Must be finite and non-negative.
   float border_width = 2.0F;
+
   bool operator==(const DropZoneStyle&) const = default;
 };
 
-/// Accepts an exact typed DragSource payload and paints a highlight border while it is over the zone.
-///
-/// The wrapper attaches DropTarget and observes Entered/Moved/Exited/Dropped without consuming pointer events. The
-/// callback receives the borrowed payload and the node-local DropEvent; copy the payload if it must outlive the
-/// callback. The zone imposes no intrinsic frame.
-/// @param content Content that acts as the drop target.
-/// @param on_drop Optional callback invoked once per accepted drop.
-/// @param style Highlight color and border width.
-/// @return A View carrying the DropTarget modifier and highlight presentation.
-/// @throws std::invalid_argument If the border width is invalid.
+/// Headless typed DropZone overload delegating hover presentation to `builder(bool hovered)`.
+/// @throws std::invalid_argument If `builder` is empty.
 template <class T>
-View DropZone(View content, std::function<void(const T&, const DropEvent&)> on_drop = {}, DropZoneStyle style = {}) {
-  if(!std::isfinite(style.border_width) || style.border_width < 0.0F) {
-    throw std::invalid_argument("HuxerUI Interaction: DropZone border width must be finite and non-negative");
+View DropZone(std::function<View(bool hovered)> builder,
+              std::function<void(const T&, const DropEvent&)> on_drop = {}) {
+  if(!builder) {
+    throw std::invalid_argument("HuxerUI Interaction: DropZone requires a view builder");
   }
-  return Scope([content = std::move(content), on_drop = std::move(on_drop), style]() -> View {
+  return Scope([builder = std::move(builder), on_drop = std::move(on_drop)]() -> View {
     auto hovered = UseState(false);
-    View zone = content;
+    View zone = builder(hovered.Get());
     zone = std::move(zone)
                .With(DropTarget::template Accepts<T>())
                .template On<typename DropEvents<T>::Entered>([hovered](const T&, const DropEvent&) { hovered = true; })
                .template On<typename DropEvents<T>::Moved>([hovered](const T&, const DropEvent&) { hovered = true; })
                .template On<typename DropEvents<T>::Exited>([hovered](const T&, const DropEvent&) { hovered = false; })
-               .template On<typename DropEvents<T>::Dropped>([hovered, on_drop](const T& payload, const DropEvent& event) {
-                 hovered = false;
-                 if(on_drop) on_drop(payload, event);
-               })
-               .With(Border{hovered.Get() ? style.highlight_color : Color::Transparent(),
-                            hovered.Get() ? style.border_width : 0.0F});
+               .template On<typename DropEvents<T>::Dropped>(
+                   [hovered, on_drop](const T& payload, const DropEvent& event) {
+                     hovered = false;
+                     if(on_drop) on_drop(payload, event);
+                   });
     return zone;
+  });
+}
+
+/// Accepts an exact typed DragSource payload and paints a highlight border while it is over the zone.
+/// @throws std::invalid_argument If `border_width` is non-finite or negative.
+template <class T>
+View DropZone(View content, std::function<void(const T&, const DropEvent&)> on_drop = {}, DropZoneStyle style = {}) {
+  if(!std::isfinite(style.border_width) || style.border_width < 0.0F) {
+    throw std::invalid_argument("HuxerUI Interaction: DropZone border width must be finite and non-negative");
+  }
+  return DropZone<T>(
+      [content = std::move(content), style](bool hovered) -> View {
+        View zone = content;
+        return std::move(zone).With(Border{
+            hovered ? style.highlight_color : Color::Transparent(),
+            hovered ? style.border_width : 0.0F,
+        });
+      },
+      std::move(on_drop));
+}
+
+/// Pipeable adaptor for DropZone<T>.
+template <class T>
+[[nodiscard]] ViewAdaptor DropZone(std::function<void(const T&, const DropEvent&)> on_drop = {},
+                                   DropZoneStyle style = {}) {
+  return ViewAdaptor([on_drop = std::move(on_drop), style](View content) {
+    return DropZone<T>(std::move(content), on_drop, style);
   });
 }
 

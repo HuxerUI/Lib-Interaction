@@ -26,7 +26,7 @@ public:
   class Extension;
 
   /// Returns the retained-modifier descriptor used by View::With().
-  static const detail::ModifierDescriptor& Descriptor();
+  static const huxerui::detail::ModifierDescriptor& Descriptor();
 
   /// Creates a standard-action contribution.
   /// @param semantics Owner semantic properties merged with other contributions.

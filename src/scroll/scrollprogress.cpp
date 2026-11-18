@@ -1,23 +1,21 @@
 #include <huxerui/interaction/scroll/scrollprogress.h>
 
+#include "../internal/validate.h"
+
 #include <huxerui/modifier.h>
 #include <huxerui/paint.h>
 
 #include <algorithm>
-#include <cmath>
-#include <stdexcept>
 #include <utility>
 
 namespace huxerui::interaction {
 namespace {
 
 void ValidateStyle(const ScrollProgressStyle& style) {
-  if(!std::isfinite(style.thickness) || style.thickness <= 0.0F) {
-    throw std::invalid_argument("HuxerUI Interaction: ScrollProgress thickness must be finite and positive");
-  }
-  if(!std::isfinite(style.inset) || style.inset < 0.0F) {
-    throw std::invalid_argument("HuxerUI Interaction: ScrollProgress inset must be finite and non-negative");
-  }
+  internal::RequirePositive(style.thickness,
+                            "HuxerUI Interaction: ScrollProgress thickness must be finite and positive");
+  internal::RequireNonNegative(style.inset,
+                               "HuxerUI Interaction: ScrollProgress inset must be finite and non-negative");
 }
 
 } // namespace
@@ -43,8 +41,8 @@ public:
     }
     const Rect bounds = node.Bounds();
     if(bounds.IsEmpty()) return;
-    const float track_length = (metrics.axis == Axis::Vertical ? bounds.height : bounds.width)
-                               - style_.inset * 2.0F;
+    const float track_length =
+        (metrics.axis == Axis::Vertical ? bounds.height : bounds.width) - style_.inset * 2.0F;
     if(track_length <= 0.0F) return;
     const float ratio = std::clamp(metrics.viewport_extent / metrics.content_extent, 0.0F, 1.0F);
     const float thumb_length = std::max(style_.thickness, track_length * ratio);
@@ -71,8 +69,8 @@ private:
   ScrollProgressStyle style_;
 };
 
-const detail::ModifierDescriptor& ScrollProgress::Descriptor() {
-  return detail::ModifierDescriptorFor<ScrollProgress, ScrollProgress::Extension>();
+const huxerui::detail::ModifierDescriptor& ScrollProgress::Descriptor() {
+  return huxerui::detail::ModifierDescriptorFor<ScrollProgress, ScrollProgress::Extension>();
 }
 
 ScrollProgress::ScrollProgress(ScrollController controller, ScrollProgressStyle style)

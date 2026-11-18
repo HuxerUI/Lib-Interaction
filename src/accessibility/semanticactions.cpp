@@ -49,8 +49,8 @@ private:
   std::function<void(SemanticActionKind)> on_action_;
 };
 
-const detail::ModifierDescriptor& SemanticActions::Descriptor() {
-  return detail::ModifierDescriptorFor<SemanticActions, SemanticActions::Extension>();
+const huxerui::detail::ModifierDescriptor& SemanticActions::Descriptor() {
+  return huxerui::detail::ModifierDescriptorFor<SemanticActions, SemanticActions::Extension>();
 }
 
 SemanticActions::SemanticActions(Semantics semantics, std::uint64_t actions,

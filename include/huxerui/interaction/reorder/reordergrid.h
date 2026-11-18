@@ -3,9 +3,14 @@
 #include <huxerui/animation.h>
 #include <huxerui/color.h>
 #include <huxerui/geometry.h>
+#include <huxerui/scroll.h>
 #include <huxerui/view.h>
 
+#include <concepts>
+#include <cstddef>
 #include <functional>
+#include <optional>
+#include <utility>
 #include <vector>
 
 namespace huxerui::interaction {
@@ -26,21 +31,36 @@ struct ReorderableGridStyle {
   Color target_highlight = Color::Rgb(31, 111, 235, 0.9F);
   /// Outline width of the preview target highlight. Must be finite and non-negative.
   float target_highlight_width = 2.0F;
+  /// When true, dragging starts only from a nested ReorderHandle inside each cell rather than the whole cell.
+  bool handle_only = false;
+  /// Enables Alt + arrow keyboard reordering on a focused cell.
+  bool keyboard_reorder = true;
+  /// Distance from a viewport edge that drives per-drag-update auto-scroll. Empty disables auto-scroll.
+  std::optional<float> auto_scroll_edge = 24.0F;
+  /// Scroll delta requested per drag update while near an edge. Must be finite and positive.
+  float auto_scroll_step = 24.0F;
+  /// Controller bound to the enclosing ScrollView. Auto-scroll is skipped when disconnected.
+  ScrollController scroll_controller{};
+
   bool operator==(const ReorderableGridStyle&) const = default;
 };
 
-/// Composes fixed-size cells in a wrapping grid with drag-to-reorder.
-///
-/// Cells keep layout order while a drag runs: the dragged cell follows the pointer, cells between source and target
-/// ease one linear position aside, and the closest slot draws the target outline. Dropping calls on_reordered with
-/// source and destination linear indices. The caller recomposes with the model's new order. The widget imposes no
-/// intrinsic frame beyond its cells.
-/// @param items One view per cell in display order.
-/// @param style Cell size, gap, motions, and target highlight.
-/// @param on_reordered Callback invoked on drop with original and target linear indices.
-/// @return A Flow of fixed-size cells.
-/// @throws std::invalid_argument If a cell dimension, gap, or highlight width is invalid.
-View ReorderableGrid(std::vector<View> items, ReorderableGridStyle style = {},
-                     std::function<void(std::size_t from, std::size_t to)> on_reordered = {});
+namespace detail {
+View ReorderableGridImpl(std::vector<View> items, std::function<void(std::size_t, std::size_t)> on_reordered,
+                         ReorderableGridStyle style);
+} // namespace detail
+
+/// Visual-only ReorderableGrid overload.
+inline View ReorderableGrid(std::vector<View> items, ReorderableGridStyle style = {}) {
+  return detail::ReorderableGridImpl(std::move(items), {}, style);
+}
+
+/// Composes fixed-size cells in a wrapping grid with drag-to-reorder and optional Alt+arrow keyboard reordering.
+/// @throws std::invalid_argument If cell dimensions, gap, highlight width, or auto-scroll settings are invalid.
+template <std::invocable<std::size_t, std::size_t> F>
+View ReorderableGrid(std::vector<View> items, F&& on_reordered, ReorderableGridStyle style = {}) {
+  return detail::ReorderableGridImpl(
+      std::move(items), std::function<void(std::size_t, std::size_t)>(std::forward<F>(on_reordered)), style);
+}
 
 } // namespace huxerui::interaction

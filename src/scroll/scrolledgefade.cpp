@@ -1,22 +1,19 @@
 #include <huxerui/interaction/scroll/scrolledgefade.h>
 
+#include "../internal/validate.h"
+
 #include <huxerui/paint.h>
 
 #include <algorithm>
-#include <cmath>
-#include <stdexcept>
 #include <utility>
 
 namespace huxerui::interaction {
 namespace {
 
 void ValidateStyle(const ScrollEdgeFadeStyle& style) {
-  if(!std::isfinite(style.extent) || style.extent <= 0.0F) {
-    throw std::invalid_argument("HuxerUI Interaction: ScrollEdgeFade extent must be finite and positive");
-  }
+  internal::RequirePositive(style.extent,
+                            "HuxerUI Interaction: ScrollEdgeFade extent must be finite and positive");
 }
-
-Color Transparent() { return Color::Transparent(); }
 
 } // namespace
 
@@ -48,7 +45,7 @@ public:
       const LinearGradient gradient{
           .start = {0.0F, 0.0F},
           .end = {vertical ? 0.0F : 1.0F, vertical ? 1.0F : 0.0F},
-          .stops = {{0.0F, style_.color}, {1.0F, Transparent()}},
+          .stops = {{0.0F, style_.color}, {1.0F, Color::Transparent()}},
       };
       const Rect rect = vertical ? Rect{bounds.x, bounds.y, bounds.width, extent}
                                  : Rect{bounds.x, bounds.y, extent, bounds.height};
@@ -58,11 +55,10 @@ public:
       const LinearGradient gradient{
           .start = {0.0F, 0.0F},
           .end = {vertical ? 0.0F : 1.0F, vertical ? 1.0F : 0.0F},
-          .stops = {{0.0F, Transparent()}, {1.0F, style_.color}},
+          .stops = {{0.0F, Color::Transparent()}, {1.0F, style_.color}},
       };
-      const Rect rect = vertical
-                            ? Rect{bounds.x, bounds.y + bounds.height - extent, bounds.width, extent}
-                            : Rect{bounds.x + bounds.width - extent, bounds.y, extent, bounds.height};
+      const Rect rect = vertical ? Rect{bounds.x, bounds.y + bounds.height - extent, bounds.width, extent}
+                                 : Rect{bounds.x + bounds.width - extent, bounds.y, extent, bounds.height};
       context.DrawRect(rect, Brush(gradient));
     }
   }
@@ -72,8 +68,8 @@ private:
   ScrollEdgeFadeStyle style_;
 };
 
-const detail::ModifierDescriptor& ScrollEdgeFade::Descriptor() {
-  return detail::ModifierDescriptorFor<ScrollEdgeFade, ScrollEdgeFade::Extension>();
+const huxerui::detail::ModifierDescriptor& ScrollEdgeFade::Descriptor() {
+  return huxerui::detail::ModifierDescriptorFor<ScrollEdgeFade, ScrollEdgeFade::Extension>();
 }
 
 ScrollEdgeFade::ScrollEdgeFade(ScrollController controller, ScrollEdgeFadeStyle style)

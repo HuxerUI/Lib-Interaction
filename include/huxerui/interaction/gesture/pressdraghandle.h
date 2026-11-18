@@ -2,11 +2,13 @@
 
 #include <huxerui/event.h>
 #include <huxerui/gesture.h>
+#include <huxerui/interaction/pipe.h>
 #include <huxerui/view.h>
 
 #include <chrono>
 #include <functional>
 #include <optional>
+#include <utility>
 
 namespace huxerui::interaction {
 
@@ -18,6 +20,7 @@ struct PressDragHandleStyle {
   std::optional<Axis> axis = std::nullopt;
   /// Cursor shown while the handle is idle.
   PointerCursorKind cursor = PointerCursorKind::Grab;
+
   bool operator==(const PressDragHandleStyle&) const = default;
 };
 
@@ -29,16 +32,19 @@ struct PressDragHandleCallbacks {
   std::function<void(const DragEvent&)> on_canceled;
 };
 
-/// Requires a hold before a drag is recognized, without moving the content itself.
-///
-/// This is the building block for reorder grips and press-drag surfaces. It attaches DragGesture with
-/// minimum_press_duration and forwards the typed lifecycle to the callbacks; the caller owns any offset or model
-/// mutation. The wrapper imposes no intrinsic frame.
-/// @param content Handle content.
-/// @param style Hold duration, axis, and cursor.
-/// @param callbacks Drag lifecycle callbacks.
-/// @return A View carrying the press-drag recognizer.
-/// @throws std::invalid_argument If the hold duration is not positive.
-View PressDragHandle(View content, PressDragHandleStyle style = {}, PressDragHandleCallbacks callbacks = {});
+/// Visual/cursor-only PressDragHandle overload.
+View PressDragHandle(View content, PressDragHandleStyle style = {});
+
+/// Requires a hold before a drag is recognized, forwarding lifecycle events to `callbacks` without moving content itself.
+/// @throws std::invalid_argument If `press_duration` is non-finite or not positive.
+View PressDragHandle(View content, PressDragHandleCallbacks callbacks, PressDragHandleStyle style = {});
+
+/// Pipeable adaptor for PressDragHandle.
+[[nodiscard]] inline ViewAdaptor PressDragHandle(PressDragHandleCallbacks callbacks,
+                                                 PressDragHandleStyle style = {}) {
+  return ViewAdaptor([callbacks = std::move(callbacks), style](View content) {
+    return PressDragHandle(std::move(content), callbacks, style);
+  });
+}
 
 } // namespace huxerui::interaction

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <huxerui/huxerui.h>
 
 namespace interaction_demo {

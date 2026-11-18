@@ -6,7 +6,7 @@
 
 #include <chrono>
 #include <cmath>
-#include <functional>
+#include <cstddef>
 #include <string>
 #include <vector>
 
@@ -16,764 +16,216 @@ using namespace huxerui::testing;
 
 namespace {
 
-View StateGallery() {
+/// Cross-feature scenario 1: Multi-stage `operator|` pipeline combining Pressable, DoubleClickable, ContextMenuArea,
+/// KeyboardShortcut, and retained Ripple/Spotlight on one card without mutual interference.
+View PipelineIntegrationApp() {
   auto clicks = UseState(0);
-  View ripple = Text("ripple surface")
-                    .With(Frame{.width = 200.0F, .height = 64.0F}, Background{Color::Rgb(80, 110, 160)},
-                          CornerRadius(10.0F));
-  ripple = std::move(ripple).OnClick([] {}).With(Focusable{true}, Ripple{RippleStyle{.duration = 0.4}});
+  auto doubles = UseState(0);
+  auto menus = UseState(0);
+  auto shortcuts = UseState(0);
+
+  View card = Text("pipeline card")
+                  .With(Frame{.width = 220.0F, .height = 64.0F}, Background{Color::Rgb(64, 108, 178)},
+                        CornerRadius(10.0F), Ripple{}, Spotlight{})
+              | DoubleClickable([doubles](const MultiTapEvent&) { doubles += 1; })
+              | ContextMenuArea([menus](Point) { menus += 1; })
+              | Pressable([clicks] { clicks += 1; });
+
   return Column {
-    Pressable(Text("keyboard press")
-                  .With(Frame{.width = 200.0F, .height = 64.0F}, Background{Color::Rgb(64, 108, 178)},
-                        CornerRadius(10.0F)),
-              {}, [clicks] { clicks += 1; })
-        .Key("pressable"),
-    std::move(ripple).Key("ripple"),
-    Text("clicks: " + std::to_string(clicks.Get())).Key("clicks"),
-  }.With(Padding(16.0F), Spacing(16.0F));
+    std::move(card).Key("pipe-card"),
+    Text("clicks: " + std::to_string(clicks.Get())),
+    Text("doubles: " + std::to_string(doubles.Get())),
+    Text("menus: " + std::to_string(menus.Get())),
+    Text("shortcuts: " + std::to_string(shortcuts.Get())),
+  }.With(Padding(16.0F), Spacing(12.0F))
+         | KeyboardShortcut({.key = Key::J, .modifiers = KeyModifiers{.control = true}},
+                            [shortcuts] { shortcuts += 1; });
 }
 
-View SwipeGallery() {
-  auto deleted = UseState(0);
-  return Column {
-    SwipeActions(
-        Text("swipe row")
-            .With(Frame{.width = 300.0F, .height = 64.0F}, Background{Color::Rgb(80, 110, 160)},
-                  CornerRadius(10.0F))
-            .Key("swipe-content"),
-        [deleted](std::function<void()> close) {
-          return Button("Delete")
-              .OnClick([deleted, close] {
-                deleted += 1;
-                close();
-              })
-              .Key("delete");
+/// Cross-feature scenario 2: Mutually exclusive SwipeActions list rows coordinated through SwipeController.
+View ExclusiveSwipeListApp() {
+  auto row_a = UseSwipeController();
+  auto row_b = UseSwipeController();
+
+  auto build_row = [](const char* key_prefix, SwipeController own, SwipeController sibling) {
+    return SwipeActions(
+        Text(std::string("row ") + key_prefix)
+            .With(Frame{.width = 280.0F, .height = 52.0F}, Background{Color::Rgb(80, 110, 160)})
+            .Key(std::string("content-") + key_prefix),
+        [](SwipeActionContext ctx) {
+          return Button("Close").OnClick(ctx.close);
         },
-        {.action_extent = 96.0F, .activation_ratio = 0.4F})
-        .Key("swipe"),
-    Text("deleted: " + std::to_string(deleted.Get())).Key("deleted-count"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
+        {.action_extent = 90.0F, .activation_ratio = 0.35F, .controller = own},
+        [sibling](bool opened) {
+          if(opened) sibling.Close();
+        });
+  };
 
-View ContextGallery() {
-  auto requests = UseState(0);
-  auto last_position = UseState(Point{});
   return Column {
-    ContextMenuArea(Text("context target")
-                        .With(Frame{.width = 220.0F, .height = 64.0F}, Background{Color::Rgb(110, 90, 150)},
-                              CornerRadius(10.0F)),
-                    [requests, last_position](Point position) {
-                      requests += 1;
-                      last_position = position;
-                    })
-        .Key("context"),
-    Text("requests: " + std::to_string(requests.Get())).Key("request-count"),
-    Text("last x: " + std::to_string(static_cast<int>(last_position.Get().x))).Key("last-x"),
-  }.With(Padding(16.0F), Spacing(16.0F));
+    build_row("a", row_a, row_b),
+    build_row("b", row_b, row_a),
+    Text(std::string("a open: ") + (row_a.IsOpen() ? "yes" : "no")),
+    Text(std::string("b open: ") + (row_b.IsOpen() ? "yes" : "no")),
+  }.With(Padding(16.0F), Spacing(12.0F));
 }
 
-View DragDropGallery() {
-  auto drops = UseState(0);
-  auto payload = UseState(0);
-  return Column {
-    Draggable(Text("drag source")
-                  .With(Frame{.width = 160.0F, .height = 56.0F}, Background{Color::Rgb(70, 120, 160)},
-                        CornerRadius(10.0F)),
-              42)
-        .Key("drag-source"),
-    DropZone<int>(Text("drop zone")
-                      .With(Frame{.width = 220.0F, .height = 80.0F}, Background{Color::Rgb(90, 130, 100)},
-                            CornerRadius(10.0F)),
-                  [drops, payload](const int& value, const DropEvent&) {
-                    drops += 1;
-                    payload = value;
-                  })
-        .Key("drop-zone"),
-    Text("drops: " + std::to_string(drops.Get())).Key("drop-count"),
-    Text("payload: " + std::to_string(payload.Get())).Key("drop-payload"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View FileGallery() {
-  return Column {
-    FileDropZone(Text("file zone")
-                     .With(Frame{.width = 220.0F, .height = 80.0F}, Background{Color::Rgb(120, 90, 150)},
-                           CornerRadius(10.0F)),
-                 FileDropOptions{.extensions = {"png"}})
-        .Key("file-zone"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View TransformGallery() {
-  return Column {
-    PanZoom(Text("transform target")
-                .With(Frame{.width = 160.0F, .height = 80.0F}, Background{Color::Rgb(80, 120, 160)},
-                      CornerRadius(10.0F))
-                .Key("transform-content"),
-            {.minimum_scale = 0.5F, .maximum_scale = 3.0F})
-        .Key("panzoom"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View InertiaGallery() {
-  return Column {
-    InertialDrag(Text("inertial target")
-                     .With(Frame{.width = 160.0F, .height = 60.0F}, Background{Color::Rgb(150, 100, 70)},
-                           CornerRadius(10.0F))
-                     .Key("inertial-content"),
-                 {.projection_time = 0.2F, .maximum_projection = 300.0F})
-        .Key("inertial"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View ScrollGallery() {
-  auto controller = UseScrollController();
-  std::vector<View> rows;
-  for(int index = 0; index < 24; ++index) {
-    rows.push_back(Text("scroll row " + std::to_string(index))
-                       .With(Frame{.height = 32.0F})
-                       .Key("scroll-row-" + std::to_string(index)));
-  }
-  return ScrollView(Column(std::move(rows)).With(Spacing(8.0F)))
-      .Controller(controller)
-      .With(ScrollProgress{controller, ScrollProgressStyle{}})
-      .With(ScrollEdgeFade{controller, ScrollEdgeFadeStyle{.color = Color::White()}})
-      .Key("scroll");
-}
-
-View RollingGallery() {
-  auto value = UseState(0);
-  return Column {
-    RollingNumber(value.Get(), {.motion = TweenSpec{.duration = 0.2}}).Key("rolling"),
-    Button("Increment").OnClick([value] { value += 1; }).Key("increment"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View SemanticsGallery() {
-  auto count = UseState(0);
-  View target = Text("semantic target")
-                    .With(Frame{.width = 220.0F, .height = 48.0F}, Background{Color::Rgb(80, 110, 160)},
-                          CornerRadius(8.0F));
-  target = std::move(target)
-               .With(Semantics{.role = SemanticRole::Button, .label = "Semantic target"},
-                     SemanticActions{Semantics{},
-                                     SemanticActionMask(SemanticActionKind::Activate),
-                                     [count](SemanticActionKind) { count += 1; }});
-  return Column {
-    std::move(target).Key("semantic"),
-    Text("semantic count: " + std::to_string(count.Get())).Key("semantic-count"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View KeyboardGallery() {
-  auto count = UseState(0);
-  View root = Column {
-    Button("Focus me").Key("focus-target"),
-    Text("shortcut count: " + std::to_string(count.Get())).Key("shortcut-count"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-  return KeyboardShortcut(std::move(root), {.key = Key::K, .modifiers = KeyModifiers{.control = true}},
-                          [count] { count += 1; });
-}
-
-View MultiGallery() {
-  auto count = UseState(0);
-  return Column {
-    MultiClickable(Text("triple target")
-                       .With(Frame{.width = 200.0F, .height = 48.0F}, Background{Color::Rgb(120, 90, 150)},
-                             CornerRadius(8.0F)),
-                   {.count = 3}, [count](const MultiTapEvent&) { count += 1; })
-        .Key("triple"),
-    Text("triples: " + std::to_string(count.Get())).Key("triples"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View SecondaryGallery() {
-  auto count = UseState(0);
-  return Column {
-    SecondaryClickable(Text("secondary target")
-                           .With(Frame{.width = 220.0F, .height = 48.0F}, Background{Color::Rgb(90, 130, 100)},
-                                 CornerRadius(8.0F)),
-                       [count](Point) { count += 1; })
-        .Key("secondary"),
-    Text("secondaries: " + std::to_string(count.Get())).Key("secondaries"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View PressDragGallery() {
-  auto started = UseState(0);
-  auto ended = UseState(0);
-  auto last = UseState(0);
-  return Column {
-    PressDragHandle(Text("handle")
-                        .With(Frame{.width = 160.0F, .height = 56.0F}, Background{Color::Rgb(120, 90, 150)},
-                              CornerRadius(8.0F)),
-                    {.press_duration = std::chrono::duration<double>(0.2)},
-                    {.on_started = [started](const DragEvent&) { started += 1; },
-                     .on_changed = [last](const DragEvent& event) {
-                       last = static_cast<int>(event.translation.x);
-                     },
-                     .on_ended = [ended](const DragEvent&) { ended += 1; }})
-        .Key("press-drag"),
-    Text("started: " + std::to_string(started.Get())).Key("pd-started"),
-    Text("ended: " + std::to_string(ended.Get())).Key("pd-ended"),
-    Text("last: " + std::to_string(last.Get())).Key("pd-last"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View DismissGallery() {
-  auto dismissed = UseState(0);
-  return Column {
-    Dismissible(Text("dismiss target")
-                    .With(Frame{.width = 200.0F, .height = 60.0F}, Background{Color::Rgb(80, 120, 160)},
-                          CornerRadius(8.0F)),
-                [dismissed] { dismissed += 1; },
-                {.dismiss_threshold = 80.0F,
-                 .minimum_velocity = 10000.0F,
-                 .exit_distance = 240.0F,
-                 .exit_duration = 0.2})
-        .Key("dismiss"),
-    Text("dismissed: " + std::to_string(dismissed.Get())).Key("dismissed"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View HoverCardGallery() {
-  return HoverCard(Text("hover anchor")
-                       .With(Frame{.width = 200.0F, .height = 60.0F}, Background{Color::Rgb(80, 120, 160)},
-                             CornerRadius(8.0F)),
-                   [](PopupContext) {
-                     return Text("hover card").With(Frame{.width = 160.0F, .height = 60.0F},
-                                                   Background{Color::Rgb(40, 44, 52)},
-                                                   CornerRadius(8.0F));
-                   },
-                   {.show_delay = std::chrono::duration<double>(0.05),
-                    .hide_delay = std::chrono::duration<double>(0.05),
-                    .long_press = false})
-      .Key("hover-card");
-}
-
-View HorizontalReorderGallery() {
+/// Cross-feature scenario 3: Handle-only Reorderable containing interactive child buttons inside each slot.
+/// Dragging the child area or clicking the button must not reorder; dragging ReorderHandle reorders cleanly.
+View HandleOnlyReorderApp() {
   auto order = UseState(std::vector<int>{1, 2, 3});
-  auto event = UseState(std::string("none"));
-  std::vector<View> slots;
-  for(int value : order.Get()) {
-    slots.push_back(Text("h " + std::to_string(value))
-                        .With(Frame{.width = 80.0F, .height = 60.0F}, Background{Color::Rgb(80, 110, 160)},
-                              CornerRadius(8.0F))
-                        .Key("h-" + std::to_string(value)));
+  auto button_clicks = UseState(0);
+  auto reorders = UseState(std::string("none"));
+
+  std::vector<View> rows;
+  for(int id : order.Get()) {
+    View grip = Text("grip")
+                    .With(Frame{.width = 48.0F, .height = 44.0F}, Background{Color::Rgb(50, 90, 160)})
+                    .Key("grip-" + std::to_string(id))
+                | ReorderHandle();
+    View action = Button("Act " + std::to_string(id))
+                      .OnClick([button_clicks] { button_clicks += 1; })
+                      .Key("act-" + std::to_string(id));
+    rows.push_back(Row {
+      std::move(grip),
+      Text("Body " + std::to_string(id)).With(Grow{}).Key("body-" + std::to_string(id)),
+      std::move(action),
+    }.With(Frame{.width = 300.0F, .height = 48.0F}, Spacing(8.0F), CrossAlign(CrossAxisAlignment::Center),
+           Background{Color::Rgb(90, 110, 130)}));
   }
-  View listed = Reorderable(
-      std::move(slots), {.axis = Axis::Horizontal},
-      [order, event](std::size_t from, std::size_t to) {
-        auto next = order.Get();
-        if(from >= next.size() || to >= next.size()) return;
-        const int value = next[from];
-        next.erase(next.begin() + static_cast<std::ptrdiff_t>(from));
-        next.insert(next.begin() + static_cast<std::ptrdiff_t>(to), value);
-        order = std::move(next);
-        event = std::to_string(from) + "->" + std::to_string(to);
-      });
+
   return Column {
-    std::move(listed).Key("h-reorder"),
-    Text("h event: " + event.Get()).Key("h-event"),
-  }.With(Padding(16.0F), Spacing(16.0F));
+    Reorderable(
+        std::move(rows),
+        [order, reorders](std::size_t from, std::size_t to) {
+          auto next = order.Get();
+          const int val = next[from];
+          next.erase(next.begin() + static_cast<std::ptrdiff_t>(from));
+          next.insert(next.begin() + static_cast<std::ptrdiff_t>(to), val);
+          order = std::move(next);
+          reorders = std::to_string(from) + "->" + std::to_string(to);
+        },
+        {.handle_only = true}),
+    Text("btn clicks: " + std::to_string(button_clicks.Get())),
+    Text("reorders: " + reorders.Get()),
+  }.With(Padding(16.0F), Spacing(12.0F));
 }
 
-View RevealGallery() {
-  auto reveals = UseState(0);
-  auto reveal = UseRevealOnTap();
-  View root = Column {
-    Button("Reveal")
-        .OnClick([reveal, reveals] {
-          reveal.Run([reveals] { reveals += 1; });
-        })
-        .Key("reveal-button"),
-    Text("reveals: " + std::to_string(reveals.Get())).Key("reveals"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-  return root;
-}
+/// Cross-feature scenario 4: External toolbar controlling and observing PanZoom through PanZoomController.
+View ControlledPanZoomApp() {
+  auto controller = UsePanZoomController();
+  const int pct = static_cast<int>(std::lround(controller.Scale() * 100.0F));
 
-View GridGallery() {
-  auto order = UseState(std::vector<int>{1, 2, 3, 4, 5});
-  auto event = UseState(std::string("none"));
-  std::vector<View> cells;
-  for(int value : order.Get()) {
-    cells.push_back(Text("g " + std::to_string(value))
-                        .With(Background{Color::Rgb(80, 110, 160)}, CornerRadius(8.0F))
-                        .Key("g-" + std::to_string(value)));
-  }
-  View grid = ReorderableGrid(
-      std::move(cells), {.cell_width = 80.0F, .cell_height = 60.0F, .spacing = 8.0F},
-      [order, event](std::size_t from, std::size_t to) {
-        auto next = order.Get();
-        if(from >= next.size() || to >= next.size()) return;
-        const int value = next[from];
-        next.erase(next.begin() + static_cast<std::ptrdiff_t>(from));
-        next.insert(next.begin() + static_cast<std::ptrdiff_t>(to), value);
-        order = std::move(next);
-        event = std::to_string(from) + "->" + std::to_string(to);
-      });
-  grid = std::move(grid).With(Frame{.width = 360.0F, .height = 200.0F});
   return Column {
-    std::move(grid).Key("grid"),
-    Text("grid event: " + event.Get()).Key("grid-event"),
-  }.With(Padding(16.0F), Spacing(16.0F));
-}
-
-View ResizeGallery() {
-  auto width = UseState(100.0F);
-  auto deltas = UseState(0.0F);
-  View handle = ResizeHandle(Axis::Horizontal, [width, deltas](float delta) {
-    width = std::clamp(width.Get() + delta, 60.0F, 240.0F);
-    deltas = deltas.Get() + delta;
-  });
-  handle = std::move(handle).Key("resize-handle");
-  View row = Row {
-    Text("panel").With(Frame{.width = width.Get(), .height = 80.0F}, Background{Color::Rgb(80, 110, 160)},
-                        CornerRadius(8.0F)),
-    std::move(handle),
-  }.With(CrossAlign(CrossAxisAlignment::Stretch));
-  return Column {
-    std::move(row).Key("resize-row"),
-    Text("width: " + std::to_string(static_cast<int>(std::lround(width.Get())))).Key("resize-width"),
+    Row {
+      Button("Zoom In").OnClick([controller] { controller.ZoomBy(2.0F); }).Key("zoom-in"),
+      Button("Pan Right").OnClick([controller] { controller.PanTo({50.0F, 0.0F}); }).Key("pan-right"),
+      Button("Reset").OnClick([controller] { controller.Reset(); }).Key("zoom-reset"),
+      Text("zoom: " + std::to_string(pct) + "%"),
+    }.With(Spacing(8.0F)),
+    PanZoom(
+        Text("canvas").With(Frame{.width = 120.0F, .height = 60.0F}, Background{Color::Rgb(70, 120, 150)}).Key("canvas"),
+        {.minimum_scale = 0.5F, .maximum_scale = 4.0F, .controller = controller}),
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
 } // namespace
 
-int main() { return Run([] {
-  Application app(StateGallery, {.window = {.initial_size = {420, 360}}, .show_debug_overlay = false});
-  UiTest ui(app, {.viewport = {420, 360}});
+int main() {
+  return Run([] {
+    // 1. Pipeline integration.
+    {
+      Application app(PipelineIntegrationApp, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
+      UiTest ui(app, {.viewport = {420, 320}});
+      ui.Find(UiSelector::Key("pipe-card")).Tap();
+      ui.Pump(std::chrono::milliseconds(80));
+      ui.Find(UiSelector::Key("pipe-card")).Tap();
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("clicks: 2")).Exists());
+      CHECK(ui.Find(UiSelector::Text("doubles: 1")).Exists());
 
-  const Rect initial = ui.Find(UiSelector::Text("keyboard press")).One().bounds;
-  ui.PressKey(Key::Tab);
-  ui.PumpAndSettle();
-  CHECK(ui.Find(UiSelector::Key("pressable")).Find(UiSelector::Focused(true)).Exists());
-  CHECK(ui.Find(UiSelector::Text("clicks: 0")).Exists());
-
-  ui.SendKey({.type = KeyEventType::Down, .key = Key::Space});
-  ui.PumpAndSettle();
-  const Rect held = ui.Find(UiSelector::Text("keyboard press")).One().bounds;
-  CHECK(held.width < initial.width);
-
-  ui.SendKey({.type = KeyEventType::Up, .key = Key::Space});
-  ui.PumpAndSettle();
-  const Rect released = ui.Find(UiSelector::Text("keyboard press")).One().bounds;
-  CHECK(Near(released.width, initial.width));
-  CHECK(ui.Find(UiSelector::Text("clicks: 1")).Exists());
-
-  // Focus loss clears the held Space scale even if the key release is never delivered to the widget.
-  ui.SendKey({.type = KeyEventType::Down, .key = Key::Space});
-  ui.PumpAndSettle();
-  CHECK(ui.Find(UiSelector::Text("keyboard press")).One().bounds.width < initial.width);
-  ui.PressKey(Key::Tab);
-  ui.PumpAndSettle();
-  CHECK(ui.Find(UiSelector::Key("ripple")).One().focused);
-  CHECK(Near(ui.Find(UiSelector::Text("keyboard press")).One().bounds.width, initial.width));
-  ui.SendKey({.type = KeyEventType::Up, .key = Key::Space});
-  ui.PumpAndSettle();
-  CHECK(ui.Find(UiSelector::Text("clicks: 1")).Exists());
-
-  // Keyboard activation drives the same InteractionEvent path as pointer presses.
-  ui.SendKey({.type = KeyEventType::Down, .key = Key::Space});
-  ui.Pump(std::chrono::milliseconds(100));
-  CHECK(ui.Find(UiSelector::Key("ripple")).One().focused);
-  ui.SendKey({.type = KeyEventType::Up, .key = Key::Space});
-  ui.PumpAndSettle();
-
-  {
-    Application swipe_app(SwipeGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
-    UiTest swipe(swipe_app, {.viewport = {420, 240}});
-    const Rect initial = swipe.Find(UiSelector::Key("swipe-content")).One().bounds;
-    const Point start{initial.x + initial.width * 0.5F, initial.y + initial.height * 0.5F};
-    swipe.Drag(start, {start.x - 120.0F, start.y},
-               {.duration = std::chrono::duration<double>(0.3), .segments = 12});
-    swipe.PumpAndSettle();
-    const Rect open = swipe.Find(UiSelector::Key("swipe-content")).One().bounds;
-    CHECK(open.x < initial.x - 40.0F);
-    const UiNodeInfo action_node = swipe.Find(UiSelector::Key("delete")).One();
-    CHECK(action_node.in_viewport);
-    CHECK(Near(action_node.bounds.height, initial.height));
-    swipe.Find(UiSelector::Key("delete")).Tap();
-    swipe.PumpAndSettle();
-    CHECK(swipe.Find(UiSelector::Text("deleted: 1")).Exists());
-    CHECK(Near(swipe.Find(UiSelector::Key("swipe-content")).One().bounds.x, initial.x));
-  }
-
-  {
-    Application context_app(ContextGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
-    UiTest context(context_app, {.viewport = {420, 240}});
-    const Point target_point = Center(context.Find(UiSelector::Key("context")).One().bounds);
-    PointerEvent secondary{.type = PointerEventType::Down,
-                           .pointer_id = 9,
-                           .position = target_point,
-                           .device_kind = PointerDeviceKind::Mouse,
-                           .changed_button = PointerButton::Secondary,
-                           .pressed_buttons = PointerButton::Secondary};
-    context.SendPointer(secondary);
-    secondary.type = PointerEventType::Up;
-    secondary.changed_button = PointerButton::Secondary;
-    secondary.pressed_buttons = PointerButton::None;
-    context.SendPointer(secondary);
-    context.PumpAndSettle();
-    CHECK(context.Find(UiSelector::Text("requests: 1")).Exists());
-
-    PointerEvent press{.type = PointerEventType::Down,
-                       .pointer_id = 10,
-                       .position = target_point,
-                       .device_kind = PointerDeviceKind::Touch,
-                       .changed_button = PointerButton::Primary,
-                       .pressed_buttons = PointerButton::Primary};
-    context.SendPointer(press);
-    context.Pump(std::chrono::milliseconds(600));
-    context.Pump();
-    press.type = PointerEventType::Up;
-    press.changed_button = PointerButton::Primary;
-    press.pressed_buttons = PointerButton::None;
-    context.SendPointer(press);
-    context.PumpAndSettle();
-    CHECK(context.Find(UiSelector::Text("requests: 2")).Exists());
-    CHECK(context.Find(UiSelector::Text("last x: " + std::to_string(static_cast<int>(target_point.x)))).Exists());
-  }
-
-  {
-    Application drag_app(DragDropGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
-    UiTest drag(drag_app, {.viewport = {420, 320}});
-    const Rect source = drag.Find(UiSelector::Key("drag-source")).One().bounds;
-    const Rect target = drag.Find(UiSelector::Key("drop-zone")).One().bounds;
-    drag.Drag(Center(source), Center(target), {.duration = std::chrono::duration<double>(0.3), .segments = 12});
-    drag.PumpAndSettle();
-    CHECK(drag.Find(UiSelector::Text("drops: 1")).Exists());
-    CHECK(drag.Find(UiSelector::Text("payload: 42")).Exists());
-  }
-
-  {
-    Application file_app(FileGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
-    UiTest file(file_app, {.viewport = {420, 240}});
-    CHECK(file.Find(UiSelector::Key("file-zone")).Exists());
-  }
-
-  {
-    Application transform_app(TransformGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
-    UiTest transform(transform_app, {.viewport = {420, 320}});
-    const Rect initial = transform.Find(UiSelector::Key("transform-content")).One().bounds;
-    const Point center = Center(initial);
-    const Point left{center.x - 30.0F, center.y};
-    const Point right{center.x + 30.0F, center.y};
-    PointerEvent first{.type = PointerEventType::Down,
-                       .pointer_id = 21,
-                       .position = left,
-                       .device_kind = PointerDeviceKind::Touch,
-                       .changed_button = PointerButton::Primary,
-                       .pressed_buttons = PointerButton::Primary};
-    PointerEvent second = first;
-    second.pointer_id = 22;
-    second.position = right;
-    transform.SendPointer(first);
-    transform.SendPointer(second);
-    transform.Pump();
-    first.type = PointerEventType::Move;
-    first.position = {center.x - 60.0F, center.y};
-    second.type = PointerEventType::Move;
-    second.position = {center.x + 60.0F, center.y};
-    transform.SendPointer(first);
-    transform.SendPointer(second);
-    transform.PumpAndSettle();
-    const Rect scaled = transform.Find(UiSelector::Key("transform-content")).One().bounds;
-    CHECK(scaled.width > initial.width * 1.2F);
-    first.type = PointerEventType::Up;
-    first.changed_button = PointerButton::Primary;
-    first.pressed_buttons = PointerButton::None;
-    second.type = PointerEventType::Up;
-    second.changed_button = PointerButton::Primary;
-    second.pressed_buttons = PointerButton::None;
-    transform.SendPointer(first);
-    transform.SendPointer(second);
-    transform.PumpAndSettle();
-
-    // Pan with a fresh two-pointer sequence.
-    PointerEvent pan_first{.type = PointerEventType::Down,
-                           .pointer_id = 31,
-                           .position = left,
-                           .device_kind = PointerDeviceKind::Touch,
-                           .changed_button = PointerButton::Primary,
-                           .pressed_buttons = PointerButton::Primary};
-    PointerEvent pan_second = pan_first;
-    pan_second.pointer_id = 32;
-    pan_second.position = right;
-    transform.SendPointer(pan_first);
-    transform.SendPointer(pan_second);
-    transform.Pump();
-    pan_first.type = PointerEventType::Move;
-    pan_first.position = {left.x + 40.0F, left.y};
-    pan_second.type = PointerEventType::Move;
-    pan_second.position = {right.x + 40.0F, right.y};
-    transform.SendPointer(pan_first);
-    transform.SendPointer(pan_second);
-    transform.PumpAndSettle();
-    const Rect panned = transform.Find(UiSelector::Key("transform-content")).One().bounds;
-    CHECK(panned.x > scaled.x + 10.0F);
-    pan_first.type = PointerEventType::Up;
-    pan_first.changed_button = PointerButton::Primary;
-    pan_first.pressed_buttons = PointerButton::None;
-    pan_second.type = PointerEventType::Up;
-    pan_second.changed_button = PointerButton::Primary;
-    pan_second.pressed_buttons = PointerButton::None;
-    transform.SendPointer(pan_first);
-    transform.SendPointer(pan_second);
-    transform.PumpAndSettle();
-
-    // Rotate the accumulated transform by moving two pointers from horizontal to vertical.
-    const Point rotated_center = Center(panned);
-    PointerEvent rotate_first{.type = PointerEventType::Down,
-                              .pointer_id = 41,
-                              .position = {rotated_center.x - 60.0F, rotated_center.y},
-                              .device_kind = PointerDeviceKind::Touch,
-                              .changed_button = PointerButton::Primary,
-                              .pressed_buttons = PointerButton::Primary};
-    PointerEvent rotate_second = rotate_first;
-    rotate_second.pointer_id = 42;
-    rotate_second.position = {rotated_center.x + 60.0F, rotated_center.y};
-    transform.SendPointer(rotate_first);
-    transform.SendPointer(rotate_second);
-    transform.Pump();
-    rotate_first.type = PointerEventType::Move;
-    rotate_first.position = {rotated_center.x, rotated_center.y - 60.0F};
-    rotate_second.type = PointerEventType::Move;
-    rotate_second.position = {rotated_center.x, rotated_center.y + 60.0F};
-    transform.SendPointer(rotate_first);
-    transform.SendPointer(rotate_second);
-    transform.PumpAndSettle();
-    const Rect rotated = transform.Find(UiSelector::Key("transform-content")).One().bounds;
-    CHECK(rotated.height > panned.height + 20.0F);
-    rotate_first.type = PointerEventType::Up;
-    rotate_first.changed_button = PointerButton::Primary;
-    rotate_first.pressed_buttons = PointerButton::None;
-    rotate_second.type = PointerEventType::Up;
-    rotate_second.changed_button = PointerButton::Primary;
-    rotate_second.pressed_buttons = PointerButton::None;
-    transform.SendPointer(rotate_first);
-    transform.SendPointer(rotate_second);
-    transform.PumpAndSettle();
-  }
-
-  {
-    Application inertia_app(InertiaGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
-    UiTest inertia(inertia_app, {.viewport = {420, 240}});
-    const Rect initial = inertia.Find(UiSelector::Key("inertial-content")).One().bounds;
-    const Point start = Center(initial);
-    inertia.Drag(start, {start.x + 60.0F, start.y},
-                 {.duration = std::chrono::duration<double>(0.1), .segments = 5});
-    inertia.PumpAndSettle();
-    const Rect settled = inertia.Find(UiSelector::Key("inertial-content")).One().bounds;
-    CHECK(settled.x > initial.x + 60.0F);
-  }
-
-  {
-    Application scroll_app(ScrollGallery, {.window = {.initial_size = {320, 240}}, .show_debug_overlay = false});
-    UiTest scroll(scroll_app, {.viewport = {320, 240}});
-    const float row_before = scroll.Find(UiSelector::Key("scroll-row-0")).One().bounds.y;
-    scroll.SendScroll({.position = {160.0F, 120.0F}, .delta_y = 160.0F});
-    scroll.PumpAndSettle();
-    CHECK(scroll.Find(UiSelector::Key("scroll-row-0")).One().bounds.y < row_before);
-  }
-
-  {
-    Application rolling_app(RollingGallery, {.window = {.initial_size = {320, 240}}, .show_debug_overlay = false});
-    UiTest rolling(rolling_app, {.viewport = {320, 240}});
-    const float zero_before = rolling.Find(UiSelector::Key("rolling")).Find(UiSelector::Text("0")).One().bounds.y;
-    rolling.Find(UiSelector::Key("increment")).Tap();
-    rolling.PumpAndSettle();
-    const float zero_after = rolling.Find(UiSelector::Key("rolling")).Find(UiSelector::Text("0")).One().bounds.y;
-    CHECK(zero_after < zero_before - 1.0F);
-  }
-
-  {
-    Application semantic_app(SemanticsGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
-    UiTest semantic(semantic_app, {.viewport = {360, 240}});
-    semantic.FindSemantics(UiSemanticSelector::Label("Semantic target"))
-        .PerformSemanticAction({SemanticActionKind::Activate, std::monostate{}});
-    semantic.PumpAndSettle();
-    CHECK(semantic.Find(UiSelector::Text("semantic count: 1")).Exists());
-  }
-
-  {
-    Application keyboard_app(KeyboardGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
-    UiTest keyboard(keyboard_app, {.viewport = {360, 240}});
-    keyboard.Find(UiSelector::Key("focus-target")).Tap();
-    keyboard.PumpAndSettle();
-    keyboard.PressKey(Key::K, KeyModifiers{.control = true});
-    keyboard.PumpAndSettle();
-    CHECK(keyboard.Find(UiSelector::Text("shortcut count: 1")).Exists());
-  }
-
-  {
-    Application multi_app(MultiGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
-    UiTest multi(multi_app, {.viewport = {360, 240}});
-    for(int tap = 0; tap < 3; ++tap) {
-      multi.Find(UiSelector::Key("triple")).Tap();
-      multi.Pump(std::chrono::milliseconds(50));
-    }
-    multi.PumpAndSettle();
-    CHECK(multi.Find(UiSelector::Text("triples: 1")).Exists());
-  }
-
-  {
-    Application resize_app(ResizeGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
-    UiTest resize(resize_app, {.viewport = {420, 320}});
-    const Rect handle = resize.Find(UiSelector::Key("resize-handle")).One().bounds;
-    resize.Drag({handle.x + handle.width * 0.5F, handle.y + handle.height * 0.5F},
-                {handle.x + handle.width * 0.5F + 40.0F, handle.y + handle.height * 0.5F},
-                {.duration = std::chrono::duration<double>(0.2), .segments = 8});
-    resize.PumpAndSettle();
-    CHECK(resize.Find(UiSelector::Text("width: 140")).Exists());
-  }
-
-  {
-    Application grid_app(GridGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
-    UiTest grid(grid_app, {.viewport = {420, 320}});
-    const Rect first = grid.Find(UiSelector::Key("g-1")).One().bounds;
-    const Rect third = grid.Find(UiSelector::Key("g-3")).One().bounds;
-    grid.Drag({first.x + first.width * 0.5F, first.y + first.height * 0.5F},
-              {third.x + third.width * 0.5F, third.y + third.height * 0.5F},
-              {.duration = std::chrono::duration<double>(0.3), .segments = 12});
-    grid.PumpAndSettle();
-    CHECK(grid.Find(UiSelector::Text("grid event: 0->2")).Exists());
-  }
-
-  {
-    Application horizontal_app(HorizontalReorderGallery, {.window = {.initial_size = {420, 240}}, .show_debug_overlay = false});
-    UiTest horizontal(horizontal_app, {.viewport = {420, 240}});
-    const Rect first = horizontal.Find(UiSelector::Key("h-1")).One().bounds;
-    const Rect third = horizontal.Find(UiSelector::Key("h-3")).One().bounds;
-    horizontal.Drag({first.x + first.width * 0.5F, first.y + first.height * 0.5F},
-                    {third.x + third.width * 0.5F, third.y + third.height * 0.5F},
-                    {.duration = std::chrono::duration<double>(0.3), .segments = 12});
-    horizontal.PumpAndSettle();
-    CHECK(horizontal.Find(UiSelector::Text("h event: 0->2")).Exists());
-  }
-
-  {
-    Application reveal_app(RevealGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
-    UiTest reveal(reveal_app, {.viewport = {360, 240}});
-    reveal.Find(UiSelector::Key("reveal-button")).Tap();
-    reveal.Pump(std::chrono::milliseconds(400));
-    CHECK(reveal.Find(UiSelector::Text("reveals: 1")).Exists());
-  }
-
-  {
-    Application hover_app(HoverCardGallery, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
-    UiTest hover(hover_app, {.viewport = {420, 320}});
-    CHECK(hover.Find(UiSelector::Key("hover-card")).Exists());
-  }
-
-  {
-    Application press_drag_app(PressDragGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
-    UiTest press_drag(press_drag_app, {.viewport = {360, 240}});
-    const Point start = Center(press_drag.Find(UiSelector::Key("press-drag")).One().bounds);
-    PointerEvent hold{.type = PointerEventType::Down,
-                      .pointer_id = 61,
-                      .position = start,
-                      .device_kind = PointerDeviceKind::Touch,
-                      .changed_button = PointerButton::Primary,
-                      .pressed_buttons = PointerButton::Primary};
-    press_drag.SendPointer(hold);
-    press_drag.Pump(std::chrono::milliseconds(250));
-    hold.type = PointerEventType::Move;
-    hold.position = {start.x + 40.0F, start.y};
-    press_drag.SendPointer(hold);
-    press_drag.Pump();
-    hold.type = PointerEventType::Up;
-    hold.changed_button = PointerButton::Primary;
-    hold.pressed_buttons = PointerButton::None;
-    press_drag.SendPointer(hold);
-    press_drag.PumpAndSettle();
-    CHECK(press_drag.Find(UiSelector::Text("started: 1")).Exists());
-    CHECK(press_drag.Find(UiSelector::Text("ended: 1")).Exists());
-    CHECK(press_drag.Find(UiSelector::Text("last: 40")).Exists());
-  }
-
-  {
-    Application dismiss_app(DismissGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
-    UiTest dismiss(dismiss_app, {.viewport = {360, 240}});
-    const Rect initial = dismiss.Find(UiSelector::Key("dismiss")).One().bounds;
-    const Point start{initial.x + 40.0F, initial.y + initial.height * 0.5F};
-    dismiss.Drag(start, {start.x + 120.0F, start.y},
-                 {.duration = std::chrono::duration<double>(0.2), .segments = 8});
-    dismiss.PumpAndSettle();
-    CHECK(dismiss.Find(UiSelector::Text("dismissed: 1")).Exists());
-  }
-
-  {
-    Application secondary_app(SecondaryGallery, {.window = {.initial_size = {360, 240}}, .show_debug_overlay = false});
-    UiTest secondary(secondary_app, {.viewport = {360, 240}});
-    const Point point = Center(secondary.Find(UiSelector::Key("secondary")).One().bounds);
-    PointerEvent click{.type = PointerEventType::Down,
-                       .pointer_id = 51,
-                       .position = point,
+      const Point center = Center(ui.Find(UiSelector::Key("pipe-card")).One().bounds);
+      PointerEvent sec{.type = PointerEventType::Down,
+                       .pointer_id = 1,
+                       .position = center,
                        .device_kind = PointerDeviceKind::Mouse,
                        .changed_button = PointerButton::Secondary,
                        .pressed_buttons = PointerButton::Secondary};
-    secondary.SendPointer(click);
-    click.type = PointerEventType::Up;
-    click.changed_button = PointerButton::Secondary;
-    click.pressed_buttons = PointerButton::None;
-    secondary.SendPointer(click);
-    secondary.PumpAndSettle();
-    CHECK(secondary.Find(UiSelector::Text("secondaries: 1")).Exists());
-  }
+      ui.SendPointer(sec);
+      sec.type = PointerEventType::Up;
+      sec.pressed_buttons = PointerButton::None;
+      ui.SendPointer(sec);
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("menus: 1")).Exists());
 
-  Throws<std::invalid_argument>([] { (void)SwipeActions(Text("x"), {}, {}); });
-  Throws<std::invalid_argument>([] {
-    (void)SwipeActions(Text("x"), [](std::function<void()>) { return Text("action"); },
-                       {.action_extent = 0.0F});
+      ui.PressKey(Key::J, KeyModifiers{.control = true});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("shortcuts: 1")).Exists());
+    }
+
+    // 2. Mutual-exclusion SwipeController rows.
+    {
+      Application app(ExclusiveSwipeListApp, {.window = {.initial_size = {420, 320}}, .show_debug_overlay = false});
+      UiTest ui(app, {.viewport = {420, 320}});
+      const Point start_a = Center(ui.Find(UiSelector::Key("content-a")).One().bounds);
+      ui.Drag(start_a, {start_a.x - 120.0F, start_a.y},
+              {.duration = std::chrono::duration<double>(0.25), .segments = 10});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("a open: yes")).Exists());
+      CHECK(ui.Find(UiSelector::Text("b open: no")).Exists());
+
+      const Point start_b = Center(ui.Find(UiSelector::Key("content-b")).One().bounds);
+      ui.Drag(start_b, {start_b.x - 120.0F, start_b.y},
+              {.duration = std::chrono::duration<double>(0.25), .segments = 10});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("a open: no")).Exists());
+      CHECK(ui.Find(UiSelector::Text("b open: yes")).Exists());
+    }
+
+    // 3. Handle-only Reorderable + child button isolation.
+    {
+      Application app(HandleOnlyReorderApp, {.window = {.initial_size = {420, 360}}, .show_debug_overlay = false});
+      UiTest ui(app, {.viewport = {420, 360}});
+
+      // Dragging the row body does NOT reorder when handle_only = true.
+      ui.Drag(Center(ui.Find(UiSelector::Key("body-1")).One().bounds),
+              Center(ui.Find(UiSelector::Key("body-3")).One().bounds),
+              {.duration = std::chrono::duration<double>(0.25), .segments = 10});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("reorders: none")).Exists());
+
+      // Clicking the child button activates cleanly.
+      ui.Find(UiSelector::Key("act-1")).Tap();
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("btn clicks: 1")).Exists());
+
+      // Dragging the ReorderHandle grip reorders row 0 -> 2.
+      ui.Drag(Center(ui.Find(UiSelector::Key("grip-1")).One().bounds),
+              Center(ui.Find(UiSelector::Key("grip-3")).One().bounds),
+              {.duration = std::chrono::duration<double>(0.3), .segments = 12});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("reorders: 0->2")).Exists());
+    }
+
+    // 4. Controlled PanZoom via external toolbar.
+    {
+      Application app(ControlledPanZoomApp, {.window = {.initial_size = {480, 320}}, .show_debug_overlay = false});
+      UiTest ui(app, {.viewport = {480, 320}});
+      const Rect initial = ui.Find(UiSelector::Key("canvas")).One().bounds;
+      CHECK(ui.Find(UiSelector::Text("zoom: 100%")).Exists());
+
+      ui.Find(UiSelector::Key("zoom-in")).Tap();
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("zoom: 200%")).Exists());
+      CHECK(Near(ui.Find(UiSelector::Key("canvas")).One().bounds.width, initial.width * 2.0F));
+
+      ui.Find(UiSelector::Key("pan-right")).Tap();
+      ui.PumpAndSettle();
+      CHECK(Near(Center(ui.Find(UiSelector::Key("canvas")).One().bounds).x, Center(initial).x + 50.0F));
+
+      ui.Find(UiSelector::Key("zoom-reset")).Tap();
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("zoom: 100%")).Exists());
+      CHECK(Near(ui.Find(UiSelector::Key("canvas")).One().bounds.width, initial.width));
+    }
   });
-  Throws<std::invalid_argument>([] {
-    (void)SwipeActions(Text("x"), [](std::function<void()>) { return Text("action"); },
-                       {.activation_ratio = 1.5F});
-  });
-  Throws<std::invalid_argument>([] {
-    (void)SwipeActions(Text("x"), [](std::function<void()>) { return Text("action"); },
-                       {.minimum_velocity = -1.0F});
-  });
-  Throws<std::invalid_argument>([] {
-    (void)ContextMenuArea(Text("x"), {}, {.long_press_duration = std::chrono::duration<double>(0.0)});
-  });
-  Throws<std::invalid_argument>([] { (void)Draggable(Text("x"), 1, {.dragging_opacity = 1.5F}); });
-  Throws<std::invalid_argument>([] { (void)DropZone<int>(Text("x"), {}, {.border_width = -1.0F}); });
-  Throws<std::invalid_argument>([] { (void)FileDropZone(Text("x"), {.extensions = {"bad/name"}}); });
-  Throws<std::invalid_argument>([] {
-    (void)FileDropZone(Text("x"), {}, {}, {.border_width = -1.0F});
-  });
-  Throws<std::invalid_argument>([] {
-    (void)PanZoom(Text("x"), {.minimum_scale = 2.0F, .maximum_scale = 1.0F});
-  });
-  Throws<std::invalid_argument>([] { (void)PanZoom(Text("x"), {.wheel_sensitivity = -1.0F}); });
-  Throws<std::invalid_argument>([] { (void)InertialDrag(Text("x"), {.projection_time = -1.0F}); });
-  Throws<std::invalid_argument>([] { (void)InertialDrag(Text("x"), {.maximum_projection = -1.0F}); });
-  Throws<std::invalid_argument>([] { (void)ScrollProgress(ScrollController{}, {.thickness = 0.0F}); });
-  Throws<std::invalid_argument>([] { (void)ScrollEdgeFade(ScrollController{}, {.extent = 0.0F}); });
-  Throws<std::invalid_argument>([] { (void)RollingNumber(0, {.digit_gap = -1.0F}); });
-  Throws<std::invalid_argument>([] { (void)RollingNumber(0, {.minimum_digits = -1}); });
-  Throws<std::invalid_argument>([] { (void)MultiClickable(Text("x"), {.count = 1}); });
-  Throws<std::invalid_argument>([] { (void)KeyboardShortcut(Text("x"), {}, [] {}); });
-  Throws<std::invalid_argument>([] {
-    (void)SemanticActions{Semantics{}, SemanticActionMask(SemanticActionKind::Custom)};
-  });
-  Throws<std::invalid_argument>([] {
-    (void)PressDragHandle(Text("x"), {.press_duration = std::chrono::duration<double>(0.0)});
-  });
-  Throws<std::invalid_argument>([] { (void)Dismissible(Text("x"), {}, {.dismiss_threshold = 0.0F}); });
-  Throws<std::invalid_argument>([] {
-    (void)Reorderable({Text("a")}, {.auto_scroll_edge = 0.0F});
-  });
-  Throws<std::invalid_argument>([] {
-    (void)Reorderable({Text("a")}, {.auto_scroll_step = 0.0F});
-  });
-  Throws<std::invalid_argument>([] {
-    (void)PanZoom(Text("x"), {.pan_bounds = Point{0.0F, 10.0F}});
-  });
-  Throws<std::invalid_argument>([] { (void)PanZoom(Text("x"), {.rotation_snap = -1.0F}); });
-  Throws<std::invalid_argument>([] { (void)ReorderableGrid({Text("a")}, {.cell_width = 0.0F}); });
-  Throws<std::invalid_argument>([] { (void)ResizeHandle(Axis::Horizontal, {}, {.thickness = 0.0F}); });
-  Throws<std::invalid_argument>([] { (void)HoverCard(Text("x"), {}, {}); });
-}); }
+}

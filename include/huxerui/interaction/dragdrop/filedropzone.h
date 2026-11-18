@@ -3,9 +3,11 @@
 #include <huxerui/color.h>
 #include <huxerui/file_drop.h>
 #include <huxerui/geometry.h>
+#include <huxerui/interaction/pipe.h>
 #include <huxerui/view.h>
 
 #include <functional>
+#include <utility>
 #include <vector>
 
 namespace huxerui::interaction {
@@ -16,22 +18,30 @@ struct FileDropZoneStyle {
   Color highlight_color = Color::Rgb(31, 111, 235, 0.9F);
   /// Border width while highlighted, in logical pixels. Must be finite and non-negative.
   float border_width = 2.0F;
+
   bool operator==(const FileDropZoneStyle&) const = default;
 };
 
+/// Headless external FileDropZone overload delegating hover presentation to `builder(bool hovered)`.
+/// @throws std::invalid_argument If `builder` is empty or `options` are malformed.
+View FileDropZone(std::function<View(bool hovered)> builder, FileDropOptions options,
+                  std::function<void(const std::vector<FileReference>&, const FileDropEvent&)> on_dropped = {});
+
 /// Receives external files on content with a highlighted border.
-///
-/// The wrapper attaches FileDropTarget with the supplied extension/MIME/batch filters, tracks hover from
-/// FileDropEvents::Entered/Moved/Exited, clears on Failed, and forwards a successful batch to on_dropped. File
-/// references are borrowed for the callback; copy them to retain access. The zone imposes no intrinsic frame.
-/// @param content Content that acts as the external drop target.
-/// @param options File extension, MIME, and batch filters. Invalid filters throw immediately.
-/// @param on_dropped Optional callback invoked once per accepted batch.
-/// @param style Highlight color and border width.
-/// @return A View carrying the FileDropTarget modifier and highlight presentation.
 /// @throws std::invalid_argument If the filters or border width are invalid.
 View FileDropZone(View content, FileDropOptions options,
                   std::function<void(const std::vector<FileReference>&, const FileDropEvent&)> on_dropped = {},
                   FileDropZoneStyle style = {});
+
+/// Pipeable adaptor for FileDropZone.
+[[nodiscard]] inline ViewAdaptor FileDropZone(
+    FileDropOptions options,
+    std::function<void(const std::vector<FileReference>&, const FileDropEvent&)> on_dropped = {},
+    FileDropZoneStyle style = {}) {
+  return ViewAdaptor(
+      [options = std::move(options), on_dropped = std::move(on_dropped), style](View content) {
+        return FileDropZone(std::move(content), options, on_dropped, style);
+      });
+}
 
 } // namespace huxerui::interaction

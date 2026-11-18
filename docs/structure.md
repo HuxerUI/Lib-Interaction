@@ -1,77 +1,76 @@
 # Repository structure
 
-Lib-Interaction follows the same rule as Flutter, GTK, and Qt: one concept per file, dependencies point
-one way, and tests and samples live in their own layers. The public include path, implementation directory,
-and test location should make the owning family obvious without opening the file.
+Lib-Interaction separates public interaction contracts from internal shared machinery, and separates input-driven
+interaction primitives from pure visual/value-driven motion effects. Dependencies point strictly inward toward
+HuxerUI core:
+
+- **Layer 0 (`src/internal/`)**: Private validation, multi-controller frame aggregation, and shared slot-reorder
+  geometry/session infrastructure. Never exposed in `include/`.
+- **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `DropZone` /
+  `FileDropZone` / `Dismissible`, `SwipeController`, `PanZoomController`, `HoverCardController`, `ReorderHandle`, and
+  `ViewAdaptor` (`operator|`).
+- **Layer 2 (Styled presets, Retained modifiers & `visual/`)**: Ready-to-use composed widgets, retained
+  `NodeExtension` paint/semantics modifiers, and non-interactive visual effects under `visual/`.
 
 ## Layout
 
 ```text
 include/huxerui/
-  interaction.h                       # canonical umbrella; keep this stable
+  interaction.h                       # canonical umbrella; exports all families and pipe combinators
   interaction/
-    press/                            # Pressable, LongPressable, MultiClickable, SecondaryClickable, DoubleClickable, Ripple
-    hover/                            # HoverLift, HoverHighlight, Spotlight, HoverCard
-    motion/                           # Pulsing, Popped, Shaken, Shimmer, Fireworks, RollingNumber, RevealOnTap
-    gesture/                          # DragSpring, InertialDrag, PanZoom, PinchZoom, SwipeActions,
-                                      # Dismissible, PressDragHandle, ResizeHandle
-    reorder/                          # Reorderable, ReorderableGrid
+    pipe.h                            # ViewAdaptor and left-to-right operator| pipeline support
+    press/                            # InteractiveSurface, Pressable, LongPressable, HoldProgressRing,
+                                      # MultiClickable, DoubleClickable, ContextMenuArea, SecondaryClickable, Ripple
+    hover/                            # Hoverable, HoverLift, HoverHighlight, Spotlight
+    gesture/                          # DragSpring, InertialDrag, PanZoom, PinchZoom, PanZoomController,
+                                      # SwipeActions, SwipeController, Dismissible, PressDragHandle, ResizeHandle
+    reorder/                          # Reorderable, ReorderableGrid, ReorderHandle
     dragdrop/                         # Draggable, DropZone, FileDropZone
+    overlay/                          # HoverCard, HoverCardController
     scroll/                           # ScrollProgress, ScrollEdgeFade
-    overlay/                          # ContextMenuArea
     accessibility/                    # SemanticActions, KeyboardShortcut
-src/                                  # mirrors the include families; header-only widgets have no .cpp
-examples/preview/src/
-  app.cpp                             # gallery scaffold: theme, header, section order only
-  demos/demos.h                       # DemoState + DemoContext + section declarations
-  demos/<family>.cpp                  # one demo family per file
+    visual/                           # Pulsing, Shimmer, Fireworks, RollingNumber, UsePop/Popped,
+                                      # UseShake/Shaken, UseRevealOnTap (non-input visual/motion effects)
+src/
+  internal/                           # validate.h, motion_group.h, reorder_core.h/.cpp (private Layer 0)
+  <family>/                           # mirrors include/huxerui/interaction/<family>/
+examples/preview/
+  PreviewViews.cmake                  # shared static target (interaction_preview_views) reused by app and tests
+  src/
+    app.cpp                           # gallery scaffold: theme, header, section order only
+    demos/demos.h                     # cross-section DemoState counters + value-owned DemoContext
+    demos/<family>.cpp                # autonomous section scopes with private assets and local state
 tests/
   support/test.h                      # CHECK, Throws, Run, Center, Near
-  widget/                             # validation and composed-widget UI contracts
-  advanced/                           # cross-widget gesture and state flows
-  preview/                            # gallery smoke test
-  api/api_surface_test.cpp            # public umbrella compile/link smoke
+  widget/                             # family-aligned unit contracts + centralized validation_test.cpp
+  advanced/                           # cross-widget pipelines, controller coordination, handle-only reorder
+  preview/                            # gallery smoke test linked against interaction_preview_views
+  api/api_surface_test.cpp            # umbrella compile/link smoke + equality_comparable static_asserts
 docs/
-  design.md                           # widget catalog and motion conventions
+  design.md                           # architecture, widget catalog, controller & motion conventions
   structure.md                        # this file
   testing.md                          # test layers and conventions
-  open-questions.md                   # reviewed limitations and decisions
+  open-questions.md                   # reviewed limitations and resolved design history
 ```
 
-## Dependency rules
+## Dependency and API rules
 
-- `include/huxerui/interaction/*` may include HuxerUI core headers, but never this repository's
-  `examples/` or `tests/`.
-- Composed widgets may use retained modifiers and framework primitives. Retained paint modifiers stay
-  paint-only: they do not consume pointer sequences and do not change layout or hit testing.
-- No widget talks to a platform API directly. Platform entry points live in `examples/preview/platform/`.
-- Public declarations belong in `include/`; implementation helpers stay in anonymous namespaces in the
-  matching `src/` file. Do not add a public header for a helper that is not part of the contract.
-- `include/huxerui/interaction.h` is the canonical entry point. Grouped headers are also supported, so a
-  header move is an API change: update the umbrella, every implementation include, and the documentation.
-
-## Adding a widget
-
-1. Add the header under the closest `include/huxerui/interaction/<family>/`.
-2. Add the implementation under the mirrored `src/<family>/`.
-3. Export it from `include/huxerui/interaction.h`.
-4. Add the Doxygen contract, validation rules, and `operator==` for any style type.
-5. Add the entry to the widget catalog in `docs/design.md`.
-6. Add validation and behavior coverage under the matching `tests/widget/` family.
-7. Add the source to the explicit list in `CMakeLists.txt`.
-8. If the widget deserves gallery space, add a section under `examples/preview/src/demos/` and register it
-   in `app.cpp` and the preview test target.
-
-## Adding a demos section
-
-A demo is not part of the library. Keep its private vector assets, layout constants, and state helpers in
-`examples/preview/src/demos/<family>.cpp`. `DemoState` holds only state that must be shared across sections;
-`DemoContext` carries the resolved theme and viewport flags. `app.cpp` should remain a section list and
-theme scaffold.
+- `include/huxerui/interaction/*` may include fine-grained HuxerUI core headers and `pipe.h`, never `src/internal/`,
+  `examples/`, or `tests/`. Triggers and controllers hide `State<T>` and `TaskScope` behind `std::shared_ptr` state
+  structs so default-constructed handles are `noexcept`, runtime-free, and pointer-equality comparable.
+- Every public `*Style` struct and every public retained `ViewModifier` (`Ripple`, `HoldProgressRing`,
+  `HoverHighlight`, `Spotlight`, `Shimmer`, `Fireworks`, `ScrollProgress`, `ScrollEdgeFade`) must satisfy
+  `std::equality_comparable` so `ModifierDescriptorFor` short-circuits unchanged updates.
+- Wrapper functions follow one uniform parameter order:
+  `(View content, [required domain arguments], primary_callback, Style style = {})`, with `std::invocable`-constrained
+  overloads where a visual-only `(View content, Style style = {})` form is also meaningful.
+- Stateless view decorators (`MultiClickable`, `DoubleClickable`, `ContextMenuArea`, `KeyboardShortcut`) attach
+  modifiers directly without extra container nodes; apply them before stateful `Scope`-creating wrappers (`Pressable`,
+  `HoverLift`) when piping both onto one node.
+- `DemoState` in `examples/preview` holds only counters read across multiple sections (`StatusSection`). Section-local
+  state must stay inside each section's own `Scope` so local interactions never recompose sibling sections.
 
 ## Build boundary
 
-There is one library target, `huxerui_interaction`. Grouping directories does not create separate CMake
-targets: at this size a single target keeps linking and export simple. Split targets only when consumers
-need a smaller dependency surface or build time demands it; prefer `interaction_core` +
-`interaction_widgets` over one target per family.
+There is one library target, `huxerui_interaction` (`HuxerUI::Interaction`). Grouping directories organizes headers,
+sources, and tests by responsibility while keeping linking and export simple.

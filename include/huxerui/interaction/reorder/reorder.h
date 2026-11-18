@@ -1,21 +1,21 @@
 #pragma once
 
 #include <huxerui/animation.h>
-#include <huxerui/geometry.h>
-#include <huxerui/scroll.h>
-#include <huxerui/semantics.h>
 #include <huxerui/color.h>
 #include <huxerui/geometry.h>
+#include <huxerui/scroll.h>
 #include <huxerui/view.h>
 
+#include <concepts>
+#include <cstddef>
 #include <functional>
 #include <optional>
+#include <utility>
 #include <vector>
 
 namespace huxerui::interaction {
 
-/// Presentation configuration for Reorderable. Layout never changes while a drag runs: the dragged item follows
-/// the pointer, the items between ease one slot aside, and the model reorders only at drop.
+/// Presentation and interaction configuration for Reorderable.
 struct ReorderableStyle {
   /// Layout and drag axis. Vertical composes Column; Horizontal composes Row.
   Axis axis = Axis::Vertical;
@@ -25,11 +25,12 @@ struct ReorderableStyle {
   AnimationSpec settle_motion = TweenSpec{.duration = 0.18, .easing = Easing::EaseOut};
   /// Motion used by the dragged item following the pointer.
   AnimationSpec follow_motion = TweenSpec{.duration = 0.04, .easing = Easing::Linear};
-  /// Outline color drawn over the preview target slot while a drag runs. A fully transparent color disables the
-  /// highlight.
+  /// Outline color drawn over the preview target slot while a drag runs.
   Color target_highlight = Color::Rgb(31, 111, 235, 0.9F);
   /// Outline width of the preview target highlight. Must be finite and non-negative.
   float target_highlight_width = 2.0F;
+  /// When true, dragging starts only from a nested ReorderHandle inside each item rather than the whole slot.
+  bool handle_only = false;
   /// Enables Alt + arrow keyboard reordering on a focused slot.
   bool keyboard_reorder = true;
   /// Distance from a viewport edge that drives per-drag-update auto-scroll. Empty disables auto-scroll.
@@ -38,36 +39,26 @@ struct ReorderableStyle {
   float auto_scroll_step = 24.0F;
   /// Controller bound to the enclosing ScrollView. Auto-scroll is skipped when disconnected.
   ScrollController scroll_controller{};
+
   bool operator==(const ReorderableStyle&) const = default;
 };
 
-/// Composes items in one column that supports drag-to-reorder.
-///
-/// While a drag runs, the layout stays in the original order — the dragged item follows the pointer from its own
-/// slot, the items between it and the pointer's closest slot ease one position aside, and the closest slot draws
-/// the target highlight. Dropping fires the callback once with the source and destination indices; equal indices
-/// mean the item returned to its own slot. The items vector is display input: after the callback, recompose with
-/// the model's new order and the drag session is already reset.
-///
-/// Call during composition. Each call creates an independent state scope; recomposition with equal arguments
-/// preserves the mounted drag session by scope position. Slot geometry is recorded during layout preparation, so
-/// preview targeting works while displaced items are still animating. The widget imposes no intrinsic frame;
-/// supply bounds through a parent or Frame.
-/// @param items One view per slot, in display order. The widget never mutates the vector.
-/// @param style Spacing, motions, and preview highlight. Must satisfy the documented ranges.
-/// @param on_reordered Callback invoked on drop with the original and previewed slot indices, or an empty
-///     function to compose a purely visual reorder surface.
-/// @return A View whose mounted instance owns the drag session and slot geometry.
-/// @throws std::invalid_argument If spacing or the highlight width is non-finite or negative.
-/// @code
-/// auto order = UseState<std::vector<int>>({1, 2, 3});
-/// return Reorderable(BuildTiles(order.Get()), {}, [order](std::size_t from, std::size_t to) {
-///   auto next = order.Get();
-///   Rotate(next, from, to);
-///   order = std::move(next);
-/// }).With(Frame{.width = 320.0F});
-/// @endcode
-View Reorderable(std::vector<View> items, ReorderableStyle style = {},
-                 std::function<void(std::size_t from, std::size_t to)> on_reordered = {});
+namespace detail {
+View ReorderableImpl(std::vector<View> items, std::function<void(std::size_t, std::size_t)> on_reordered,
+                     ReorderableStyle style);
+} // namespace detail
+
+/// Visual-only Reorderable overload.
+inline View Reorderable(std::vector<View> items, ReorderableStyle style = {}) {
+  return detail::ReorderableImpl(std::move(items), {}, style);
+}
+
+/// Composes items in a row or column that supports drag-to-reorder and optional Alt+arrow keyboard reordering.
+/// @throws std::invalid_argument If spacing, highlight width, auto-scroll edge, or auto-scroll step is invalid.
+template <std::invocable<std::size_t, std::size_t> F>
+View Reorderable(std::vector<View> items, F&& on_reordered, ReorderableStyle style = {}) {
+  return detail::ReorderableImpl(
+      std::move(items), std::function<void(std::size_t, std::size_t)>(std::forward<F>(on_reordered)), style);
+}
 
 } // namespace huxerui::interaction
