@@ -1,5 +1,6 @@
 #pragma once
 
+#include <huxerui/animation.h>
 #include <huxerui/geometry.h>
 #include <huxerui/interaction/pipe.h>
 #include <huxerui/scroll.h>
@@ -18,6 +19,14 @@ struct ScrollSpyControllerState;
 
 struct ScrollSpyStyle;
 
+/// Controls whether programmatic ScrollToSection() transitions animate smoothly or jump immediately.
+enum class ScrollJumpBehavior {
+  /// Smoothly interpolates scroll offset using `ScrollSpyStyle::scroll_motion`.
+  Smooth,
+  /// Jumps directly to the target section offset in a single frame.
+  Instant,
+};
+
 /// Copyable handle exposing the active visible section and programmatic section navigation for ScrollSpyArea.
 /// Default-constructed handles are unbound and safe outside an Application runtime; bind one with
 /// UseScrollSpyController().
@@ -34,8 +43,9 @@ public:
   [[nodiscard]] std::size_t SectionCount() const;
 
   /// Scrolls the connected ScrollController so the leading edge of section `index` aligns with the viewport start.
+  /// When `behavior` is unset, follows `ScrollSpyStyle::jump_behavior`.
   /// Returns true when a connected ScrollController accepted the request.
-  bool ScrollToSection(std::size_t index) const;
+  bool ScrollToSection(std::size_t index, std::optional<ScrollJumpBehavior> behavior = std::nullopt) const;
 
   bool operator==(const ScrollSpyController&) const = default;
 
@@ -61,6 +71,10 @@ struct ScrollSpyStyle {
   /// Distance in logical pixels inside the leading viewport edge where a section becomes active. Must be finite and
   /// non-negative.
   float activation_offset = 16.0F;
+  /// Controls whether ScrollToSection() animates smoothly or jumps immediately by default.
+  ScrollJumpBehavior jump_behavior = ScrollJumpBehavior::Smooth;
+  /// Animation timing specification used when `jump_behavior` resolves to `ScrollJumpBehavior::Smooth`.
+  AnimationSpec scroll_motion = TweenSpec{.duration = 0.28, .easing = Easing::EaseInOut};
   /// Optional external controller bound to this ScrollSpyArea.
   ScrollSpyController controller{};
 

@@ -10,10 +10,12 @@
 #include <huxerui/task.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <map>
 #include <optional>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace huxerui::interaction {
@@ -39,6 +41,8 @@ struct ScrollSpyControllerState {
   bool sync_scheduled = false;
   std::shared_ptr<bool> alive;
   std::function<void()> post_sync;
+  std::function<void(float from, float to, const AnimationSpec& motion)> start_smooth_scroll;
+  std::function<void()> cancel_smooth_scroll;
 };
 
 } // namespace detail
@@ -48,6 +52,16 @@ namespace {
 void ValidateStyle(const ScrollSpyStyle& style) {
   internal::RequireNonNegative(style.activation_offset,
                                "HuxerUI Interaction: ScrollSpy activation offset must be finite and non-negative");
+  if(const auto* tween = std::get_if<TweenSpec>(&style.scroll_motion)) {
+    internal::RequireNonNegative(tween->duration,
+                                 "HuxerUI Interaction: ScrollSpy scroll motion tween duration must be finite and non-negative");
+  } else if(const auto* spring = std::get_if<SpringSpec>(&style.scroll_motion)) {
+    internal::RequirePositive(spring->stiffness,
+                              "HuxerUI Interaction: ScrollSpy scroll motion spring stiffness must be finite and positive");
+    internal::RequirePositive(
+        spring->damping_ratio,
+        "HuxerUI Interaction: ScrollSpy scroll motion spring damping ratio must be finite and positive");
+  }
 }
 
 struct ScrollSpyEnvironment {
@@ -134,15 +148,81 @@ class ScrollSpyViewportProbe::Extension final : public NodeExtension {
 public:
   Extension(ViewNode& node, const ScrollSpyViewportProbe& value) { Update(node, value); }
 
+  ~Extension() override {
+    if(state_) {
+      state_->start_smooth_scroll = {};
+      state_->cancel_smooth_scroll = {};
+    }
+  }
+
   void Update(ViewNode&, const ScrollSpyViewportProbe& value) {
     const bool config_changed =
         state_ != value.state || axis_ != value.axis || activation_offset_ != value.activation_offset;
+    if(state_ && state_ != value.state) {
+      state_->start_smooth_scroll = {};
+      state_->cancel_smooth_scroll = {};
+      animating_scroll_ = false;
+      has_applied_offset_ = false;
+    }
     state_ = value.state;
     axis_ = value.axis;
     activation_offset_ = value.activation_offset;
-    if(config_changed && state_) {
-      state_->needs_sync = true;
+    if(state_) {
+      state_->start_smooth_scroll = [this](float from, float to, const AnimationSpec& motion) {
+        if(animating_scroll_ && has_applied_offset_ && std::abs(scroll_motion_.Value() - from) <= 1.0F) {
+          scroll_motion_.AnimateTo(to, motion);
+        } else {
+          scroll_motion_.Set(from);
+          scroll_motion_.AnimateTo(to, motion);
+        }
+        target_offset_ = to;
+        last_applied_offset_ = from;
+        has_applied_offset_ = true;
+        animating_scroll_ = true;
+        InvalidatePaint(PaintInvalidation::Foreground);
+      };
+      state_->cancel_smooth_scroll = [this]() {
+        animating_scroll_ = false;
+        has_applied_offset_ = false;
+      };
+      if(config_changed) {
+        state_->needs_sync = true;
+      }
     }
+  }
+
+  FrameResult OnFrame(ViewNode&, const FrameInfo& frame) override {
+    if(!animating_scroll_) return {};
+    if(!state_ || !state_->style.scroll_controller.has_value() || !state_->style.scroll_controller->IsConnected()) {
+      animating_scroll_ = false;
+      has_applied_offset_ = false;
+      return {};
+    }
+    const ScrollController sc = *state_->style.scroll_controller;
+    const ScrollMetrics metrics = sc.Metrics();
+    const float live_offset = metrics.offset;
+    if(has_applied_offset_ && std::abs(live_offset - last_applied_offset_) > 1.0F) {
+      animating_scroll_ = false;
+      has_applied_offset_ = false;
+      scroll_motion_.Set(live_offset);
+      return {};
+    }
+    const float max_offset = std::max(0.0F, metrics.maximum_offset);
+    const float clamped_target = std::clamp(target_offset_, 0.0F, max_offset);
+    const MotionAdvanceResult result = scroll_motion_.Advance(frame);
+    const float next_offset =
+        !scroll_motion_.IsRunning() ? clamped_target : std::clamp(scroll_motion_.Value(), 0.0F, max_offset);
+    if(result.changed || !scroll_motion_.IsRunning()) {
+      (void)sc.ScrollTo(next_offset);
+      last_applied_offset_ = sc.Metrics().offset;
+      has_applied_offset_ = true;
+    }
+    if(!scroll_motion_.IsRunning()) {
+      animating_scroll_ = false;
+      has_applied_offset_ = false;
+      return {};
+    }
+    return {result.needs_frame, result.wake_after};
   }
 
   PaintInvalidation PrepareGeometry(ViewNode& node, TextMeasurer&) override {
@@ -165,6 +245,11 @@ private:
   std::shared_ptr<detail::ScrollSpyControllerState> state_;
   Axis axis_ = Axis::Vertical;
   float activation_offset_ = 16.0F;
+  MotionController scroll_motion_{0.0F};
+  bool animating_scroll_ = false;
+  bool has_applied_offset_ = false;
+  float last_applied_offset_ = 0.0F;
+  float target_offset_ = 0.0F;
 };
 
 const huxerui::detail::ModifierDescriptor& ScrollSpyViewportProbe::Descriptor() {
@@ -230,7 +315,7 @@ std::size_t ScrollSpyController::SectionCount() const {
   return state_->section_count.Get();
 }
 
-bool ScrollSpyController::ScrollToSection(std::size_t index) const {
+bool ScrollSpyController::ScrollToSection(std::size_t index, std::optional<ScrollJumpBehavior> behavior) const {
   if(!state_ || !state_->has_viewport || !state_->style.scroll_controller.has_value()
      || !state_->style.scroll_controller->IsConnected()) {
     return false;
@@ -239,12 +324,24 @@ bool ScrollSpyController::ScrollToSection(std::size_t index) const {
   if(it == state_->sections.end() || !it->second.has_bounds) {
     return false;
   }
+  const ScrollController sc = *state_->style.scroll_controller;
+  const ScrollMetrics metrics = sc.Metrics();
   const bool vertical = state_->style.axis == Axis::Vertical;
   const float sec_start = vertical ? it->second.window_bounds.y : it->second.window_bounds.x;
   const float vp_start = vertical ? state_->viewport_bounds.y : state_->viewport_bounds.x;
-  const float current_offset = state_->style.scroll_controller->Offset();
-  const float target_offset = std::max(0.0F, current_offset + (sec_start - vp_start));
-  return state_->style.scroll_controller->ScrollTo(target_offset);
+  const float current_offset = metrics.offset;
+  const float raw_target = current_offset + (sec_start - vp_start);
+  const float clamped_target = std::clamp(raw_target, 0.0F, std::max(0.0F, metrics.maximum_offset));
+  const ScrollJumpBehavior resolved = behavior.value_or(state_->style.jump_behavior);
+  if(resolved == ScrollJumpBehavior::Instant || !state_->start_smooth_scroll
+     || std::abs(clamped_target - current_offset) <= 0.5F) {
+    if(state_->cancel_smooth_scroll) {
+      state_->cancel_smooth_scroll();
+    }
+    return sc.ScrollTo(clamped_target);
+  }
+  state_->start_smooth_scroll(current_offset, clamped_target, state_->style.scroll_motion);
+  return true;
 }
 
 ScrollSpyController UseScrollSpyController(std::size_t initial_section) {

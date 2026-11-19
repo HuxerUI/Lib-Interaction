@@ -523,7 +523,7 @@ void CheckScrollA11yAndVisualContracts() {
     runtime.Retire();
   }
 
-  // ScrollSpy (vertical + horizontal active tracking, bottom-of-scroll rule, and ScrollToSection).
+  // ScrollSpy (vertical + horizontal active tracking, bottom-of-scroll rule, Smooth vs. Instant jumps).
   {
     Application spy_app(
         []() -> View {
@@ -532,6 +532,7 @@ void CheckScrollA11yAndVisualContracts() {
           auto v_spy = UseScrollSpyController();
           auto h_spy = UseScrollSpyController();
           auto v_changes = UseState(0);
+          auto v_mode = UseState(ScrollJumpBehavior::Smooth);
 
           std::vector<View> v_sections;
           for(std::size_t i = 0; i < 4; ++i) {
@@ -555,7 +556,11 @@ void CheckScrollA11yAndVisualContracts() {
                    .Controller(v_scroll)
                    .With(Frame{.width = 220.0F, .height = 140.0F})
                    .Key("vspy-scroll")
-               | ScrollSpyArea({.scroll_controller = v_scroll, .activation_offset = 16.0F, .controller = v_spy},
+               | ScrollSpyArea({.scroll_controller = v_scroll,
+                                .activation_offset = 16.0F,
+                                .jump_behavior = v_mode.Get(),
+                                .scroll_motion = TweenSpec{.duration = 0.24, .easing = Easing::Linear},
+                                .controller = v_spy},
                                [v_changes](std::size_t) { v_changes += 1; })),
               (ScrollView(Row(std::move(h_sections)))
                    .ScrollAxis(Axis::Horizontal)
@@ -570,6 +575,16 @@ void CheckScrollA11yAndVisualContracts() {
             Row {
               Button("Jump V0").OnClick([v_spy] { v_spy.ScrollToSection(0); }).Key("vjump-0"),
               Button("Jump V1").OnClick([v_spy] { v_spy.ScrollToSection(1); }).Key("vjump-1"),
+              Button("Jump V2").OnClick([v_spy] { v_spy.ScrollToSection(2); }).Key("vjump-2"),
+              Button("Jump V0 Instant")
+                  .OnClick([v_spy] { v_spy.ScrollToSection(0, ScrollJumpBehavior::Instant); })
+                  .Key("vjump-0-instant"),
+              Button("Mode Toggle")
+                  .OnClick([v_mode] {
+                    v_mode = v_mode.Get() == ScrollJumpBehavior::Smooth ? ScrollJumpBehavior::Instant
+                                                                        : ScrollJumpBehavior::Smooth;
+                  })
+                  .Key("v-mode-toggle"),
               Button("Jump H0").OnClick([h_spy] { h_spy.ScrollToSection(0); }).Key("hjump-0"),
             }.With(Spacing(8.0F)),
             Text("v_active: " + std::to_string(v_spy.ActiveSection())),
@@ -578,13 +593,14 @@ void CheckScrollA11yAndVisualContracts() {
             Text("h_active: " + std::to_string(h_spy.ActiveSection())),
           }.With(Padding(16.0F), Spacing(10.0F));
         },
-        {.window = {.initial_size = {520, 320}}, .show_debug_overlay = false});
-    UiTest sui(spy_app, {.viewport = {520, 320}});
+        {.window = {.initial_size = {640, 320}}, .show_debug_overlay = false});
+    UiTest sui(spy_app, {.viewport = {640, 320}});
     sui.PumpAndSettle();
 
     CHECK(sui.Find(UiSelector::Text("v_active: 0")).Exists());
     CHECK(sui.Find(UiSelector::Text("v_count: 4")).Exists());
     CHECK(sui.Find(UiSelector::Text("h_active: 0")).Exists());
+    const float vsec0_y0 = sui.Find(UiSelector::Key("vsec-0")).One().bounds.y;
 
     const Point v_center = Center(sui.Find(UiSelector::Key("vspy-scroll")).One().bounds);
     // Scroll down past Section 0 (height 120) -> Section 1 active.
@@ -606,6 +622,43 @@ void CheckScrollA11yAndVisualContracts() {
     sui.Find(UiSelector::Key("vjump-0")).Tap();
     sui.PumpAndSettle();
     CHECK(sui.Find(UiSelector::Text("v_active: 0")).Exists());
+    CHECK(Near(sui.Find(UiSelector::Key("vsec-0")).One().bounds.y, vsec0_y0));
+
+    // Smooth jump from 0 -> Section 2 (240px): intermediate pumps stay between 0 and 240, then settle at 240.
+    sui.Find(UiSelector::Key("vjump-2")).Tap();
+    for(int f = 0; f < 4; ++f) {
+      sui.Pump(std::chrono::milliseconds(16));
+    }
+    const float mid_y = sui.Find(UiSelector::Key("vsec-0")).One().bounds.y;
+    CHECK(mid_y < vsec0_y0 - 10.0F);
+    CHECK(mid_y > vsec0_y0 - 230.0F);
+    sui.PumpAndSettle();
+    CHECK(Near(sui.Find(UiSelector::Key("vsec-0")).One().bounds.y, vsec0_y0 - 240.0F));
+    CHECK(sui.Find(UiSelector::Text("v_active: 2")).Exists());
+
+    // User wheel input mid-animation cancels Smooth jump cleanly.
+    sui.Find(UiSelector::Key("vjump-0")).Tap();
+    sui.Pump(std::chrono::milliseconds(16));
+    sui.Pump(std::chrono::milliseconds(16));
+    sui.SendScroll({.position = v_center, .delta_y = 60.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Key("vsec-0")).One().bounds.y < vsec0_y0 - 50.0F);
+
+    // Per-call ScrollJumpBehavior::Instant override lands in a single 0ms Pump().
+    sui.Find(UiSelector::Key("vjump-0-instant")).Tap();
+    sui.Pump();
+    CHECK(Near(sui.Find(UiSelector::Key("vsec-0")).One().bounds.y, vsec0_y0));
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("v_active: 0")).Exists());
+
+    // ScrollSpyStyle::jump_behavior == Instant lands in a single 0ms Pump().
+    sui.Find(UiSelector::Key("v-mode-toggle")).Tap();
+    sui.PumpAndSettle();
+    sui.Find(UiSelector::Key("vjump-2")).Tap();
+    sui.Pump();
+    CHECK(Near(sui.Find(UiSelector::Key("vsec-0")).One().bounds.y, vsec0_y0 - 240.0F));
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("v_active: 2")).Exists());
 
     // Horizontal axis ScrollSpy.
     const Point h_center = Center(sui.Find(UiSelector::Key("hspy-scroll")).One().bounds);

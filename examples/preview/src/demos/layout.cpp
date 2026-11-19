@@ -122,7 +122,9 @@ View LayoutSection(const DemoContext& context) {
           Scope([context]() -> View {
             auto spy_scroll = UseScrollController();
             auto spy = UseScrollSpyController();
+            auto jump_mode = UseState(ScrollJumpBehavior::Smooth);
             const std::size_t active = spy.ActiveSection();
+            const bool is_smooth = jump_mode.Get() == ScrollJumpBehavior::Smooth;
             constexpr const char* kTitles[] = {"Intro", "Motion", "Layout", "A11y"};
             std::vector<View> chips;
             std::vector<View> sections;
@@ -142,24 +144,39 @@ View LayoutSection(const DemoContext& context) {
                     Column {
                       Text(std::string(kTitles[i]) + " Section", TextRole::Label)
                           .With(Foreground(context.colors.on_primary_container)),
-                      Text("Scroll or tap a chip to jump & track active section.", TextRole::Body)
+                      Text("Tap tabs or toggle Smooth/Instant jump mode.", TextRole::Body)
                           .With(Foreground(context.colors.on_surface_variant)),
                     }.With(Spacing(4.0F)),
                   }
-                      .With(Frame{.width = 276.0F, .height = 84.0F}, Padding(10.0F),
+                      .With(Frame{.width = 276.0F, .height = 108.0F}, Padding(10.0F),
                             Background{is_active ? context.colors.primary_container
                                                  : context.colors.surface_container_low},
                             CornerRadius(10.0F))
                   | ScrollSpySection(i));
             }
+            chips.push_back(
+                Stack {
+                  Text(is_smooth ? "Smooth" : "Instant", TextRole::Label)
+                      .With(Foreground(is_smooth ? context.colors.on_primary : context.colors.on_surface)),
+                }
+                    .With(Padding(EdgeInsets::Symmetric(10.0F, 6.0F)),
+                          Background{is_smooth ? context.colors.secondary : context.colors.surface_container_high},
+                          Border{.color = context.colors.outline, .width = 1.0F}, CornerRadius(8.0F),
+                          PointerCursor(PointerCursorKind::Hand))
+                    .OnClick([jump_mode] {
+                      jump_mode = jump_mode.Get() == ScrollJumpBehavior::Smooth ? ScrollJumpBehavior::Instant
+                                                                                : ScrollJumpBehavior::Smooth;
+                    }));
             return Column {
-              Row {std::move(chips)}.With(Spacing(6.0F)),
+              Flow {std::move(chips)}.With(Frame{.width = 300.0F}, Spacing(6.0F)),
               (ScrollView(Column(std::move(sections)).With(Spacing(8.0F)))
                    .Controller(spy_scroll)
-                   .With(Frame{.width = 300.0F, .height = 136.0F},
+                   .With(Frame{.width = 300.0F, .height = 156.0F},
                          Background{context.colors.surface_container}, CornerRadius(12.0F),
                          ScrollProgress{spy_scroll})
-               | ScrollSpyArea({.scroll_controller = spy_scroll, .controller = spy})),
+               | ScrollSpyArea({.scroll_controller = spy_scroll,
+                                .jump_behavior = jump_mode.Get(),
+                                .controller = spy})),
             }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
           }).Key("scrollspy-demo"),
         }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start)),

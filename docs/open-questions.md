@@ -49,7 +49,8 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - Pairs `Environment` section registration with `PrepareGeometry` (`NodeExtension::PrepareGeometry` reading
     `PresentationBounds()`) and coalesced `TaskScope::Post` synchronization (never posting during `Update()` /
     composition or cleanup), supporting vertical/horizontal tracking, bottom-of-scroll last-section fallback, and
-    `ScrollToSection(index)` jump alignment.
+    configurable `ScrollJumpBehavior::Smooth` (driven via retained `MotionController` + `scroll_motion`, auto-canceled
+    on user scroll interruption) or `ScrollJumpBehavior::Instant` `ScrollToSection(index)` jump alignment.
 
 ## Remaining framework-bound questions
 

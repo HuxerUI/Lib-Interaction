@@ -253,4 +253,11 @@ void CheckValidation() {
   // ScrollSpy validation.
   Throws<std::invalid_argument>([] { (void)ScrollSpyArea(Text("x"), {.activation_offset = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)ScrollSpyArea(Text("x"), {.activation_offset = std::nanf("")}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollSpyArea(Text("x"), {.scroll_motion = TweenSpec{.duration = -0.1}}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollSpyArea(Text("x"), {.scroll_motion = SpringSpec{.stiffness = 0.0F}}); });
+  Throws<std::invalid_argument>([] {
+    (void)ScrollSpyArea(Text("x"), {.scroll_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
+  });
 }

@@ -26,6 +26,7 @@ static_assert(std::equality_comparable<HoverCardController>);
 static_assert(std::equality_comparable<NestedScrollConnection>);
 static_assert(std::equality_comparable<ScrollHideStyle>);
 static_assert(std::equality_comparable<ScrollHideController>);
+static_assert(std::equality_comparable<ScrollJumpBehavior>);
 static_assert(std::equality_comparable<ScrollSpyStyle>);
 static_assert(std::equality_comparable<ScrollSpyController>);
 static_assert(std::equality_comparable<ExpandableStyle>);
@@ -118,6 +119,8 @@ int main() {
   (void)HoverCard(Text("hover"), [](PopupContext) { return Text("card"); });
   (void)ScrollProgress(ScrollController{});
   (void)ScrollEdgeFade(ScrollController{});
+  (void)ScrollSpyStyle{.jump_behavior = ScrollJumpBehavior::Instant};
+  (void)ScrollSpyController{}.ScrollToSection(0, ScrollJumpBehavior::Smooth);
   (void)SemanticActions{Semantics{}, SemanticActionMask(SemanticActionKind::Activate)};
   (void)PredictiveBack([](PredictiveBackSnapshot) { return Text("pb"); }, [] {});
 
