@@ -7,14 +7,14 @@
 ## 架构概览
 
 - **Layer 1 — 无头交互原语、受控句柄与管道组合**：
-  - `InteractiveSurface`、`Hoverable`、`Copyable` 与 `Popover`：封装主键按压、悬停、键盘激活、剪贴板反馈、浮层显隐与焦点环状态机，向构建器输出实时状态快照，不强制绑定单一视觉样式。
-  - `SwipeController`（`UseSwipeController`）、`PanZoomController`（`UsePanZoomController`）、`HoverCardController`（`UseHoverCardController`）、`PopoverController`（`UsePopoverController`）、`ScrollHideController`（`UseScrollHideController`）、`RovingFocusController`（`UseRovingFocusController`）、`MarqueeSelectController`（`UseMarqueeSelectController`）：支持外部读取实时状态与编程式控制。
+  - `InteractiveSurface`、`Hoverable`、`Copyable`、`Popover` 与 `PredictiveBack`：封装主键按压、悬停、键盘激活、剪贴板反馈、浮层显隐、预测式返回进度与焦点环状态机，向构建器输出实时状态快照，不强制绑定单一视觉样式。
+  - `SwipeController`（`UseSwipeController`）、`PanZoomController`（`UsePanZoomController`）、`HoverCardController`（`UseHoverCardController`）、`PopoverController`（`UsePopoverController`）、`ScrollHideController`（`UseScrollHideController`）、`RovingFocusController`（`UseRovingFocusController`）、`PredictiveBackController`（`UsePredictiveBackController`）、`MarqueeSelectController`（`UseMarqueeSelectController`）：支持外部读取实时状态与编程式控制。
   - `ReorderHandle`、`RovingFocusItem` 与 `MarqueeSelectItem`：通过 HuxerUI `Environment` 与外层 `Reorderable` / `ReorderableGrid`、`RovingFocusGroup` 或 `MarqueeSelectArea` 对接。
   - `ViewAdaptor`（`operator|`）：支持从左到右链式叠加交互装饰器，告别多层函数包裹的“洋葱嵌套”。
 - **Layer 2 — 预设交互组件与保留式反馈修饰符**：
   - **按压与悬停（`press/`、`hover/`）**：`Pressable`、`Copyable`、`LongPressable`、`HoldProgressRing`、`MultiClickable`、`DoubleClickable`、`ContextMenuArea`、`SecondaryClickable`、`Ripple`、`HoverLift`、`HoverHighlight`、`HoverShadow`、`Spotlight`、`Magnetic`。
   - **连续手势、重排与拖放（`gesture/`、`reorder/`、`dragdrop/`）**：`DragSpring`、`InertialDrag`、`MarqueeSelectArea`、`MarqueeSelectItem`、`PanZoom`、`PinchZoom`、`SwipeActions`、`Dismissible`、`PressDragHandle`、`ResizeHandle`、`Reorderable`、`ReorderableGrid`、`Draggable<T>`、带谓词过滤的 `DropZone<T>`、`FileDropZone`。
-  - **浮层、滚动与无障碍（`overlay/`、`scroll/`、`accessibility/`）**：`HoverCard`、`Popover`、`ScrollProgress`、`ScrollEdgeFade`、`NestedScrollConnection`、`KeyboardShortcut`、`ShortcutMap`、`RovingFocusGroup`、`RovingFocusItem`、`SemanticActions`。
+  - **浮层、滚动与无障碍（`overlay/`、`scroll/`、`accessibility/`）**：`HoverCard`、`Popover`、`ScrollProgress`、`ScrollEdgeFade`、`NestedScrollConnection`、`KeyboardShortcut`、`ShortcutMap`、`BackHandler`、`PredictiveBack`、`RovingFocusGroup`、`RovingFocusItem`、`SemanticActions`。
 - **纯视觉动效子域（`visual/`）**：
   - 将不接收用户输入的纯视觉/数值过渡组件独立归类：`Expandable`、`Appear`、`SharedMorph`（`UseSharedMorph` / `MorphScope` / `MorphElement` / `MorphBounds`）、`Pulsing`、`Shimmer`、`Fireworks`、`RollingNumber`、`UsePop` / `Popped`、`UseShake` / `Shaken`、`UseRevealOnTap`。
 - **统一签名与框架时钟**：全库统一 `(View content, [必填参数], callback, Style = {})` 参数顺序（纯视觉重载通过 `std::invocable` 无歧义并存）；所有动画统一走 `AnimateTo`、`MotionController` 与 `TaskScope::Delay`，自动遵循系统减弱动态（Reduced Motion）与帧调度策略。

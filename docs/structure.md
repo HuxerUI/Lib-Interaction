@@ -7,9 +7,9 @@ HuxerUI core:
 - **Layer 0 (`src/internal/`)**: Private validation, multi-controller frame aggregation, and shared slot-reorder
   geometry/session infrastructure. Never exposed in `include/`.
 - **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `Copyable` /
-  `Popover` / `DropZone` / `FileDropZone` / `Dismissible`, `SwipeController`, `PanZoomController`,
+  `Popover` / `PredictiveBack` / `DropZone` / `FileDropZone` / `Dismissible`, `SwipeController`, `PanZoomController`,
   `HoverCardController`, `PopoverController`, `ScrollHideController`, `RovingFocusController`,
-  `MarqueeSelectController`, `ReorderHandle`, and `ViewAdaptor` (`operator|`).
+  `PredictiveBackController`, `MarqueeSelectController`, `ReorderHandle`, and `ViewAdaptor` (`operator|`).
 - **Layer 2 (Styled presets, Retained modifiers & `visual/`)**: Ready-to-use composed widgets, retained
   `NodeExtension` paint/scroll/hover/focus/semantics modifiers, and non-interactive visual effects under `visual/`.
 
@@ -30,8 +30,8 @@ include/huxerui/
     dragdrop/                         # Draggable, DropZone (exact & predicate-filtered), FileDropZone
     overlay/                          # HoverCard, HoverCardController, Popover, PopoverController
     scroll/                           # ScrollProgress, ScrollEdgeFade, NestedScrollConnection, ScrollHideController
-    accessibility/                    # SemanticActions, KeyboardShortcut, ShortcutMap,
-                                      # RovingFocusGroup, RovingFocusItem, RovingFocusController
+    accessibility/                    # SemanticActions, KeyboardShortcut, ShortcutMap, BackHandler,
+                                      # PredictiveBack, RovingFocusGroup, RovingFocusItem, RovingFocusController
     visual/                           # Expandable, Appear, SharedMorph, Pulsing, Shimmer, Fireworks, RollingNumber,
                                       # UsePop/Popped, UseShake/Shaken, UseRevealOnTap (non-input visual/motion effects)
 src/

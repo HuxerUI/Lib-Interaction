@@ -41,6 +41,7 @@
 #include <huxerui/interaction/scroll/scrolledgefade.h>
 #include <huxerui/interaction/scroll/scrollprogress.h>
 // accessibility
+#include <huxerui/interaction/accessibility/backhandler.h>
 #include <huxerui/interaction/accessibility/keyboardshortcut.h>
 #include <huxerui/interaction/accessibility/rovingfocus.h>
 #include <huxerui/interaction/accessibility/semanticactions.h>

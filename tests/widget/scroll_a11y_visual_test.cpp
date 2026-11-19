@@ -3,8 +3,12 @@
 
 #include "../support/test.h"
 
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <functional>
 #include <string>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -345,6 +349,178 @@ void CheckScrollA11yAndVisualContracts() {
     aui.PumpAndSettle();
     const float pill_after = aui.Find(UiSelector::Key("morph-pill")).One().bounds.x;
     CHECK(pill_after > pill_before + 10.0F);
+  }
+
+  // BackHandler (nested inner-wins + enabled toggle) and PredictiveBack (Escape commit).
+  {
+    Application back_app(
+        []() -> View {
+          auto outer_hits = UseState(0);
+          auto inner_hits = UseState(0);
+          auto pb_commits = UseState(0);
+          auto inner_enabled = UseState(true);
+          auto outer_enabled = UseState(true);
+          auto pb_enabled = UseState(false);
+          auto pb_ctrl = UsePredictiveBackController();
+
+          return (Column {
+            Row {
+              Button("Toggle Inner")
+                  .OnClick([inner_enabled] { inner_enabled = !inner_enabled.Get(); })
+                  .Key("bh-toggle-inner"),
+              Button("Toggle Outer")
+                  .OnClick([outer_enabled] { outer_enabled = !outer_enabled.Get(); })
+                  .Key("bh-toggle-outer"),
+              Button("Toggle Predictive")
+                  .OnClick([pb_enabled] { pb_enabled = !pb_enabled.Get(); })
+                  .Key("pb-toggle"),
+            }.With(Spacing(8.0F)),
+            (Text("inner surface").With(Frame{.width = 200.0F, .height = 36.0F})
+             | BackHandler([inner_hits] { inner_hits += 1; }, {.enabled = inner_enabled.Get()})
+             | PredictiveBack([pb_commits] { pb_commits += 1; },
+                              {.enabled = pb_enabled.Get(), .controller = pb_ctrl})),
+            Text("outer_hits: " + std::to_string(outer_hits.Get())),
+            Text("inner_hits: " + std::to_string(inner_hits.Get())),
+            Text("pb_commits: " + std::to_string(pb_commits.Get())),
+            Text(std::string("pb_active: ") + (pb_ctrl.IsActive() ? "yes" : "no")),
+            Text("pb_phase: " + std::to_string(static_cast<int>(pb_ctrl.Phase()))),
+          }.With(Padding(16.0F), Spacing(8.0F))
+           | BackHandler([outer_hits] { outer_hits += 1; }, {.enabled = outer_enabled.Get()}));
+        },
+        {.window = {.initial_size = {520, 260}}, .show_debug_overlay = false});
+    UiTest bui(back_app, {.viewport = {520, 260}});
+
+    // Inner BackHandler is a child inside PredictiveBack, so it intercepts before PredictiveBack and outer BackHandler.
+    CHECK(bui.Find(UiSelector::Text("pb_active: no")).Exists());
+    bui.PressKey(Key::Escape);
+    bui.PumpAndSettle();
+    CHECK(bui.Find(UiSelector::Text("inner_hits: 1")).Exists());
+    CHECK(bui.Find(UiSelector::Text("outer_hits: 0")).Exists());
+
+    // Disabling inner BackHandler and enabling PredictiveBack lets PredictiveBack intercept before outer BackHandler.
+    bui.Find(UiSelector::Key("bh-toggle-inner")).Tap();
+    bui.Find(UiSelector::Key("pb-toggle")).Tap();
+    bui.PumpAndSettle();
+    bui.PressKey(Key::Escape);
+    bui.PumpAndSettle();
+    CHECK(bui.Find(UiSelector::Text("pb_commits: 1")).Exists());
+    CHECK(bui.Find(UiSelector::Text("inner_hits: 1")).Exists());
+    CHECK(bui.Find(UiSelector::Text("outer_hits: 0")).Exists());
+    CHECK(bui.Find(UiSelector::Text("pb_active: no")).Exists());
+    CHECK(bui.Find(UiSelector::Text("pb_phase: " + std::to_string(static_cast<int>(BackPhase::Commit)))).Exists());
+
+    // Disabling PredictiveBack falls through to outer BackHandler.
+    bui.Find(UiSelector::Key("pb-toggle")).Tap();
+    bui.PumpAndSettle();
+    bui.PressKey(Key::Escape);
+    bui.PumpAndSettle();
+    CHECK(bui.Find(UiSelector::Text("outer_hits: 1")).Exists());
+    CHECK(bui.Find(UiSelector::Text("inner_hits: 1")).Exists());
+    CHECK(bui.Find(UiSelector::Text("pb_commits: 1")).Exists());
+
+    // Disabling outer BackHandler leaves Escape unhandled by BackHandlers.
+    bui.Find(UiSelector::Key("bh-toggle-outer")).Tap();
+    bui.PumpAndSettle();
+    bui.PressKey(Key::Escape);
+    bui.PumpAndSettle();
+    CHECK(bui.Find(UiSelector::Text("outer_hits: 1")).Exists());
+  }
+
+  // PredictiveBack full Begin / Update / Cancel / Commit transaction via UiWindow::HandleBack(BackEvent).
+  {
+    struct BackTestRuntime final : huxerui::Runtime {
+      BackTestRuntime() : Runtime([this](std::function<void()> task) { pending.push_back(std::move(task)); }) {}
+      ~BackTestRuntime() override { Retire(); }
+      void Start(const huxerui::Application& application) { InitializeApplication(application); }
+      using Runtime::Retire;
+      std::vector<std::function<void()>> pending;
+      void OnRuntimeStopped() override {}
+    };
+
+    struct BackTestWindow final : huxerui::UiWindow {
+      ~BackTestWindow() override { Retire(); }
+      using UiWindow::InitializeWindow;
+      using UiWindow::Retire;
+      void RequestFrameAt(double) override {}
+      huxerui::FontMetrics Metrics(const huxerui::Font&) override { return {.ascent = 15.0F, .descent = 5.0F}; }
+      huxerui::TextRunMetrics MeasureRun(std::string_view text, const huxerui::TextStyle&,
+                                        const huxerui::TextShapingOptions&) override {
+        const float w = static_cast<float>(text.size()) * 8.0F;
+        return {w, {0.0F, -15.0F, w, 20.0F}, {.ascent = 15.0F, .descent = 5.0F}};
+      }
+      huxerui::TextLayoutMetrics MeasureText(const huxerui::AttributedText& text, const huxerui::TextStyle&,
+                                           float max_w, const huxerui::TextLayoutOptions&) override {
+        const float nat = static_cast<float>(text.PlainText().size()) * 8.0F;
+        const float w = std::isfinite(max_w) ? std::min(nat, max_w) : nat;
+        return {{w, 20.0F}, 15.0F, 15.0F, 1};
+      }
+    };
+
+    static PredictiveBackController pb_ctrl_slot;
+    static int pb_commit_count = 0;
+    static int pb_cancel_count = 0;
+    pb_ctrl_slot = PredictiveBackController{};
+    pb_commit_count = 0;
+    pb_cancel_count = 0;
+
+    Application pb_app(
+        []() -> View {
+          auto ctrl = UsePredictiveBackController();
+          pb_ctrl_slot = ctrl;
+          return PredictiveBack(
+              [](PredictiveBackSnapshot snap) {
+                return Text(snap.active ? "predicting" : "idle").With(Frame{.width = 200.0F, .height = 60.0F});
+              },
+              [] { ++pb_commit_count; },
+              {.controller = ctrl},
+              [] { ++pb_cancel_count; });
+        },
+        {.window = {.initial_size = {360, 200}}, .show_debug_overlay = false});
+
+    BackTestRuntime runtime;
+    runtime.Start(pb_app);
+    BackTestWindow window;
+    window.InitializeWindow(runtime, pb_app.root_factory, pb_app.options.window);
+    window.SetWindowMetrics({.viewport = {360.0F, 200.0F}});
+    window.BuildFrame();
+
+    CHECK(static_cast<bool>(pb_ctrl_slot));
+    CHECK(!pb_ctrl_slot.IsActive());
+    CHECK(Near(pb_ctrl_slot.Progress(), 0.0F));
+
+    CHECK(window.HandleBack({BackPhase::Begin, 0.1F}));
+    window.BuildFrame();
+    CHECK(pb_ctrl_slot.IsActive());
+    CHECK(pb_ctrl_slot.Phase() == BackPhase::Begin);
+    CHECK(Near(pb_ctrl_slot.Progress(), 0.1F));
+
+    CHECK(window.HandleBack({BackPhase::Update, 0.55F}));
+    window.BuildFrame();
+    CHECK(pb_ctrl_slot.IsActive());
+    CHECK(pb_ctrl_slot.Phase() == BackPhase::Update);
+    CHECK(Near(pb_ctrl_slot.Progress(), 0.55F));
+
+    CHECK(window.HandleBack({BackPhase::Cancel, 0.0F}));
+    window.BuildFrame();
+    CHECK(!pb_ctrl_slot.IsActive());
+    CHECK(pb_ctrl_slot.Phase() == BackPhase::Cancel);
+    CHECK(Near(pb_ctrl_slot.Progress(), 0.0F));
+    CHECK(pb_cancel_count == 1);
+    CHECK(pb_commit_count == 0);
+
+    CHECK(window.HandleBack({BackPhase::Begin, 0.0F}));
+    CHECK(window.HandleBack({BackPhase::Update, 0.8F}));
+    CHECK(window.HandleBack({BackPhase::Commit, 1.0F}));
+    window.BuildFrame();
+    CHECK(!pb_ctrl_slot.IsActive());
+    CHECK(pb_ctrl_slot.Phase() == BackPhase::Commit);
+    CHECK(Near(pb_ctrl_slot.Progress(), 0.0F));
+    CHECK(pb_commit_count == 1);
+    CHECK(pb_cancel_count == 1);
+
+    pb_ctrl_slot = PredictiveBackController{};
+    window.Retire();
+    runtime.Retire();
   }
 }
 

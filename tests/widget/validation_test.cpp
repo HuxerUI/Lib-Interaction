@@ -242,4 +242,11 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] { (void)MarqueeSelectArea(Text("x"), {.border_width = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)MarqueeSelectArea(Text("x"), {.minimum_distance = 0.0F}); });
   Throws<std::invalid_argument>([] { (void)MarqueeSelectArea(Text("x"), {.corner_radii = CornerRadii{-1.0F}}); });
+
+  // PredictiveBack validation.
+  Throws<std::invalid_argument>(
+      [] { (void)PredictiveBack(std::function<View(PredictiveBackSnapshot)>{}, [] {}); });
+  Throws<std::invalid_argument>([] { (void)PredictiveBack(Text("x"), {}, {.maximum_offset = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)PredictiveBack(Text("x"), {}, {.minimum_scale = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)PredictiveBack(Text("x"), {}, {.minimum_scale = 1.2F}); });
 }

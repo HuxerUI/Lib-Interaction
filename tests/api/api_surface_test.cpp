@@ -41,6 +41,10 @@ static_assert(std::equality_comparable<PopoverController>);
 static_assert(std::equality_comparable<CopyableStyle>);
 static_assert(std::equality_comparable<SharedMorphStyle>);
 static_assert(std::equality_comparable<SharedMorphHandle>);
+static_assert(std::equality_comparable<BackHandlerStyle>);
+static_assert(std::equality_comparable<PredictiveBackSnapshot>);
+static_assert(std::equality_comparable<PredictiveBackStyle>);
+static_assert(std::equality_comparable<PredictiveBackController>);
 
 /// Compiles the umbrella header, links one symbol from every family, and exercises pipeable adaptors.
 int main() {
@@ -56,6 +60,9 @@ int main() {
   if(!(PopoverController{} == PopoverController{}) || static_cast<bool>(PopoverController{})) return 1;
   if(!(SharedMorphHandle{} == SharedMorphHandle{}) || static_cast<bool>(SharedMorphHandle{})) return 1;
   if(!(MarqueeSelectController{} == MarqueeSelectController{}) || static_cast<bool>(MarqueeSelectController{})) return 1;
+  if(!(PredictiveBackController{} == PredictiveBackController{}) || static_cast<bool>(PredictiveBackController{})) {
+    return 1;
+  }
 
   View probe = Text("probe")
                    .With(Ripple{}, Spotlight{}, HoverHighlight{}, NestedScrollConnection{})
@@ -64,6 +71,8 @@ int main() {
                | ContextMenuArea([](Point) {})
                | KeyboardShortcut({.key = Key::K}, [] {})
                | ShortcutMap({{.chord = {.key = Key::S}, .on_trigger = [] {}}})
+               | BackHandler([] {})
+               | PredictiveBack([] {})
                | RovingFocusItem(0)
                | RovingFocusGroup()
                | Copyable("probe")
@@ -104,6 +113,7 @@ int main() {
   (void)ScrollProgress(ScrollController{});
   (void)ScrollEdgeFade(ScrollController{});
   (void)SemanticActions{Semantics{}, SemanticActionMask(SemanticActionKind::Activate)};
+  (void)PredictiveBack([](PredictiveBackSnapshot) { return Text("pb"); }, [] {});
 
   return probe ? 0 : 1;
 }

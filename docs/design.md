@@ -12,13 +12,14 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
    multi-controller frame scheduling (`motion_group.h`), and slot-geometry / auto-scroll / keyboard-reorder machinery
    (`reorder_core.h`) shared between 1D `Reorderable` and 2D `ReorderableGrid`.
 2. **Layer 1 — Headless state, Controllers, and Pipelines**:
-   - **Headless builders** (`InteractiveSurface`, `Hoverable`, `Copyable`, `Popover` trigger builder, and builder
-     overloads of `DropZone<T>`, `FileDropZone`, `Dismissible`) run the input/focus/semantics state machine and pass
-     live state snapshots (`InteractionSnapshot`, `hovered`, `copied`, `progress`) to caller-supplied view builders.
+   - **Headless builders** (`InteractiveSurface`, `Hoverable`, `Copyable`, `Popover` trigger builder, `PredictiveBack`
+     builder, and builder overloads of `DropZone<T>`, `FileDropZone`, `Dismissible`) run the input/focus/semantics/back
+     state machine and pass live state snapshots (`InteractionSnapshot`, `hovered`, `copied`, `PredictiveBackSnapshot`,
+     `progress`) to caller-supplied view builders.
    - **Controllers** (`SwipeController`, `PanZoomController`, `HoverCardController`, `PopoverController`,
-     `ScrollHideController`, `RovingFocusController`, `MarqueeSelectController`) use `std::shared_ptr` state
-     handles remembered via `Use*Controller()`, enabling external state reads and programmatic actions while keeping
-     default-constructed handles runtime-free.
+     `ScrollHideController`, `RovingFocusController`, `PredictiveBackController`, `MarqueeSelectController`) use
+     `std::shared_ptr` state handles remembered via `Use*Controller()`, enabling external state reads and programmatic
+     actions while keeping default-constructed handles runtime-free.
    - **Environment-bridged grips & pipelines**: `ReorderHandle`, `RovingFocusItem`, and `MarqueeSelectItem` connect to
      enclosing containers via `Environment` (`ProvideEnvironment` / `UseEnvironment`), and `pipe.h` provides
      left-to-right `operator|` composition via `ViewAdaptor`.
@@ -66,6 +67,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 | `ScrollProgress` / `ScrollEdgeFade` | `scroll/` | Retained modifier (`With`) | Connected `ScrollController` | Proportional thumb / edge gradients |
 | `NestedScrollConnection` / `ScrollHideController` | `scroll/nestedscroll.h` | Modifier + `UseScrollHideController` | Pre/post scroll & fling hooks | Signed clamped deltas + hidden offset state |
 | `KeyboardShortcut` / `ShortcutMap` / `SemanticActions` | `accessibility/` | Decorator / Retained modifier | Single or multi-entry `KeyIntercept` / `BuildSemantics` | Chord callbacks / standard a11y routing |
+| `BackHandler` / `PredictiveBack` | `accessibility/backhandler.h` | Decorator / Builder + `PredictiveBackController` | `NodeExtension::OnBack` (`Begin`/`Update`/`Cancel`/`Commit`) | Back interception + predictive offset/scale preview |
 | `RovingFocusGroup` / `RovingFocusItem` | `accessibility/rovingfocus.h` | Group + Item + `RovingFocusController` | `Environment` + `FocusRequester` + `OnFocusChanged` | Arrow / Home / End traversal skipping disabled |
 | `Expandable` | `visual/expandable.h` | Layout wrapper + `ViewAdaptor` | `MotionController` -> `ExpandableLayout` | Axis collapse (`0` size + child excluded closed) |
 | `Appear` | `visual/appear.h` | Wrapper + `ViewAdaptor` | 0-dep `Lifecycle` mount trigger + `visible` | Synchronized `Transition` (`Opacity`/`Offset`/`Scale`) |

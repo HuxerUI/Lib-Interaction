@@ -41,6 +41,10 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - `Copyable` integrates `UseApplication().Clipboard()` with `TaskScope::Delay` timed feedback reset.
   - `UseSharedMorph` / `MorphScope` / `MorphElement` / `MorphBounds` expose HuxerUI's local shared-element transition
     scope and pipelined markers with one-shot timing validation.
+- **Back Interception (`BackHandler`, `PredictiveBack`)**:
+  - `BackHandler` and `PredictiveBack` wrap `NodeExtension::OnBack(ViewNode&, const BackEvent&)` so dynamic
+    `enabled = false` bypasses Back dispatch to enclosing scopes or platform navigation without unmounting content,
+    while capturing predictive `Begin` → `Update` → `Cancel`/`Commit` transactions cleanly.
 
 ## Remaining framework-bound questions
 
