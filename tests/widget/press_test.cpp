@@ -221,6 +221,43 @@ void CheckPressContracts() {
   ui.SendPointer(sec);
   ui.PumpAndSettle();
   CHECK(ui.Find(UiSelector::Text("secondaries: 1")).Exists());
+
+  // Copyable headless builder + clipboard write + timed feedback reset.
+  {
+    Application copy_app(
+        []() -> View {
+          const auto clipboard = UseApplication().Clipboard();
+          auto clip_text = UseState(std::string{});
+          auto callbacks = UseState(0);
+          return Column {
+            Copyable(
+                [](bool copied) {
+                  return Text(copied ? "copy:done" : "copy:idle").With(Frame{.width = 140.0F, .height = 44.0F});
+                },
+                "copied-secret",
+                [clipboard, clip_text, callbacks](bool ok) {
+                  if(ok && clipboard) {
+                    callbacks += 1;
+                    clip_text = clipboard->ReadText().value_or("");
+                  }
+                },
+                CopyableStyle{.feedback_duration = std::chrono::milliseconds(200)})
+                .Key("copyable-chip"),
+            Text("callbacks: " + std::to_string(callbacks.Get())),
+            Text("clip: " + clip_text.Get()),
+          }.With(Padding(16.0F), Spacing(8.0F));
+        },
+        {.window = {.initial_size = {360, 200}}, .show_debug_overlay = false});
+    UiTest cui(copy_app, {.viewport = {360, 200}});
+    CHECK(cui.Find(UiSelector::Text("copy:idle")).Exists());
+    cui.Find(UiSelector::Key("copyable-chip")).Tap();
+    cui.Pump();
+    CHECK(cui.Find(UiSelector::Text("callbacks: 1")).Exists());
+    CHECK(cui.Find(UiSelector::Text("clip: copied-secret")).Exists());
+    CHECK(cui.Find(UiSelector::Text("copy:done")).Exists());
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("copy:idle")).Exists());
+  }
 }
 
 #endif

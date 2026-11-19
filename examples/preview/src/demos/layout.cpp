@@ -11,6 +11,9 @@ View LayoutSection(const DemoContext& context) {
   return Scope([context]() -> View {
     auto grid_last = UseState(std::string{"drop a cell"});
     auto pane_width = UseState(164.0F);
+    auto details_open = UseState(false);
+    auto morph_swapped = UseState(false);
+    auto morph = UseSharedMorph();
     const auto card_label = Foreground(context.colors.on_primary_container);
     const auto grid_tile = [&context](const char* label) {
       return Stack { Text(label, TextRole::Label).With(Foreground(context.colors.on_primary_container)) }
@@ -53,6 +56,70 @@ View LayoutSection(const DemoContext& context) {
               .With(Foreground(context.colors.on_surface_variant))
               .Key("resize-width"),
         }.With(Spacing(8.0F)),
+        Column {
+          Row {
+            Button(details_open.Get() ? "Collapse details" : "Expand details")
+                .OnClick([details_open] { details_open = !details_open.Get(); })
+                .Key("expandable-toggle"),
+            (Stack { Text("Appear", TextRole::Label).With(card_label) }
+                 .With(Padding(EdgeInsets::Symmetric(14.0F, 8.0F)),
+                       Background{context.colors.primary_container}, CornerRadius(10.0F))
+             | Appear())
+                .Key("appear-demo"),
+          }.With(Spacing(12.0F), CrossAlign(CrossAxisAlignment::Center)),
+          (Stack {
+            Text("Layout-driven accordion content clips smoothly while collapsing.", TextRole::Body)
+                .With(Foreground(context.colors.on_surface)),
+          }
+               .With(Padding(12.0F), Frame{.width = 300.0F},
+                     Background{context.colors.surface_container_low}, CornerRadius(12.0F))
+           | Expandable(details_open.Get()))
+              .Key("expandable-demo"),
+          Row {
+            Popover(
+                Button("Open Popover"),
+                [context](PopupContext ctx) {
+                  return Column {
+                    Text("Click-triggered anchored popover", TextRole::Body)
+                        .With(Foreground(context.colors.on_surface)),
+                    Button("Close").OnClick([ctx] { ctx.Dismiss(); }),
+                  }
+                      .With(Padding(12.0F), Spacing(8.0F), Background{context.colors.surface_container_high},
+                            CornerRadius(10.0F));
+                })
+                .Key("popover-demo"),
+            (Row {
+              Button("Prev") | RovingFocusItem(0),
+              Button("Current") | RovingFocusItem(1),
+              Button("Next") | RovingFocusItem(2),
+            }.With(Spacing(6.0F))
+             | RovingFocusGroup({.orientation = RovingFocusOrientation::Horizontal}))
+                .Key("roving-demo"),
+          }.With(Spacing(12.0F), CrossAlign(CrossAxisAlignment::Center)),
+          (Column {
+            Row {
+              morph_swapped.Get()
+                  ? View(Stack{}.With(Frame{.width = 96.0F, .height = 28.0F}))
+                  : (Stack { Text("Morph", TextRole::Label).With(card_label) }
+                         .With(Frame{.width = 96.0F, .height = 28.0F},
+                               Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                               Background{context.colors.primary_container}, CornerRadius(8.0F))
+                     | MorphElement("preview-morph-pill")),
+              Button("Swap Morph").OnClick([morph, morph_swapped] {
+                morph.Run([morph_swapped] { morph_swapped = !morph_swapped.Get(); });
+              }),
+              morph_swapped.Get()
+                  ? (Stack { Text("Morph", TextRole::Label).With(card_label) }
+                         .With(Frame{.width = 96.0F, .height = 28.0F},
+                               Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                               Background{context.colors.primary_container}, CornerRadius(8.0F))
+                     | MorphElement("preview-morph-pill"))
+                  : View(Stack{}.With(Frame{.width = 96.0F, .height = 28.0F})),
+            }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Center)),
+          }.With(Padding(8.0F), Background{context.colors.surface_container_low}, CornerRadius(12.0F))
+           | MorphScope(morph))
+              .Key("morph-demo"),
+        }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start)),
       }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Start)),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
   });

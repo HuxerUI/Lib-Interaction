@@ -17,6 +17,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/internal/reorder_core.cpp
     # press
     src/press/contextmenu.cpp
+    src/press/copyable.cpp
     src/press/longpress.cpp
     src/press/multiclick.cpp
     src/press/pressable.cpp
@@ -25,11 +26,14 @@ huxerui_add_library(huxerui_interaction SOURCES
     # hover
     src/hover/highlight.cpp
     src/hover/hoverlift.cpp
+    src/hover/hovershadow.cpp
+    src/hover/magnetic.cpp
     src/hover/spotlight.cpp
     # gesture
     src/gesture/dismissible.cpp
     src/gesture/dragspring.cpp
     src/gesture/inertialdrag.cpp
+    src/gesture/marqueeselect.cpp
     src/gesture/pressdraghandle.cpp
     src/gesture/resizehandle.cpp
     src/gesture/swipe.cpp
@@ -42,19 +46,26 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/dragdrop/filedropzone.cpp
     # overlay
     src/overlay/hovercard.cpp
+    src/overlay/popover.cpp
     # scroll
+    src/scroll/nestedscroll.cpp
     src/scroll/scrolledgefade.cpp
     src/scroll/scrollprogress.cpp
     # accessibility
     src/accessibility/keyboardshortcut.cpp
+    src/accessibility/rovingfocus.cpp
     src/accessibility/semanticactions.cpp
+    src/accessibility/shortcutmap.cpp
     # visual
+    src/visual/appear.cpp
+    src/visual/expandable.cpp
     src/visual/fireworks.cpp
     src/visual/pop.cpp
     src/visual/pulse.cpp
     src/visual/revealontap.cpp
     src/visual/rollingnumber.cpp
     src/visual/shake.cpp
+    src/visual/sharedmorph.cpp
     src/visual/shimmer.cpp)
 add_library(HuxerUI::Interaction ALIAS huxerui_interaction)
 if(HUXERUI_LIBRARY_GRAPH_ONLY)

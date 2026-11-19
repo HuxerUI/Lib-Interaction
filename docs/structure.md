@@ -6,11 +6,12 @@ HuxerUI core:
 
 - **Layer 0 (`src/internal/`)**: Private validation, multi-controller frame aggregation, and shared slot-reorder
   geometry/session infrastructure. Never exposed in `include/`.
-- **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `DropZone` /
-  `FileDropZone` / `Dismissible`, `SwipeController`, `PanZoomController`, `HoverCardController`, `ReorderHandle`, and
-  `ViewAdaptor` (`operator|`).
+- **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `Copyable` /
+  `Popover` / `DropZone` / `FileDropZone` / `Dismissible`, `SwipeController`, `PanZoomController`,
+  `HoverCardController`, `PopoverController`, `ScrollHideController`, `RovingFocusController`,
+  `MarqueeSelectController`, `ReorderHandle`, and `ViewAdaptor` (`operator|`).
 - **Layer 2 (Styled presets, Retained modifiers & `visual/`)**: Ready-to-use composed widgets, retained
-  `NodeExtension` paint/semantics modifiers, and non-interactive visual effects under `visual/`.
+  `NodeExtension` paint/scroll/hover/focus/semantics modifiers, and non-interactive visual effects under `visual/`.
 
 ## Layout
 
@@ -19,18 +20,20 @@ include/huxerui/
   interaction.h                       # canonical umbrella; exports all families and pipe combinators
   interaction/
     pipe.h                            # ViewAdaptor and left-to-right operator| pipeline support
-    press/                            # InteractiveSurface, Pressable, LongPressable, HoldProgressRing,
+    press/                            # InteractiveSurface, Pressable, Copyable, LongPressable, HoldProgressRing,
                                       # MultiClickable, DoubleClickable, ContextMenuArea, SecondaryClickable, Ripple
-    hover/                            # Hoverable, HoverLift, HoverHighlight, Spotlight
-    gesture/                          # DragSpring, InertialDrag, PanZoom, PinchZoom, PanZoomController,
-                                      # SwipeActions, SwipeController, Dismissible, PressDragHandle, ResizeHandle
+    hover/                            # Hoverable, HoverLift, HoverHighlight, HoverShadow, Spotlight, Magnetic
+    gesture/                          # DragSpring, InertialDrag, MarqueeSelectArea/Item, PanZoom, PinchZoom,
+                                      # PanZoomController, SwipeActions, SwipeController, Dismissible, PressDragHandle,
+                                      # ResizeHandle
     reorder/                          # Reorderable, ReorderableGrid, ReorderHandle
-    dragdrop/                         # Draggable, DropZone, FileDropZone
-    overlay/                          # HoverCard, HoverCardController
-    scroll/                           # ScrollProgress, ScrollEdgeFade
-    accessibility/                    # SemanticActions, KeyboardShortcut
-    visual/                           # Pulsing, Shimmer, Fireworks, RollingNumber, UsePop/Popped,
-                                      # UseShake/Shaken, UseRevealOnTap (non-input visual/motion effects)
+    dragdrop/                         # Draggable, DropZone (exact & predicate-filtered), FileDropZone
+    overlay/                          # HoverCard, HoverCardController, Popover, PopoverController
+    scroll/                           # ScrollProgress, ScrollEdgeFade, NestedScrollConnection, ScrollHideController
+    accessibility/                    # SemanticActions, KeyboardShortcut, ShortcutMap,
+                                      # RovingFocusGroup, RovingFocusItem, RovingFocusController
+    visual/                           # Expandable, Appear, SharedMorph, Pulsing, Shimmer, Fireworks, RollingNumber,
+                                      # UsePop/Popped, UseShake/Shaken, UseRevealOnTap (non-input visual/motion effects)
 src/
   internal/                           # validate.h, motion_group.h, reorder_core.h/.cpp (private Layer 0)
   <family>/                           # mirrors include/huxerui/interaction/<family>/
@@ -59,8 +62,9 @@ docs/
   `examples/`, or `tests/`. Triggers and controllers hide `State<T>` and `TaskScope` behind `std::shared_ptr` state
   structs so default-constructed handles are `noexcept`, runtime-free, and pointer-equality comparable.
 - Every public `*Style` struct and every public retained `ViewModifier` (`Ripple`, `HoldProgressRing`,
-  `HoverHighlight`, `Spotlight`, `Shimmer`, `Fireworks`, `ScrollProgress`, `ScrollEdgeFade`) must satisfy
-  `std::equality_comparable` so `ModifierDescriptorFor` short-circuits unchanged updates.
+  `HoverHighlight`, `Spotlight`, `Shimmer`, `Fireworks`, `ScrollProgress`, `ScrollEdgeFade`,
+  `NestedScrollConnection`) must satisfy `std::equality_comparable` so `ModifierDescriptorFor` short-circuits
+  unchanged updates.
 - Wrapper functions follow one uniform parameter order:
   `(View content, [required domain arguments], primary_callback, Style style = {})`, with `std::invocable`-constrained
   overloads where a visual-only `(View content, Style style = {})` form is also meaningful.

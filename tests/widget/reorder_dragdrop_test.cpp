@@ -26,6 +26,8 @@ View ReorderAndDragDropGallery() {
   auto g_event = UseState(std::string("none"));
   auto drops = UseState(0);
   auto payload = UseState(0);
+  auto even_drops = UseState(0);
+  auto even_payload = UseState(0);
 
   std::vector<View> v_slots;
   for(int v : v_order.Get()) {
@@ -85,19 +87,35 @@ View ReorderAndDragDropGallery() {
       FileDropZone(Text("files").With(Frame{.width = 120.0F, .height = 56.0F}), FileDropOptions{.extensions = {"png"}})
           .Key("file-zone"),
     }.With(Spacing(12.0F)),
+    Row {
+      Draggable(Text("odd").With(Frame{.width = 80.0F, .height = 44.0F}, Background{Color::Rgb(120, 80, 90)}), 3)
+          .Key("drag-odd"),
+      Draggable(Text("even").With(Frame{.width = 80.0F, .height = 44.0F}, Background{Color::Rgb(80, 120, 90)}), 8)
+          .Key("drag-even"),
+      DropZone<int>(
+          Text("even only").With(Frame{.width = 140.0F, .height = 48.0F}, Background{Color::Rgb(60, 80, 110)}),
+          [](int value) { return value % 2 == 0; },
+          [even_drops, even_payload](const int& v, const DropEvent&) {
+            even_drops += 1;
+            even_payload = v;
+          })
+          .Key("even-zone"),
+    }.With(Spacing(12.0F)),
     Text("v: " + v_event.Get()),
     Text("h: " + h_event.Get()),
     Text("g: " + g_event.Get()),
     Text("drops: " + std::to_string(drops.Get())),
     Text("payload: " + std::to_string(payload.Get())),
-  }.With(Padding(16.0F), Spacing(12.0F));
+    Text("even_drops: " + std::to_string(even_drops.Get())),
+    Text("even_payload: " + std::to_string(even_payload.Get())),
+  }.With(Padding(16.0F), Spacing(10.0F));
 }
 
 } // namespace
 
 void CheckReorderAndDragDropContracts() {
-  Application app(ReorderAndDragDropGallery, {.window = {.initial_size = {640, 560}}, .show_debug_overlay = false});
-  UiTest ui(app, {.viewport = {640, 560}});
+  Application app(ReorderAndDragDropGallery, {.window = {.initial_size = {720, 640}}, .show_debug_overlay = false});
+  UiTest ui(app, {.viewport = {720, 640}});
 
   // Vertical Reorderable.
   ui.Drag(Center(ui.Find(UiSelector::Key("slot-1")).One().bounds),
@@ -128,6 +146,20 @@ void CheckReorderAndDragDropContracts() {
   ui.PumpAndSettle();
   CHECK(ui.Find(UiSelector::Text("drops: 1")).Exists());
   CHECK(ui.Find(UiSelector::Text("payload: 42")).Exists());
+
+  // Predicate-filtered DropZone<int> rejects odd and accepts even payloads.
+  ui.Drag(Center(ui.Find(UiSelector::Key("drag-odd")).One().bounds),
+          Center(ui.Find(UiSelector::Key("even-zone")).One().bounds),
+          {.duration = std::chrono::duration<double>(0.3), .segments = 12});
+  ui.PumpAndSettle();
+  CHECK(ui.Find(UiSelector::Text("even_drops: 0")).Exists());
+
+  ui.Drag(Center(ui.Find(UiSelector::Key("drag-even")).One().bounds),
+          Center(ui.Find(UiSelector::Key("even-zone")).One().bounds),
+          {.duration = std::chrono::duration<double>(0.3), .segments = 12});
+  ui.PumpAndSettle();
+  CHECK(ui.Find(UiSelector::Text("even_drops: 1")).Exists());
+  CHECK(ui.Find(UiSelector::Text("even_payload: 8")).Exists());
 }
 
 #endif

@@ -121,6 +121,231 @@ void CheckScrollA11yAndVisualContracts() {
   ui.Find(UiSelector::Key("reveal-btn")).Tap();
   ui.Pump(std::chrono::milliseconds(400));
   CHECK(ui.Find(UiSelector::Text("reveals: 1")).Exists());
+
+  // NestedScrollConnection + ScrollHideController (consuming and non-consuming modes).
+  {
+    Application nested_app(
+        []() -> View {
+          auto hide_consume = UseScrollHideController({.extent = 48.0F, .consume_scroll = true});
+          auto hide_observe = UseScrollHideController({.extent = 48.0F, .consume_scroll = false});
+          std::vector<View> rows_a;
+          std::vector<View> rows_b;
+          for(int i = 0; i < 16; ++i) {
+            rows_a.push_back(Text("a " + std::to_string(i)).With(Frame{.height = 28.0F}).Key("na-" + std::to_string(i)));
+            rows_b.push_back(Text("b " + std::to_string(i)).With(Frame{.height = 28.0F}).Key("nb-" + std::to_string(i)));
+          }
+          return Column {
+            Row {
+              ScrollView(Column(std::move(rows_a)).With(Spacing(4.0F)))
+                  .With(Frame{.width = 200.0F, .height = 120.0F}, hide_consume.Connection())
+                  .Key("nscroll-a"),
+              ScrollView(Column(std::move(rows_b)).With(Spacing(4.0F)))
+                  .With(Frame{.width = 200.0F, .height = 120.0F}, hide_observe.Connection())
+                  .Key("nscroll-b"),
+            }.With(Spacing(16.0F)),
+            Row {
+              Button("Hide A").OnClick([hide_consume] { hide_consume.Hide(); }).Key("nhide-a"),
+              Button("Show A").OnClick([hide_consume] { hide_consume.Show(); }).Key("nshow-a"),
+            }.With(Spacing(8.0F)),
+            Text("ca_off: " + std::to_string(static_cast<int>(hide_consume.HiddenOffset()))),
+            Text("ca_hid: " + std::string(hide_consume.IsHidden() ? "yes" : "no")),
+            Text("cb_off: " + std::to_string(static_cast<int>(hide_observe.HiddenOffset()))),
+          }.With(Padding(16.0F), Spacing(10.0F));
+        },
+        {.window = {.initial_size = {520, 320}}, .show_debug_overlay = false});
+    UiTest nui(nested_app, {.viewport = {520, 320}});
+
+    const Point sa_center = Center(nui.Find(UiSelector::Key("nscroll-a")).One().bounds);
+    const float na0_before = nui.Find(UiSelector::Key("na-0")).One().bounds.y;
+    nui.SendScroll({.position = sa_center, .delta_y = 20.0F});
+    nui.PumpAndSettle();
+    CHECK(nui.Find(UiSelector::Text("ca_off: 20")).Exists());
+    CHECK(nui.Find(UiSelector::Text("ca_hid: no")).Exists());
+    CHECK(nui.Find(UiSelector::Key("na-0")).One().bounds.y == na0_before);
+
+    nui.SendScroll({.position = sa_center, .delta_y = 60.0F});
+    nui.PumpAndSettle();
+    CHECK(nui.Find(UiSelector::Text("ca_off: 48")).Exists());
+    CHECK(nui.Find(UiSelector::Text("ca_hid: yes")).Exists());
+    CHECK(nui.Find(UiSelector::Key("na-0")).One().bounds.y < na0_before - 1.0F);
+
+    nui.Find(UiSelector::Key("nshow-a")).Tap();
+    nui.PumpAndSettle();
+    CHECK(nui.Find(UiSelector::Text("ca_off: 0")).Exists());
+    nui.Find(UiSelector::Key("nhide-a")).Tap();
+    nui.PumpAndSettle();
+    CHECK(nui.Find(UiSelector::Text("ca_hid: yes")).Exists());
+
+    const Point sb_center = Center(nui.Find(UiSelector::Key("nscroll-b")).One().bounds);
+    const float nb0_before = nui.Find(UiSelector::Key("nb-0")).One().bounds.y;
+    nui.SendScroll({.position = sb_center, .delta_y = 20.0F});
+    nui.PumpAndSettle();
+    CHECK(nui.Find(UiSelector::Text("cb_off: 20")).Exists());
+    CHECK(nui.Find(UiSelector::Key("nb-0")).One().bounds.y < nb0_before - 1.0F);
+  }
+
+  // Expandable (vertical & horizontal layout sizing + collapsed input exclusion) and Appear.
+  {
+    Application visual_app(
+        []() -> View {
+          auto exp_v = UseState(false);
+          auto exp_h = UseState(false);
+          auto app_vis = UseState(true);
+          return Column {
+            Row {
+              Button("Toggle V").OnClick([exp_v] { exp_v = !exp_v.Get(); }).Key("toggle-v"),
+              Button("Toggle H").OnClick([exp_h] { exp_h = !exp_h.Get(); }).Key("toggle-h"),
+              Button("Toggle Appear").OnClick([app_vis] { app_vis = !app_vis.Get(); }).Key("toggle-appear"),
+            }.With(Spacing(8.0F)),
+            Expandable(
+                Text("Vertical body").With(Frame{.width = 180.0F, .height = 60.0F}).Key("exp-v-child"),
+                exp_v.Get(),
+                {.axis = Axis::Vertical, .motion = TweenSpec{.duration = 0.08, .easing = Easing::Linear}})
+                .Key("exp-v"),
+            Expandable(
+                Text("Horizontal body").With(Frame{.width = 120.0F, .height = 40.0F}).Key("exp-h-child"),
+                exp_h.Get(),
+                {.axis = Axis::Horizontal, .motion = TweenSpec{.duration = 0.08, .easing = Easing::Linear}})
+                .Key("exp-h"),
+            Appear(
+                Text("Appear body").With(Frame{.width = 160.0F, .height = 40.0F}).Key("appear-child"),
+                app_vis.Get(),
+                {.motion = TweenSpec{.duration = 0.08, .easing = Easing::Linear}})
+                .Key("appear-box"),
+          }.With(Padding(16.0F), Spacing(10.0F));
+        },
+        {.window = {.initial_size = {520, 320}}, .show_debug_overlay = false});
+    UiTest vui(visual_app, {.viewport = {520, 320}});
+
+    CHECK(vui.Find(UiSelector::Key("exp-v")).One().size.height == 0.0F);
+    CHECK(!vui.Find(UiSelector::Key("exp-v-child")).One().participates_in_layout);
+    CHECK(vui.Find(UiSelector::Key("exp-h")).One().size.width == 0.0F);
+    CHECK(!vui.Find(UiSelector::Key("exp-h-child")).One().participates_in_layout);
+    CHECK(vui.Find(UiSelector::Key("appear-child")).Exists());
+
+    vui.Find(UiSelector::Key("toggle-v")).Tap();
+    vui.Find(UiSelector::Key("toggle-h")).Tap();
+    vui.PumpAndSettle();
+    CHECK(vui.Find(UiSelector::Key("exp-v")).One().size.height >= 59.0F);
+    CHECK(vui.Find(UiSelector::Key("exp-v-child")).One().participates_in_layout);
+    CHECK(vui.Find(UiSelector::Key("exp-h")).One().size.width >= 119.0F);
+    CHECK(vui.Find(UiSelector::Key("exp-h-child")).One().participates_in_layout);
+
+    vui.Find(UiSelector::Key("toggle-v")).Tap();
+    vui.PumpAndSettle();
+    CHECK(vui.Find(UiSelector::Key("exp-v")).One().size.height == 0.0F);
+    CHECK(!vui.Find(UiSelector::Key("exp-v-child")).One().participates_in_layout);
+
+    vui.Find(UiSelector::Key("toggle-appear")).Tap();
+    vui.PumpAndSettle();
+    CHECK(vui.Find(UiSelector::Key("appear-child")).Exists());
+  }
+
+  // ShortcutMap multi-binding + RovingFocusGroup / RovingFocusItem / RovingFocusController + SharedMorph.
+  {
+    Application a11y_morph_app(
+        []() -> View {
+          auto s_hits = UseState(0);
+          auto e_hits = UseState(0);
+          auto map_enabled = UseState(true);
+          auto rf_changes = UseState(0);
+          auto rf = UseRovingFocusController(0);
+          auto morph = UseSharedMorph();
+          auto morph_swapped = UseState(false);
+
+          return Column {
+            (Column {
+              Row {
+                Button("S Focus").Key("smap-focus"),
+                Button("Toggle Map").OnClick([map_enabled] { map_enabled = !map_enabled.Get(); }).Key("smap-toggle"),
+              }.With(Spacing(8.0F)),
+              (Row {
+                Button("Item 0") | RovingFocusItem(0),
+                Button("Item 1").With(Enabled{false}) | RovingFocusItem(1),
+                Button("Item 2") | RovingFocusItem(2),
+              }.With(Spacing(8.0F))
+               | RovingFocusGroup({.orientation = RovingFocusOrientation::Horizontal, .controller = rf},
+                                  [rf_changes](std::size_t) { rf_changes += 1; })),
+              Button("Focus 2").OnClick([rf] { rf.FocusIndex(2); }).Key("rf-jump-2"),
+              (Row {
+                morph_swapped.Get()
+                    ? View(Stack{}.With(Frame{.width = 80.0F, .height = 28.0F}))
+                    : (Text("pill").With(Frame{.width = 60.0F, .height = 28.0F}).Key("morph-pill")
+                       | MorphElement("m-pill")),
+                morph_swapped.Get()
+                    ? (Text("pill").With(Frame{.width = 60.0F, .height = 28.0F}).Key("morph-pill")
+                       | MorphElement("m-pill"))
+                    : View(Stack{}.With(Frame{.width = 80.0F, .height = 28.0F})),
+                Button("Swap Morph")
+                    .OnClick([morph, morph_swapped] {
+                      morph.Run([morph_swapped] { morph_swapped = !morph_swapped.Get(); });
+                    })
+                    .Key("morph-swap"),
+              }.With(Spacing(8.0F))
+               | MorphScope(morph)),
+              Text("s_hits: " + std::to_string(s_hits.Get())),
+              Text("e_hits: " + std::to_string(e_hits.Get())),
+              Text("rf_active: " + std::to_string(rf.ActiveIndex())),
+              Text("rf_changes: " + std::to_string(rf_changes.Get())),
+            }.With(Padding(16.0F), Spacing(10.0F))
+             | ShortcutMap(
+                 {
+                     {.chord = {.key = Key::S, .modifiers = {.control = true}},
+                      .on_trigger = [s_hits] { s_hits += 1; }},
+                     {.chord = {.key = Key::E, .modifiers = {.control = true}},
+                      .on_trigger = [e_hits] { e_hits += 1; }},
+                 },
+                 {.enabled = map_enabled.Get()})),
+          };
+        },
+        {.window = {.initial_size = {600, 380}}, .show_debug_overlay = false});
+    UiTest aui(a11y_morph_app, {.viewport = {600, 380}});
+
+    // ShortcutMap multi-chord dispatch + enabled toggle.
+    aui.Find(UiSelector::Key("smap-focus")).Tap();
+    aui.PumpAndSettle();
+    aui.PressKey(Key::S, KeyModifiers{.control = true});
+    aui.PressKey(Key::E, KeyModifiers{.control = true});
+    aui.PumpAndSettle();
+    CHECK(aui.Find(UiSelector::Text("s_hits: 1")).Exists());
+    CHECK(aui.Find(UiSelector::Text("e_hits: 1")).Exists());
+
+    aui.Find(UiSelector::Key("smap-toggle")).Tap();
+    aui.PumpAndSettle();
+    aui.PressKey(Key::S, KeyModifiers{.control = true});
+    aui.PumpAndSettle();
+    CHECK(aui.Find(UiSelector::Text("s_hits: 1")).Exists());
+
+    // RovingFocus skips disabled index 1, wraps, supports Home/End and controller.FocusIndex.
+    aui.Find(UiSelector::Text("Item 0")).Tap();
+    aui.PumpAndSettle();
+    CHECK(aui.Find(UiSelector::Text("rf_active: 0")).Exists());
+    aui.PressKey(Key::ArrowRight);
+    aui.PumpAndSettle();
+    CHECK(aui.Find(UiSelector::Text("rf_active: 2")).Exists());
+    CHECK(aui.Find(UiSelector::Text("Item 2")).One().focused);
+    aui.PressKey(Key::ArrowRight);
+    aui.PumpAndSettle();
+    CHECK(aui.Find(UiSelector::Text("rf_active: 0")).Exists());
+    CHECK(aui.Find(UiSelector::Text("Item 0")).One().focused);
+    aui.PressKey(Key::End);
+    aui.PumpAndSettle();
+    CHECK(aui.Find(UiSelector::Text("rf_active: 2")).Exists());
+    aui.PressKey(Key::Home);
+    aui.PumpAndSettle();
+    CHECK(aui.Find(UiSelector::Text("rf_active: 0")).Exists());
+    aui.Find(UiSelector::Key("rf-jump-2")).Tap();
+    aui.PumpAndSettle();
+    CHECK(aui.Find(UiSelector::Text("rf_active: 2")).Exists());
+    CHECK(aui.Find(UiSelector::Text("Item 2")).One().focused);
+
+    // SharedMorph local transition.
+    const float pill_before = aui.Find(UiSelector::Key("morph-pill")).One().bounds.x;
+    aui.Find(UiSelector::Key("morph-swap")).Tap();
+    aui.PumpAndSettle();
+    const float pill_after = aui.Find(UiSelector::Key("morph-pill")).One().bounds.x;
+    CHECK(pill_after > pill_before + 10.0F);
+  }
 }
 
 #endif

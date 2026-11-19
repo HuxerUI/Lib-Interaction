@@ -21,6 +21,27 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   tracking to `PointerButton::Primary`, and `ContextMenuArea` uses an internal `HitTest`-only `NodeExtension` instead
   of overwriting `ViewEvents::Pointer`.
 
+- **Foundation Upgrade Batch 1 (`Expandable`, `Appear`, `Magnetic`, `NestedScrollConnection`, predicate `DropZone<T>`)**:
+  - `Expandable` implements true layout-size collapse/expand using custom `Layout<ExpandableLayout>` + `MotionController` +
+    `ClipChildren()`, omitting `Place()` when settled closed so collapsed children remain mounted without participating
+    in input, focus, or semantics.
+  - `Appear` triggers mount entrance from `0.0F` to `1.0F` via a 0-dependency `Lifecycle` hook paired with
+    `Transition`.
+  - `Magnetic` splits a stationary outer hover-probe `Stack` (`ViewNode::Bounds()` + `HoverHitTest`/`OnHover`) from inner
+    `Offset`/`Scale` transforms to avoid hover feedback jitter.
+  - `NestedScrollConnection` wraps `NodeExtension::OnPreScroll`/`OnPostScroll`/`OnPreFling`/`OnPostFling` with signed
+    clamping, paired with `ScrollHideController`.
+  - `DropZone<T>` exposes predicate-filtered payload matching via `DropTarget::Accepts<T>(predicate)`.
+- **Foundation Upgrade Batch 2 (`ShortcutMap`, `RovingFocus`, `Popover`, `Copyable`, `SharedMorph`)**:
+  - `ShortcutMap` consolidates multiple `KeyChord` entries into a single `ViewEvents::KeyIntercept` listener.
+  - `RovingFocusGroup` / `RovingFocusItem` / `RovingFocusController` pair `Environment` registration with
+    `FocusRequester` + `NodeExtension::OnFocusChanged` (preserving child focus handlers) and `Lifecycle` token cleanup.
+  - `Popover` / `PopoverController` deliver click-triggered popovers synchronized with `PopupContext::Dismiss()` and
+    outside/Escape dismissal via guarded `TaskScope::Post` cleanup.
+  - `Copyable` integrates `UseApplication().Clipboard()` with `TaskScope::Delay` timed feedback reset.
+  - `UseSharedMorph` / `MorphScope` / `MorphElement` / `MorphBounds` expose HuxerUI's local shared-element transition
+    scope and pipelined markers with one-shot timing validation.
+
 ## Remaining framework-bound questions
 
 1. **Shared pinned HuxerUI revision in CI**: CI currently checks out `56eb5ab225997cffc83ce8f2736d1fd52c530b70`.
@@ -30,8 +51,6 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
 3. **Host corner-radii auto-resolution on retained paint modifiers (`Ripple`, `Spotlight`, `HoverHighlight`,
    `Shimmer`)**: Corner radii remain style-configured until `ViewNode::ResolvedCornerRadii()` lands in upstream
    `HuxerUI/HuxerUI`.
-4. **SDK primitives needed for roadmap candidates**:
-   - `Expandable` / `Collapse` needs animated layout size or animated clip height in the SDK.
-   - `Appear` / entrance transitions need a mount appearance policy in `TransitionExtension`.
+4. **SDK primitives needed for remaining roadmap candidates**:
    - Velocity-continuous `DragSpring` / `InertialDrag` handoff needs an initial-velocity parameter on `AnimateTo` or a
      retained transform extension hook.

@@ -46,6 +46,30 @@ View PressSection(const DemoState& state, const DemoContext& context) {
             .OnClick([shake] { shake.Trigger(); })
             .With(PointerCursor{PointerCursorKind::Hand})
             .Key("shake-demo"),
+        (Stack {
+          Column {
+            Text("Magnetic", TextRole::Label).With(card_label),
+            Text("Follows pointer within bounds", TextRole::Label).With(card_label),
+          }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Center)),
+        }
+             .With(tile, Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                   Background{context.colors.primary_container}, CornerRadius(14.0F))
+         | Magnetic({.maximum_offset = {10.0F, 8.0F}, .hovered_scale = 1.04F, .cursor = PointerCursorKind::Hand}))
+            .Key("magnetic-demo"),
+        Copyable(
+            [context, card_label](bool copied) {
+              return Stack {
+                Column {
+                  Text(copied ? "Copied!" : "Copy snippet", TextRole::Label).With(card_label),
+                  Text("HuxerUI::Interaction", TextRole::Label).With(card_label),
+                }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Center)),
+              }.With(Frame{.width = 240.0F, .height = 72.0F},
+                     Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                     Background{copied ? context.colors.secondary_container : context.colors.primary_container},
+                     CornerRadius(14.0F));
+            },
+            "HuxerUI::Interaction")
+            .Key("copyable-demo"),
       }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Center)),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
   });

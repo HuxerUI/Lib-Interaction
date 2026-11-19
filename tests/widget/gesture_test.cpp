@@ -212,6 +212,73 @@ void CheckGestureContracts() {
     CHECK(ui.Find(UiSelector::Text("ended: 1")).Exists());
     CHECK(ui.Find(UiSelector::Text("last: 40")).Exists());
   }
+
+  // MarqueeSelectArea + MarqueeSelectItem + MarqueeSelectController (replace, additive, Toggle, Clear).
+  {
+    Application marquee_app(
+        []() -> View {
+          auto marquee = UseMarqueeSelectController();
+          auto additive = UseState(false);
+          auto changed_count = UseState(0);
+          auto committed_count = UseState(0);
+          const std::vector<std::size_t> selected = marquee.Selection();
+          std::string label = "sel:";
+          for(std::size_t index : selected) {
+            label += " " + std::to_string(index);
+          }
+          if(selected.empty()) label = "sel: none";
+
+          return Column {
+            (Row {
+              Text("M0").With(Frame{.width = 96.0F, .height = 56.0F}).Key("m-0") | MarqueeSelectItem(0),
+              Text("M1").With(Frame{.width = 96.0F, .height = 56.0F}).Key("m-1") | MarqueeSelectItem(1),
+              Text("M2").With(Frame{.width = 96.0F, .height = 56.0F}).Key("m-2") | MarqueeSelectItem(2),
+            }.With(Spacing(12.0F), Padding(20.0F))
+             | MarqueeSelectArea(
+                 {.additive = additive.Get(), .controller = marquee},
+                 [changed_count](const std::vector<std::size_t>&) { changed_count += 1; },
+                 [committed_count](const std::vector<std::size_t>&) { committed_count += 1; }))
+                .Key("marquee-area"),
+            Row {
+              Button("Toggle Additive").OnClick([additive] { additive = !additive.Get(); }).Key("m-additive"),
+              Button("Toggle 1").OnClick([marquee] { marquee.Toggle(1); }).Key("m-toggle-1"),
+              Button("Clear Sel").OnClick([marquee] { marquee.Clear(); }).Key("m-clear"),
+            }.With(Spacing(8.0F)),
+            Text(label),
+            Text("changed: " + std::to_string(changed_count.Get())),
+            Text("committed: " + std::to_string(committed_count.Get())),
+          }.With(Padding(16.0F), Spacing(12.0F));
+        },
+        {.window = {.initial_size = {480, 260}}, .show_debug_overlay = false});
+    UiTest mui(marquee_app, {.viewport = {480, 260}});
+
+    CHECK(mui.Find(UiSelector::Text("sel: none")).Exists());
+    const Rect r0 = mui.Find(UiSelector::Key("m-0")).One().bounds;
+    const Rect r1 = mui.Find(UiSelector::Key("m-1")).One().bounds;
+    const Rect r2 = mui.Find(UiSelector::Key("m-2")).One().bounds;
+
+    mui.Drag({r0.x - 8.0F, r0.y - 8.0F}, {r1.x + r1.width * 0.5F, r1.y + r1.height - 6.0F},
+             {.duration = std::chrono::duration<double>(0.15), .segments = 6});
+    mui.PumpAndSettle();
+    CHECK(mui.Find(UiSelector::Text("sel: 0 1")).Exists());
+    CHECK(mui.Find(UiSelector::Text("committed: 1")).Exists());
+
+    mui.Find(UiSelector::Key("m-additive")).Tap();
+    mui.PumpAndSettle();
+    mui.Drag({r2.x + 10.0F, r2.y + 10.0F}, {r2.x + r2.width - 10.0F, r2.y + r2.height - 10.0F},
+             {.duration = std::chrono::duration<double>(0.15), .segments = 6});
+    mui.PumpAndSettle();
+    CHECK(mui.Find(UiSelector::Text("sel: 0 1 2")).Exists());
+    CHECK(mui.Find(UiSelector::Text("committed: 2")).Exists());
+
+    mui.Find(UiSelector::Key("m-toggle-1")).Tap();
+    mui.PumpAndSettle();
+    CHECK(mui.Find(UiSelector::Text("sel: 0 2")).Exists());
+
+    mui.Find(UiSelector::Key("m-clear")).Tap();
+    mui.PumpAndSettle();
+    CHECK(mui.Find(UiSelector::Text("sel: none")).Exists());
+  }
 }
 
 #endif

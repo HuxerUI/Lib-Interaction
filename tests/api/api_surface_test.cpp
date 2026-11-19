@@ -23,6 +23,24 @@ static_assert(std::equality_comparable<ShakeTrigger>);
 static_assert(std::equality_comparable<SwipeController>);
 static_assert(std::equality_comparable<PanZoomController>);
 static_assert(std::equality_comparable<HoverCardController>);
+static_assert(std::equality_comparable<NestedScrollConnection>);
+static_assert(std::equality_comparable<ScrollHideStyle>);
+static_assert(std::equality_comparable<ScrollHideController>);
+static_assert(std::equality_comparable<ExpandableStyle>);
+static_assert(std::equality_comparable<AppearStyle>);
+static_assert(std::equality_comparable<MagneticStyle>);
+static_assert(std::equality_comparable<HoverShadowStyle>);
+static_assert(std::equality_comparable<MarqueeSelectStyle>);
+static_assert(std::equality_comparable<MarqueeSelectController>);
+static_assert(std::equality_comparable<ShortcutMapStyle>);
+static_assert(std::equality_comparable<RovingFocusStyle>);
+static_assert(std::equality_comparable<RovingFocusItemStyle>);
+static_assert(std::equality_comparable<RovingFocusController>);
+static_assert(std::equality_comparable<PopoverStyle>);
+static_assert(std::equality_comparable<PopoverController>);
+static_assert(std::equality_comparable<CopyableStyle>);
+static_assert(std::equality_comparable<SharedMorphStyle>);
+static_assert(std::equality_comparable<SharedMorphHandle>);
 
 /// Compiles the umbrella header, links one symbol from every family, and exercises pipeable adaptors.
 int main() {
@@ -32,13 +50,33 @@ int main() {
   if(!(SwipeController{} == SwipeController{})) return 1;
   if(!(PanZoomController{} == PanZoomController{})) return 1;
   if(!(HoverCardController{} == HoverCardController{})) return 1;
+  if(!(ScrollHideController{} == ScrollHideController{}) || static_cast<bool>(ScrollHideController{})) return 1;
+  if(!(NestedScrollConnection{} == NestedScrollConnection{})) return 1;
+  if(!(RovingFocusController{} == RovingFocusController{}) || static_cast<bool>(RovingFocusController{})) return 1;
+  if(!(PopoverController{} == PopoverController{}) || static_cast<bool>(PopoverController{})) return 1;
+  if(!(SharedMorphHandle{} == SharedMorphHandle{}) || static_cast<bool>(SharedMorphHandle{})) return 1;
+  if(!(MarqueeSelectController{} == MarqueeSelectController{}) || static_cast<bool>(MarqueeSelectController{})) return 1;
 
   View probe = Text("probe")
-                   .With(Ripple{}, Spotlight{}, HoverHighlight{})
+                   .With(Ripple{}, Spotlight{}, HoverHighlight{}, NestedScrollConnection{})
                | Pressable([] {})
                | DoubleClickable([](const MultiTapEvent&) {})
                | ContextMenuArea([](Point) {})
-               | KeyboardShortcut({.key = Key::K}, [] {});
+               | KeyboardShortcut({.key = Key::K}, [] {})
+               | ShortcutMap({{.chord = {.key = Key::S}, .on_trigger = [] {}}})
+               | RovingFocusItem(0)
+               | RovingFocusGroup()
+               | Copyable("probe")
+               | Popover([](PopupContext) { return Text("pop"); })
+               | MorphElement("item")
+               | MorphBounds("bounds")
+               | MarqueeSelectItem(0)
+               | MarqueeSelectArea()
+               | Expandable(true)
+               | Appear()
+               | Magnetic()
+               | HoverShadow()
+               | DropZone<int>([](int value) { return value > 0; });
 
   (void)InteractiveSurface([](const InteractionSnapshot&) { return Text("surface"); });
   (void)Hoverable([](bool) { return Text("hoverable"); });

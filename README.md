@@ -7,16 +7,16 @@ Interactive primitives, headless state builders, controllers, retained feedback 
 ## Architecture highlights
 
 - **Headless state & controllers (Layer 1)**:
-  - `InteractiveSurface` & `Hoverable` run hover, primary-button press, keyboard Space/Enter activation, and focus tracking while delegating visuals to caller builders (`InteractionSnapshot`).
-  - `SwipeController` (`UseSwipeController`), `PanZoomController` (`UsePanZoomController`), and `HoverCardController` (`UseHoverCardController`) support external observation and programmatic control (e.g., mutually exclusive swipe rows and zoom toolbars).
-  - `ReorderHandle` connects to its enclosing `Reorderable` or `ReorderableGrid` slot via `Environment` when `handle_only = true`, isolating drag initiation from interactive child controls.
+  - `InteractiveSurface`, `Hoverable`, `Copyable`, and `Popover` run hover, primary-button press, keyboard activation, clipboard feedback, popup visibility, and focus tracking while delegating visuals to caller builders.
+  - `SwipeController` (`UseSwipeController`), `PanZoomController` (`UsePanZoomController`), `HoverCardController` (`UseHoverCardController`), `PopoverController` (`UsePopoverController`), `ScrollHideController` (`UseScrollHideController`), `RovingFocusController` (`UseRovingFocusController`), and `MarqueeSelectController` (`UseMarqueeSelectController`) support external observation and programmatic control.
+  - `ReorderHandle`, `RovingFocusItem`, and `MarqueeSelectItem` connect to enclosing containers via `Environment` (`ProvideEnvironment` / `UseEnvironment`).
   - `ViewAdaptor` (`operator|`) chains decorators left-to-right without deeply nested wrapper calls.
 - **Styled interaction presets & retained modifiers (Layer 2)**:
-  - **Press & Hover**: `Pressable`, `LongPressable`, `HoldProgressRing`, `MultiClickable`, `DoubleClickable`, `ContextMenuArea`, `SecondaryClickable`, `Ripple`, `HoverLift`, `HoverHighlight`, `Spotlight`.
-  - **Gesture, Reorder & Drag/Drop**: `DragSpring`, `InertialDrag`, `PanZoom`, `PinchZoom`, `SwipeActions`, `Dismissible`, `PressDragHandle`, `ResizeHandle`, `Reorderable`, `ReorderableGrid`, `Draggable<T>`, `DropZone<T>`, `FileDropZone`.
-  - **Overlay, Scroll & Accessibility**: `HoverCard`, `ScrollProgress`, `ScrollEdgeFade`, `KeyboardShortcut`, `SemanticActions`.
+  - **Press & Hover**: `Pressable`, `Copyable`, `LongPressable`, `HoldProgressRing`, `MultiClickable`, `DoubleClickable`, `ContextMenuArea`, `SecondaryClickable`, `Ripple`, `HoverLift`, `HoverHighlight`, `HoverShadow`, `Spotlight`, `Magnetic`.
+  - **Gesture, Reorder & Drag/Drop**: `DragSpring`, `InertialDrag`, `MarqueeSelectArea`, `MarqueeSelectItem`, `PanZoom`, `PinchZoom`, `SwipeActions`, `Dismissible`, `PressDragHandle`, `ResizeHandle`, `Reorderable`, `ReorderableGrid`, `Draggable<T>`, predicate-filtered `DropZone<T>`, `FileDropZone`.
+  - **Overlay, Scroll & Accessibility**: `HoverCard`, `Popover`, `ScrollProgress`, `ScrollEdgeFade`, `NestedScrollConnection`, `KeyboardShortcut`, `ShortcutMap`, `RovingFocusGroup`, `RovingFocusItem`, `SemanticActions`.
 - **Visual motion domain (`visual/`)**:
-  - Non-interactive and value-driven effects isolated from input recognizers: `Pulsing`, `Shimmer`, `Fireworks`, `RollingNumber`, `UsePop` / `Popped`, `UseShake` / `Shaken`, `UseRevealOnTap`.
+  - Non-interactive and value-driven effects isolated from input recognizers: `Expandable`, `Appear`, `SharedMorph` (`UseSharedMorph`, `MorphScope`, `MorphElement`, `MorphBounds`), `Pulsing`, `Shimmer`, `Fireworks`, `RollingNumber`, `UsePop` / `Popped`, `UseShake` / `Shaken`, `UseRevealOnTap`.
 - **Framework-native motion**: Every animation runs through `AnimateTo`, `MotionController`, or `TaskScope::Delay`, automatically honoring system reduced-motion preferences and frame scheduling.
 
 ## Add to a HuxerUI app

@@ -37,6 +37,19 @@ View HoverAndOverlayGallery() {
           .Key("highlight"),
     }.With(Spacing(12.0F)),
     Row {
+      Magnetic(Text("Magnetic").With(Frame{.width = 160.0F, .height = 48.0F}, Background{Color::Rgb(70, 90, 140)})
+                   .Key("mag-inner"),
+               {.maximum_offset = {12.0F, 6.0F},
+                .hovered_scale = 1.0F,
+                .follow_motion = TweenSpec{.duration = 0.05, .easing = Easing::Linear},
+                .return_motion = TweenSpec{.duration = 0.05, .easing = Easing::Linear}})
+          .Key("mag-outer"),
+      HoverShadow(Text("Shadow").With(Frame{.width = 160.0F, .height = 48.0F}, Background{Color::Rgb(50, 60, 80)},
+                                      CornerRadius(10.0F)),
+                  {.fade = 0.05, .corner_radii = CornerRadii{10.0F}})
+          .Key("hover-shadow"),
+    }.With(Spacing(12.0F)),
+    Row {
       HoverCard(
           Text("Hover anchor").With(Frame{.width = 160.0F, .height = 48.0F}, Background{Color::Rgb(80, 120, 160)}),
           [](PopupContext) {
@@ -83,6 +96,95 @@ void CheckHoverAndOverlayContracts() {
   ui.PumpAndSettle();
   CHECK(ui.Find(UiSelector::Text("card open: no")).Exists());
   CHECK(ui.Find(UiSelector::Text("card events: 2")).Exists());
+
+  // Magnetic pulls inner child toward pointer while outer bounds stay stationary.
+  const Rect outer_rest = ui.Find(UiSelector::Key("mag-outer")).One().bounds;
+  const Rect inner_rest = ui.Find(UiSelector::Key("mag-inner")).One().bounds;
+  ui.SendPointer({
+      .type = PointerEventType::Move,
+      .position = {outer_rest.x + outer_rest.width - 10.0F, outer_rest.y + outer_rest.height - 6.0F},
+  });
+  ui.PumpAndSettle();
+  const Rect outer_hovered = ui.Find(UiSelector::Key("mag-outer")).One().bounds;
+  const Rect inner_hovered = ui.Find(UiSelector::Key("mag-inner")).One().bounds;
+  CHECK(outer_hovered == outer_rest);
+  CHECK(inner_hovered.x > inner_rest.x + 1.0F);
+  CHECK(inner_hovered.y > inner_rest.y + 1.0F);
+  ui.SendPointer({.type = PointerEventType::Move, .position = {2.0F, 2.0F}});
+  ui.PumpAndSettle();
+  const Rect inner_settled = ui.Find(UiSelector::Key("mag-inner")).One().bounds;
+  CHECK(inner_settled == inner_rest);
+
+  // HoverShadow changes shadow/glow geometry with cursor position and settles back to rest.
+  const Rect shadow_bounds = ui.Find(UiSelector::Key("hover-shadow")).One().bounds;
+  const UiSnapshot shadow_rest = ui.CaptureSnapshot();
+  ui.SendPointer({.type = PointerEventType::Move, .position = {shadow_bounds.x + 12.0F, shadow_bounds.y + 24.0F}});
+  ui.PumpAndSettle();
+  const UiSnapshot shadow_left = ui.CaptureSnapshot();
+  CHECK(shadow_left != shadow_rest);
+  ui.SendPointer({.type = PointerEventType::Move,
+                  .position = {shadow_bounds.x + shadow_bounds.width - 12.0F, shadow_bounds.y + 24.0F}});
+  ui.PumpAndSettle();
+  const UiSnapshot shadow_right = ui.CaptureSnapshot();
+  CHECK(shadow_right != shadow_left);
+  ui.SendPointer({.type = PointerEventType::Move, .position = {2.0F, 2.0F}});
+  ui.PumpAndSettle();
+  const UiSnapshot shadow_settled = ui.CaptureSnapshot();
+  CHECK(shadow_settled == shadow_rest);
+
+  // Popover click-trigger + PopoverController + ctx.Dismiss() + Escape dismissal sync.
+  {
+    Application pop_app(
+        []() -> View {
+          auto pop_ctrl = UsePopoverController();
+          auto pop_events = UseState(0);
+          return Column {
+            Row {
+              Popover(
+                  Button("Trigger Pop").Key("pop-trigger"),
+                  [](PopupContext ctx) {
+                    return Column {
+                      Text("Popover Content").Key("pop-body"),
+                      Button("Dismiss Inside").OnClick([ctx] { ctx.Dismiss(); }).Key("pop-dismiss"),
+                    }.With(Padding(12.0F), Background{Color::Rgb(40, 44, 52)});
+                  },
+                  {.controller = pop_ctrl},
+                  [pop_events](bool) { pop_events += 1; }),
+              Button("Ctrl Open").OnClick([pop_ctrl] { pop_ctrl.Open(); }).Key("pop-ctrl-open"),
+            }.With(Spacing(12.0F)),
+            Text(std::string("pop open: ") + (pop_ctrl.IsOpen() ? "yes" : "no")),
+            Text("pop events: " + std::to_string(pop_events.Get())),
+          }.With(Padding(16.0F), Spacing(12.0F));
+        },
+        {.window = {.initial_size = {520, 320}}, .show_debug_overlay = false});
+    UiTest pui(pop_app, {.viewport = {520, 320}});
+
+    CHECK(pui.Find(UiSelector::Text("pop open: no")).Exists());
+    CHECK(!pui.Find(UiSelector::Key("pop-body")).Exists());
+
+    pui.Find(UiSelector::Key("pop-trigger")).Tap();
+    pui.PumpAndSettle();
+    CHECK(pui.Find(UiSelector::Text("pop open: yes")).Exists());
+    CHECK(pui.Find(UiSelector::Key("pop-body")).Exists());
+    CHECK(pui.Find(UiSelector::Text("pop events: 1")).Exists());
+
+    pui.Find(UiSelector::Key("pop-dismiss")).Tap();
+    pui.PumpAndSettle();
+    CHECK(pui.Find(UiSelector::Text("pop open: no")).Exists());
+    CHECK(!pui.Find(UiSelector::Key("pop-body")).Exists());
+    CHECK(pui.Find(UiSelector::Text("pop events: 2")).Exists());
+
+    pui.Find(UiSelector::Key("pop-ctrl-open")).Tap();
+    pui.PumpAndSettle();
+    CHECK(pui.Find(UiSelector::Text("pop open: yes")).Exists());
+    CHECK(pui.Find(UiSelector::Key("pop-body")).Exists());
+
+    pui.PressKey(Key::Escape);
+    pui.PumpAndSettle();
+    CHECK(pui.Find(UiSelector::Text("pop open: no")).Exists());
+    CHECK(!pui.Find(UiSelector::Key("pop-body")).Exists());
+    CHECK(pui.Find(UiSelector::Text("pop events: 4")).Exists());
+  }
 }
 
 #endif

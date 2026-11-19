@@ -189,4 +189,57 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] { (void)Text("x").With(Fireworks{FireworksStyle{.gravity = -1.0F}}); });
   Throws<std::invalid_argument>([] { (void)RollingNumber(0, {.digit_gap = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)RollingNumber(0, {.minimum_digits = -1}); });
+
+  // Batch 1 upgrades validation.
+  Throws<std::invalid_argument>([] { (void)UseScrollHideController({.extent = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)UseScrollHideController({.extent = -5.0F}); });
+  Throws<std::invalid_argument>([] { (void)Expandable(Text("x"), true, {.motion = TweenSpec{.duration = -0.1}}); });
+  Throws<std::invalid_argument>([] { (void)Expandable(Text("x"), true, {.motion = SpringSpec{.stiffness = 0.0F}}); });
+  Throws<std::invalid_argument>([] { (void)Appear(Text("x"), {.initial_opacity = 1.2F}); });
+  Throws<std::invalid_argument>([] { (void)Appear(Text("x"), {.initial_offset = {std::nanf(""), 0.0F}}); });
+  Throws<std::invalid_argument>([] { (void)Appear(Text("x"), {.initial_scale = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)Appear(Text("x"), {.delay = -0.1}); });
+  Throws<std::invalid_argument>([] { (void)Magnetic(Text("x"), {.maximum_offset = {-1.0F, 4.0F}}); });
+  Throws<std::invalid_argument>([] { (void)Magnetic(Text("x"), {.hovered_scale = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)Magnetic(Text("x"), {.follow_motion = TweenSpec{.duration = -0.1}}); });
+
+  // Batch 2 upgrades validation.
+  Throws<std::invalid_argument>([] { (void)ShortcutMap(Text("x"), {{.chord = {.key = Key::Unknown}}}); });
+  Throws<std::invalid_argument>([] {
+    (void)Popover(std::function<View(PopoverTriggerContext)>{}, [](PopupContext) { return Text("ok"); });
+  });
+  Throws<std::invalid_argument>([] { (void)Popover(Text("x"), std::function<View(PopupContext)>{}); });
+  Throws<std::invalid_argument>([] {
+    (void)Popover(Text("x"), [](PopupContext) { return Text("ok"); }, {.gap = -1.0F});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)Popover(Text("x"), [](PopupContext) { return Text("ok"); }, {.offset = {std::nanf(""), 0.0F}});
+  });
+  Throws<std::invalid_argument>([] { (void)Copyable(std::function<View(bool)>{}, "text"); });
+  Throws<std::invalid_argument>([] {
+    (void)Copyable(Text("x"), "text", {.feedback_duration = std::chrono::duration<double>(0.0)});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)UseSharedMorph({.motion = TweenSpec{.duration = -0.1}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)UseSharedMorph({.motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
+  });
+  Throws<std::invalid_argument>([] { (void)MorphElement(""); });
+  Throws<std::invalid_argument>([] { (void)MorphBounds(""); });
+  Throws<std::logic_error>([] { (void)MorphScope(SharedMorphHandle{}); });
+
+  // HoverShadow validation.
+  Throws<std::invalid_argument>([] { (void)HoverShadow(Text("x"), {.rest_blur = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)HoverShadow(Text("x"), {.max_pointer_offset = {-1.0F, 2.0F}}); });
+  Throws<std::invalid_argument>([] { (void)HoverShadow(Text("x"), {.blur_radius = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)HoverShadow(Text("x"), {.border_glow_width = -0.5F}); });
+  Throws<std::invalid_argument>([] { (void)HoverShadow(Text("x"), {.border_glow_diameter = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)HoverShadow(Text("x"), {.fade = -0.1}); });
+  Throws<std::invalid_argument>([] { (void)HoverShadow(Text("x"), {.corner_radii = CornerRadii{-1.0F}}); });
+
+  // MarqueeSelect validation.
+  Throws<std::invalid_argument>([] { (void)MarqueeSelectArea(Text("x"), {.border_width = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)MarqueeSelectArea(Text("x"), {.minimum_distance = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)MarqueeSelectArea(Text("x"), {.corner_radii = CornerRadii{-1.0F}}); });
 }
