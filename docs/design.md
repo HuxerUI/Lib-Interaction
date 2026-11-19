@@ -13,11 +13,12 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
    (`reorder_core.h`) shared between 1D `Reorderable` and 2D `ReorderableGrid`.
 2. **Layer 1 — Headless state, Controllers, and Pipelines**:
    - **Headless builders** (`InteractiveSurface`, `Hoverable`, `Copyable`, `Popover` trigger builder, `PredictiveBack`
-     builder, `SnapDrag` builder, and builder overloads of `DropZone<T>`, `FileDropZone`, `Dismissible`) run the
-     input/focus/semantics/back/snap state machine and pass live state snapshots (`InteractionSnapshot`, `hovered`,
-     `copied`, `PredictiveBackSnapshot`, `SnapDragSnapshot`, `progress`) to caller-supplied view builders.
-   - **Controllers** (`SwipeController`, `PanZoomController`, `HoverCardController`, `PopoverController`,
-     `ScrollHideController`, `ScrollSpyController`, `SnapDragController`, `RovingFocusController`,
+     builder, `SnapDrag` builder, `SwipeDeck` builder, and builder overloads of `DropZone<T>`, `FileDropZone`,
+     `Dismissible`) run the input/focus/semantics/back/snap/deck state machine and pass live state snapshots
+     (`InteractionSnapshot`, `hovered`, `copied`, `PredictiveBackSnapshot`, `SnapDragSnapshot`, `SwipeDeckCardContext`,
+     `progress`) to caller-supplied view builders.
+   - **Controllers** (`SwipeController`, `SwipeDeckController`, `PanZoomController`, `HoverCardController`,
+     `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `SnapDragController`, `RovingFocusController`,
      `PredictiveBackController`, `MarqueeSelectController`) use `std::shared_ptr` state handles remembered via
      `Use*Controller()`, enabling external state reads and programmatic actions while keeping default-constructed
      handles runtime-free.
@@ -26,7 +27,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
      and `pipe.h` provides left-to-right `operator|` composition via `ViewAdaptor`.
 3. **Layer 2 — Styled presets, Retained modifiers, and `visual/`**:
    - **Input-driven presets** (`Pressable`, `Copyable`, `HoverLift`, `HoverShadow`, `Magnetic`, `LongPressable`,
-     `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`, `SwipeActions`,
+     `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`, `SwipeActions`, `SwipeDeck`,
      `Dismissible`, `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`, `FileDropZone`, `HoverCard`, `Popover`,
      `ScrollSpyArea`) build default motion and chrome on top of Layer 1.
    - **Retained modifiers** (`Ripple`, `HoldProgressRing`, `Spotlight`, `HoverHighlight`, `ScrollProgress`,
@@ -58,6 +59,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 | `MarqueeSelectArea` / `MarqueeSelectItem` | `gesture/marqueeselect.h` | Container + Item + `MarqueeSelectController` | `Environment` + `PrepareGeometry` bounds + `DragGesture` | Rubber-band box + multi-index selection |
 | `PanZoom` / `PinchZoom` | `gesture/transform.h` | Wrapper + `PanZoomController` | Pan, scale, rotation (`PinchZoom` disables pan/rotation) | `Scale`, `Rotation`, `Offset` |
 | `SwipeActions` | `gesture/swipe.h` | Wrapper + `SwipeController` | `SwipeActionContext{close, progress}` + `on_open_changed` | Clipped trailing strip + `Offset` |
+| `SwipeDeck` | `gesture/swipedeck.h` | Builder / Stacked cards + `SwipeDeckController` | `SwipeDeckCardContext` + velocity-continuous `MotionController::Seek` + rewind stack | Card rotation tilt + depth promotion (`Scale`, `Offset`, `Opacity`) + programmatic `Swipe()`/`Rewind()` |
 | `Dismissible` | `gesture/dismissible.h` | Wrapper + background builder | Axis drag + exit generation | `Offset` exit + `on_dismissed` |
 | `PressDragHandle` | `gesture/pressdraghandle.h` | Stateless decorator + `ViewAdaptor` | `DragGesture` with `minimum_press_duration` | Lifecycle callbacks |
 | `ResizeHandle` | `gesture/resizehandle.h` | Composed separator | Per-scope `pressed` cell | Incremental axis delta callback |

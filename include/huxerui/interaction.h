@@ -25,6 +25,7 @@
 #include <huxerui/interaction/gesture/resizehandle.h>
 #include <huxerui/interaction/gesture/snapdrag.h>
 #include <huxerui/interaction/gesture/swipe.h>
+#include <huxerui/interaction/gesture/swipedeck.h>
 #include <huxerui/interaction/gesture/transform.h>
 // reorder
 #include <huxerui/interaction/reorder/reorder.h>

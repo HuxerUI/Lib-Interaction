@@ -406,6 +406,106 @@ void CheckGestureContracts() {
     sui.PumpAndSettle();
     CHECK(sui.Find(UiSelector::Text("u_anchor: 2")).Exists());
   }
+
+  // SwipeDeck (sub-threshold return, swipe commit, programmatic Swipe/Rewind/Reset, empty state).
+  {
+    Application deck_app(
+        []() -> View {
+          auto deck = UseSwipeDeckController();
+          auto swipes = UseState(0);
+          auto last = UseState(std::string{"none"});
+
+          return Column {
+            SwipeDeck(
+                3,
+                [](SwipeDeckCardContext ctx) {
+                  return Text("Card " + std::to_string(ctx.index))
+                      .With(Frame{.width = 180.0F, .height = 100.0F})
+                      .Key("deck-card-" + std::to_string(ctx.index));
+                },
+                [swipes, last](std::size_t idx, SwipeDirection dir) {
+                  swipes += 1;
+                  const char* tag = dir == SwipeDirection::Right ? "R" : (dir == SwipeDirection::Left ? "L" : "O");
+                  last = std::to_string(idx) + ":" + tag;
+                },
+                {.swipe_threshold = 90.0F,
+                 .minimum_velocity = 600.0F,
+                 .exit_distance = 320.0F,
+                 .return_motion = TweenSpec{.duration = 0.08, .easing = Easing::Linear},
+                 .exit_motion = TweenSpec{.duration = 0.1, .easing = Easing::Linear},
+                 .rewind_motion = TweenSpec{.duration = 0.08, .easing = Easing::Linear},
+                 .controller = deck},
+                []() { return Text("Deck empty").With(Frame{.width = 180.0F, .height = 100.0F}); })
+                .Key("deck"),
+            Row {
+              Button("Swipe Left").OnClick([deck] { deck.Swipe(SwipeDirection::Left); }).Key("deck-left"),
+              Button("Swipe Right").OnClick([deck] { deck.Swipe(SwipeDirection::Right); }).Key("deck-right"),
+              Button("Rewind").OnClick([deck] { deck.Rewind(); }).Key("deck-rewind"),
+              Button("Reset").OnClick([deck] { deck.Reset(); }).Key("deck-reset"),
+            }.With(Spacing(8.0F)),
+            Text("top: " + std::to_string(deck.TopIndex())),
+            Text("rem: " + std::to_string(deck.RemainingCount())),
+            Text(std::string("rewind: ") + (deck.CanRewind() ? "yes" : "no")),
+            Text("swipes: " + std::to_string(swipes.Get())),
+            Text("last: " + last.Get()),
+          }.With(Padding(16.0F), Spacing(10.0F));
+        },
+        {.window = {.initial_size = {480, 320}}, .show_debug_overlay = false});
+    UiTest dui(deck_app, {.viewport = {480, 320}});
+    dui.PumpAndSettle();
+
+    CHECK(dui.Find(UiSelector::Text("top: 0")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rem: 3")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rewind: no")).Exists());
+
+    const Rect card0_rest = dui.Find(UiSelector::Key("deck-card-0")).One().bounds;
+    // 1. Slow sub-threshold drag returns cleanly to rest without advancing TopIndex.
+    dui.Drag(Center(card0_rest), {Center(card0_rest).x + 30.0F, Center(card0_rest).y},
+             {.duration = std::chrono::duration<double>(0.6), .segments = 8});
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("top: 0")).Exists());
+    CHECK(dui.Find(UiSelector::Text("swipes: 0")).Exists());
+    CHECK(Near(dui.Find(UiSelector::Key("deck-card-0")).One().bounds.x, card0_rest.x));
+
+    // 2. Drag past threshold right commits card 0 -> card 1 promoted to top.
+    dui.Drag(Center(card0_rest), {Center(card0_rest).x + 130.0F, Center(card0_rest).y},
+             {.duration = std::chrono::duration<double>(0.2), .segments = 8});
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("top: 1")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rem: 2")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rewind: yes")).Exists());
+    CHECK(dui.Find(UiSelector::Text("swipes: 1")).Exists());
+    CHECK(dui.Find(UiSelector::Text("last: 0:R")).Exists());
+
+    // 3. Programmatic Swipe Left commits card 1.
+    dui.Find(UiSelector::Key("deck-left")).Tap();
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("top: 2")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rem: 1")).Exists());
+    CHECK(dui.Find(UiSelector::Text("last: 1:L")).Exists());
+
+    // 4. Rewind brings card 1 back to top.
+    dui.Find(UiSelector::Key("deck-rewind")).Tap();
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("top: 1")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rem: 2")).Exists());
+    CHECK(dui.Find(UiSelector::Key("deck-card-1")).Exists());
+
+    // 5. Swiping remaining 2 cards reveals empty state; Reset restores full deck.
+    dui.Find(UiSelector::Key("deck-right")).Tap();
+    dui.PumpAndSettle();
+    dui.Find(UiSelector::Key("deck-right")).Tap();
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("top: 3")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rem: 0")).Exists());
+    CHECK(dui.Find(UiSelector::Text("Deck empty")).Exists());
+
+    dui.Find(UiSelector::Key("deck-reset")).Tap();
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("top: 0")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rem: 3")).Exists());
+    CHECK(dui.Find(UiSelector::Text("rewind: no")).Exists());
+  }
 }
 
 #endif

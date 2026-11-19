@@ -274,4 +274,34 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.snap_motion = SpringSpec{.stiffness = 0.0F}}); });
   Throws<std::invalid_argument>(
       [] { (void)SnapDrag(Text("x"), {.snap_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}}); });
+
+  // SwipeDeck validation.
+  Throws<std::invalid_argument>([] { (void)SwipeDeck(2, std::function<View(SwipeDeckCardContext)>{}); });
+  Throws<std::invalid_argument>([] { (void)SwipeDeck(std::vector<View>{View{}}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.visible_cards = 0}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.allowed_directions = SwipeDirectionMask::None}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.swipe_threshold = 0.0F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.minimum_velocity = -1.0F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.exit_distance = 0.0F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.maximum_rotation = -1.0F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.depth_scale_step = 0.5F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.depth_opacity_step = 1.2F}); });
+  Throws<std::invalid_argument>([] {
+    (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.return_motion = SpringSpec{.stiffness = 0.0F}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)SwipeDeck(std::vector<View>{Text("a")}, {}, {.exit_motion = TweenSpec{.duration = -0.1}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)SwipeDeck(std::vector<View>{Text("a")}, {},
+                         {.rewind_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
+  });
 }

@@ -39,6 +39,11 @@ static_assert(std::equality_comparable<SnapMode>);
 static_assert(std::equality_comparable<SnapDragSnapshot>);
 static_assert(std::equality_comparable<SnapDragStyle>);
 static_assert(std::equality_comparable<SnapDragController>);
+static_assert(std::equality_comparable<SwipeDirection>);
+static_assert(std::equality_comparable<SwipeDirectionMask>);
+static_assert(std::equality_comparable<SwipeDeckCardContext>);
+static_assert(std::equality_comparable<SwipeDeckStyle>);
+static_assert(std::equality_comparable<SwipeDeckController>);
 static_assert(std::equality_comparable<ShortcutMapStyle>);
 static_assert(std::equality_comparable<RovingFocusStyle>);
 static_assert(std::equality_comparable<RovingFocusItemStyle>);
@@ -74,6 +79,8 @@ int main() {
   if(!(ScrollSpyStyle{} == ScrollSpyStyle{})) return 1;
   if(!(SnapDragController{} == SnapDragController{}) || static_cast<bool>(SnapDragController{})) return 1;
   if(!(SnapDragStyle{} == SnapDragStyle{})) return 1;
+  if(!(SwipeDeckController{} == SwipeDeckController{}) || static_cast<bool>(SwipeDeckController{})) return 1;
+  if(!(SwipeDeckStyle{} == SwipeDeckStyle{})) return 1;
 
   View probe = Text("probe")
                    .With(Ripple{}, Spotlight{}, HoverHighlight{}, NestedScrollConnection{})
@@ -115,6 +122,8 @@ int main() {
   (void)PanZoom(Text("panzoom"));
   (void)PinchZoom(Text("pinch"));
   (void)SwipeActions(Text("row"), [](SwipeActionContext) { return Text("act"); });
+  (void)SwipeDeck(2, [](SwipeDeckCardContext) { return Text("card"); });
+  (void)SwipeDeck(std::vector<View>{Text("c1"), Text("c2")});
   (void)Dismissible(Text("dismiss"), [] {});
   (void)PressDragHandle(Text("grip"));
   (void)ResizeHandle(Axis::Horizontal, [](float) {});

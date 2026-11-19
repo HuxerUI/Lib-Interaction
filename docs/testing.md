@@ -22,8 +22,9 @@ CTest and compiled with `-Wall -Wextra -Wpedantic` (or `/W4` on MSVC).
 - `hover_overlay_test.cpp`: `Hoverable`, `HoverLift`, `HoverShadow`, `Magnetic`, `Spotlight`, `HoverHighlight`,
   `HoverCard` + `HoverCardController`, `Popover` + `PopoverController`.
 - `gesture_test.cpp`: `PinchZoom`, `PanZoom`, `InertialDrag`, `SnapDrag` (`Corners`, `HorizontalEdges`, `Custom`,
-  animated/instant controller jumps), `MarqueeSelectArea`/`MarqueeSelectItem`, `SwipeActions` +
-  `SwipeActionContext`, `Dismissible` (custom background builder), `PressDragHandle`, `ResizeHandle`.
+  animated/instant controller jumps), `MarqueeSelectArea`/`MarqueeSelectItem`, `SwipeActions` + `SwipeActionContext`,
+  `SwipeDeck` (`Swipe()`, `Rewind()`, `Reset()`, empty state), `Dismissible` (custom background builder),
+  `PressDragHandle`, `ResizeHandle`.
 - `reorder_dragdrop_test.cpp`: vertical/horizontal `Reorderable`, `ReorderableGrid`, `Draggable<T>`, headless &
   predicate-filtered `DropZone<T>`, `FileDropZone`.
 - `scroll_a11y_visual_test.cpp`: `ScrollProgress`, `ScrollEdgeFade`, `NestedScrollConnection` + `ScrollHideController`,

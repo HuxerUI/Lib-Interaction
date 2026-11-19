@@ -55,6 +55,10 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - Combines a non-blocking `SnapDragStageLayout` with `MotionController::Seek(pos, vel)` + `AnimateTo()` to provide
     velocity-continuous corner (`Corners`), edge (`HorizontalEdges` / `VerticalEdges`), and normalized custom
     (`Custom`) dock snapping while preserving click-through outside the floating item.
+- **Stacked Card Deck (`SwipeDeck`, `SwipeDeckController`)**:
+  - Coordinates top-card drag/tilt/exit and background depth promotion via `MotionController::Seek` and stable keyed
+    stack reconciliation (`Key(card_index)`), allowing smooth `Swipe()`, `Rewind()` history undo, and `Reset()` even
+    when transitioning to or from `empty_builder`.
 
 ## Remaining framework-bound questions
 
