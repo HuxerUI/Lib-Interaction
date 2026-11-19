@@ -18,6 +18,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     # press
     src/press/contextmenu.cpp
     src/press/copyable.cpp
+    src/press/holdrepeat.cpp
     src/press/longpress.cpp
     src/press/multiclick.cpp
     src/press/pressable.cpp

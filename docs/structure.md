@@ -6,10 +6,10 @@ HuxerUI core:
 
 - **Layer 0 (`src/internal/`)**: Private validation, multi-controller frame aggregation, and shared slot-reorder
   geometry/session infrastructure. Never exposed in `include/`.
-- **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `Copyable` /
-  `Popover` / `PredictiveBack` / `SnapDrag` / `SwipeDeck` / `DropZone` / `FileDropZone` / `Dismissible`,
-  `SwipeController`, `SwipeDeckController`, `PanZoomController`, `HoverCardController`, `PopoverController`,
-  `ScrollHideController`, `ScrollSpyController`, `SnapDragController`, `RovingFocusController`,
+- **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `HoldRepeat` /
+  `Copyable` / `Popover` / `PredictiveBack` / `SnapDrag` / `SwipeDeck` / `DropZone` / `FileDropZone` / `Dismissible`,
+  `HoldRepeatController`, `SwipeController`, `SwipeDeckController`, `PanZoomController`, `HoverCardController`,
+  `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `SnapDragController`, `RovingFocusController`,
   `PredictiveBackController`, `MarqueeSelectController`, `ReorderHandle`, and `ViewAdaptor` (`operator|`).
 - **Layer 2 (Styled presets, Retained modifiers & `visual/`)**: Ready-to-use composed widgets, retained
   `NodeExtension` paint/scroll/hover/focus/semantics modifiers, and non-interactive visual effects under `visual/`.
@@ -21,8 +21,9 @@ include/huxerui/
   interaction.h                       # canonical umbrella; exports all families and pipe combinators
   interaction/
     pipe.h                            # ViewAdaptor and left-to-right operator| pipeline support
-    press/                            # InteractiveSurface, Pressable, Copyable, LongPressable, HoldProgressRing,
-                                      # MultiClickable, DoubleClickable, ContextMenuArea, SecondaryClickable, Ripple
+    press/                            # InteractiveSurface, Pressable, HoldRepeat, HoldRepeatController, Copyable,
+                                      # LongPressable, HoldProgressRing, MultiClickable, DoubleClickable,
+                                      # ContextMenuArea, SecondaryClickable, Ripple
     hover/                            # Hoverable, HoverLift, HoverHighlight, HoverShadow, Spotlight, Magnetic
     gesture/                          # DragSpring, InertialDrag, SnapDrag, MarqueeSelectArea/Item, PanZoom, PinchZoom,
                                       # PanZoomController, SnapDragController, SwipeActions, SwipeController, SwipeDeck,

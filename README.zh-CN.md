@@ -7,12 +7,12 @@
 ## 架构概览
 
 - **Layer 1 — 无头交互原语、受控句柄与管道组合**：
-  - `InteractiveSurface`、`Hoverable`、`Copyable`、`Popover`、`PredictiveBack`、`SnapDrag` 与 `SwipeDeck`：封装主键按压、悬停、键盘激活、剪贴板反馈、浮层显隐、预测式返回进度、四角/贴边吸附目标、叠卡滑动/回退与焦点环状态机，向构建器输出实时状态快照，不强制绑定单一视觉样式。
-  - `SwipeController`（`UseSwipeController`）、`SwipeDeckController`（`UseSwipeDeckController`）、`PanZoomController`（`UsePanZoomController`）、`HoverCardController`（`UseHoverCardController`）、`PopoverController`（`UsePopoverController`）、`ScrollHideController`（`UseScrollHideController`）、`ScrollSpyController`（`UseScrollSpyController`）、`SnapDragController`（`UseSnapDragController`）、`RovingFocusController`（`UseRovingFocusController`）、`PredictiveBackController`（`UsePredictiveBackController`）、`MarqueeSelectController`（`UseMarqueeSelectController`）：支持外部读取实时状态与编程式控制。
+  - `InteractiveSurface`、`HoldRepeat`、`Hoverable`、`Copyable`、`Popover`、`PredictiveBack`、`SnapDrag` 与 `SwipeDeck`：封装主键按压、加速按住连发、悬停、键盘激活、剪贴板反馈、浮层显隐、预测式返回进度、四角/贴边吸附目标、叠卡滑动/回退与焦点环状态机，向构建器输出实时状态快照，不强制绑定单一视觉样式。
+  - `HoldRepeatController`（`UseHoldRepeatController`）、`SwipeController`（`UseSwipeController`）、`SwipeDeckController`（`UseSwipeDeckController`）、`PanZoomController`（`UsePanZoomController`）、`HoverCardController`（`UseHoverCardController`）、`PopoverController`（`UsePopoverController`）、`ScrollHideController`（`UseScrollHideController`）、`ScrollSpyController`（`UseScrollSpyController`）、`SnapDragController`（`UseSnapDragController`）、`RovingFocusController`（`UseRovingFocusController`）、`PredictiveBackController`（`UsePredictiveBackController`）、`MarqueeSelectController`（`UseMarqueeSelectController`）：支持外部读取实时状态与编程式控制。
   - `ReorderHandle`、`RovingFocusItem`、`MarqueeSelectItem` 与 `ScrollSpySection`：通过 HuxerUI `Environment` 与外层 `Reorderable` / `ReorderableGrid`、`RovingFocusGroup`、`MarqueeSelectArea` 或 `ScrollSpyArea` 对接。
   - `ViewAdaptor`（`operator|`）：支持从左到右链式叠加交互装饰器，告别多层函数包裹的“洋葱嵌套”。
 - **Layer 2 — 预设交互组件与保留式反馈修饰符**：
-  - **按压与悬停（`press/`、`hover/`）**：`Pressable`、`Copyable`、`LongPressable`、`HoldProgressRing`、`MultiClickable`、`DoubleClickable`、`ContextMenuArea`、`SecondaryClickable`、`Ripple`、`HoverLift`、`HoverHighlight`、`HoverShadow`、`Spotlight`、`Magnetic`。
+  - **按压与悬停（`press/`、`hover/`）**：`Pressable`、`HoldRepeat`、`Copyable`、`LongPressable`、`HoldProgressRing`、`MultiClickable`、`DoubleClickable`、`ContextMenuArea`、`SecondaryClickable`、`Ripple`、`HoverLift`、`HoverHighlight`、`HoverShadow`、`Spotlight`、`Magnetic`。
   - **连续手势、重排与拖放（`gesture/`、`reorder/`、`dragdrop/`）**：`DragSpring`、`InertialDrag`、`SnapDrag`、`MarqueeSelectArea`、`MarqueeSelectItem`、`PanZoom`、`PinchZoom`、`SwipeActions`、`SwipeDeck`、`Dismissible`、`PressDragHandle`、`ResizeHandle`、`Reorderable`、`ReorderableGrid`、`Draggable<T>`、带谓词过滤的 `DropZone<T>`、`FileDropZone`。
   - **浮层、滚动与无障碍（`overlay/`、`scroll/`、`accessibility/`）**：`HoverCard`、`Popover`、`ScrollProgress`、`ScrollEdgeFade`、`NestedScrollConnection`、`ScrollSpyArea`、`ScrollSpySection`、`KeyboardShortcut`、`ShortcutMap`、`BackHandler`、`PredictiveBack`、`RovingFocusGroup`、`RovingFocusItem`、`SemanticActions`。
 - **纯视觉动效子域（`visual/`）**：

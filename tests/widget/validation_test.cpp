@@ -50,6 +50,14 @@ void CheckValidation() {
   (void)LongPressable(Text("ok"));
   (void)LongPressable(Text("ok"), [] {}, {.minimum_duration = std::chrono::duration<double>(0.3), .held_scale = 0.9F});
   (void)LongPressable(Text("ok"), {.show_progress = true});
+  (void)HoldRepeat(Text("ok"));
+  (void)HoldRepeat(Text("ok"), [] {});
+  (void)HoldRepeat(Text("ok"), [](std::size_t) {},
+                   {.initial_delay = std::chrono::duration<double>(0.3),
+                    .repeat_interval = std::chrono::duration<double>(0.1),
+                    .minimum_interval = std::chrono::duration<double>(0.04),
+                    .acceleration = 0.8F});
+  (void)HoldRepeat([](HoldRepeatSnapshot) { return Text("ok"); });
   (void)DoubleClickable(Text("ok"));
   (void)DoubleClickable(
       Text("ok"), [](const MultiTapEvent&) {},
@@ -92,6 +100,40 @@ void CheckValidation() {
   });
   Throws<std::invalid_argument>([] {
     (void)ContextMenuArea(Text("x"), {}, {.long_press_duration = std::chrono::duration<double>(std::nan(""))});
+  });
+  Throws<std::invalid_argument>([] { (void)HoldRepeat(std::function<View(HoldRepeatSnapshot)>{}); });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.initial_delay = std::chrono::duration<double>(0.0)});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.initial_delay = std::chrono::duration<double>(std::nan(""))});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.repeat_interval = std::chrono::duration<double>(-0.1)});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.minimum_interval = std::chrono::duration<double>(0.0)});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.repeat_interval = std::chrono::duration<double>(0.1),
+                                 .minimum_interval = std::chrono::duration<double>(0.2)});
+  });
+  Throws<std::invalid_argument>([] { (void)HoldRepeat(Text("x"), {.acceleration = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)HoldRepeat(Text("x"), {.acceleration = 1.5F}); });
+  Throws<std::invalid_argument>([] { (void)HoldRepeat(Text("x"), {.acceleration = std::nanf("")}); });
+  Throws<std::invalid_argument>([] { (void)HoldRepeat(Text("x"), {.hovered_scale = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)HoldRepeat(Text("x"), {.pressed_scale = -1.0F}); });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.origin = {std::numeric_limits<float>::infinity(), 0.5F}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.animation = TweenSpec{.duration = -0.1}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.animation = SpringSpec{.stiffness = 0.0F, .damping_ratio = 1.0F}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)HoldRepeat(Text("x"), {.animation = SpringSpec{.stiffness = 100.0F, .damping_ratio = 0.0F}});
   });
 
   // Hover & Overlay validation.

@@ -17,8 +17,9 @@ CTest and compiled with `-Wall -Wextra -Wpedantic` (or `/W4` on MSVC).
 
 - `validation_test.cpp`: cross-family invalid-argument contracts without an active composition context.
 - `press_test.cpp`: `InteractiveSurface`, `Pressable` (primary-button filter, keyboard Space & focus-loss recovery),
-  `Copyable`, `LongPressable` + `HoldProgressRing`, `DoubleClickable`, `MultiClickable`, `ContextMenuArea`,
-  `SecondaryClickable`, `Ripple`.
+  `HoldRepeat` (tap, secondary filter, accelerating repeat loop, `cancel_on_leave`, `fire_on_press = false`, dynamic
+  `Enabled(false)`, keyboard Space hold & repeat swallowing, `HoldRepeatController`), `Copyable`, `LongPressable` +
+  `HoldProgressRing`, `DoubleClickable`, `MultiClickable`, `ContextMenuArea`, `SecondaryClickable`, `Ripple`.
 - `hover_overlay_test.cpp`: `Hoverable`, `HoverLift`, `HoverShadow`, `Magnetic`, `Spotlight`, `HoverHighlight`,
   `HoverCard` + `HoverCardController`, `Popover` + `PopoverController`.
 - `gesture_test.cpp`: `PinchZoom`, `PanZoom`, `InertialDrag`, `SnapDrag` (`Corners`, `HorizontalEdges`, `Custom`,

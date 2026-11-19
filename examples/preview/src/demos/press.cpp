@@ -1,5 +1,9 @@
 #include "demos.h"
 
+#include <algorithm>
+#include <chrono>
+#include <cstddef>
+#include <string>
 #include <utility>
 
 namespace interaction_demo {
@@ -9,8 +13,40 @@ using namespace huxerui::interaction;
 View PressSection(const DemoState& state, const DemoContext& context) {
   return Scope([state, context]() -> View {
     auto shake = UseShake();
+    auto stepper_value = UseState(50);
+    auto minus_ctrl = UseHoldRepeatController();
+    auto plus_ctrl = UseHoldRepeatController();
     const auto tile = Frame{.width = 240.0F, .height = 120.0F};
     const auto card_label = Foreground(context.colors.on_primary_container);
+
+    const bool is_ramping = minus_ctrl.IsRepeating() || plus_ctrl.IsRepeating();
+    const std::size_t active_steps =
+        minus_ctrl.IsHolding() ? minus_ctrl.TriggerCount() : plus_ctrl.TriggerCount();
+    const std::string repeat_status =
+        is_ramping ? ("Ramping x" + std::to_string(active_steps)) : "Hold - / +";
+
+    auto make_stepper_btn = [&](const char* glyph, auto on_step, HoldRepeatController ctrl, bool enabled) {
+      return HoldRepeat(
+                 [context, glyph](HoldRepeatSnapshot s) -> View {
+                   const float target_scale = s.holding ? 0.92F : (s.hovered ? 1.06F : 1.0F);
+                   return Stack {
+                     Text(glyph, TextRole::Label).With(Foreground(context.colors.on_primary)),
+                   }
+                       .With(Frame{.width = 40.0F, .height = 40.0F},
+                             Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                             Background{context.colors.primary}, CornerRadius(10.0F),
+                             Scale(AnimateTo(target_scale, TweenSpec{.duration = 0.1, .easing = Easing::EaseOut})));
+                 },
+                 std::move(on_step),
+                 HoldRepeatStyle{
+                     .initial_delay = std::chrono::milliseconds(350),
+                     .repeat_interval = std::chrono::milliseconds(120),
+                     .minimum_interval = std::chrono::milliseconds(35),
+                     .acceleration = 0.85F,
+                     .controller = std::move(ctrl),
+                 })
+          .With(Enabled{enabled});
+    };
 
     View press_tile = Stack {
       Column {
@@ -70,6 +106,28 @@ View PressSection(const DemoState& state, const DemoContext& context) {
             },
             "HuxerUI::Interaction")
             .Key("copyable-demo"),
+        Stack {
+          Row {
+            make_stepper_btn(
+                "-", [stepper_value] { stepper_value = std::max(0, stepper_value.Get() - 1); }, minus_ctrl,
+                stepper_value.Get() > 0)
+                .Key("holdrepeat-minus"),
+            Column {
+              Text("Hold +/-: " + std::to_string(stepper_value.Get()), TextRole::Label).With(card_label),
+              Text(repeat_status, TextRole::Label).With(card_label),
+            }
+                .With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Center))
+                .Key("holdrepeat-value"),
+            make_stepper_btn(
+                "+", [stepper_value] { stepper_value = std::min(100, stepper_value.Get() + 1); }, plus_ctrl,
+                stepper_value.Get() < 100)
+                .Key("holdrepeat-plus"),
+          }.With(Spacing(12.0F), CrossAlign(CrossAxisAlignment::Center)),
+        }
+            .With(Frame{.width = 240.0F, .height = 72.0F},
+                  Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                  Background{context.colors.primary_container}, CornerRadius(14.0F))
+            .Key("holdrepeat-demo"),
       }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Center)),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
   });

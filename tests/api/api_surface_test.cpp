@@ -2,6 +2,7 @@
 #include <huxerui/huxerui.h>
 
 #include <concepts>
+#include <cstddef>
 #include <utility>
 
 using namespace huxerui;
@@ -44,6 +45,9 @@ static_assert(std::equality_comparable<SwipeDirectionMask>);
 static_assert(std::equality_comparable<SwipeDeckCardContext>);
 static_assert(std::equality_comparable<SwipeDeckStyle>);
 static_assert(std::equality_comparable<SwipeDeckController>);
+static_assert(std::equality_comparable<HoldRepeatSnapshot>);
+static_assert(std::equality_comparable<HoldRepeatStyle>);
+static_assert(std::equality_comparable<HoldRepeatController>);
 static_assert(std::equality_comparable<ShortcutMapStyle>);
 static_assert(std::equality_comparable<RovingFocusStyle>);
 static_assert(std::equality_comparable<RovingFocusItemStyle>);
@@ -81,10 +85,13 @@ int main() {
   if(!(SnapDragStyle{} == SnapDragStyle{})) return 1;
   if(!(SwipeDeckController{} == SwipeDeckController{}) || static_cast<bool>(SwipeDeckController{})) return 1;
   if(!(SwipeDeckStyle{} == SwipeDeckStyle{})) return 1;
+  if(!(HoldRepeatController{} == HoldRepeatController{}) || static_cast<bool>(HoldRepeatController{})) return 1;
+  if(!(HoldRepeatStyle{} == HoldRepeatStyle{})) return 1;
 
   View probe = Text("probe")
                    .With(Ripple{}, Spotlight{}, HoverHighlight{}, NestedScrollConnection{})
                | Pressable([] {})
+               | HoldRepeat([] {})
                | DoubleClickable([](const MultiTapEvent&) {})
                | ContextMenuArea([](Point) {})
                | KeyboardShortcut({.key = Key::K}, [] {})
@@ -109,6 +116,8 @@ int main() {
                | DropZone<int>([](int value) { return value > 0; });
 
   (void)InteractiveSurface([](const InteractionSnapshot&) { return Text("surface"); });
+  (void)HoldRepeat(Text("hr"));
+  (void)HoldRepeat([](HoldRepeatSnapshot) { return Text("hr"); }, [](std::size_t) {});
   (void)Hoverable([](bool) { return Text("hoverable"); });
   (void)HoverLift(Text("hover"));
   (void)HoldProgressRing{};

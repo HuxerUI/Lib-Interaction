@@ -59,6 +59,10 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - Coordinates top-card drag/tilt/exit and background depth promotion via `MotionController::Seek` and stable keyed
     stack reconciliation (`Key(card_index)`), allowing smooth `Swipe()`, `Rewind()` history undo, and `Reset()` even
     when transitioning to or from `empty_builder`.
+- **Accelerating Press-and-Hold Repeater (`HoldRepeat`, `HoldRepeatController`)**:
+  - Drives initial-delay and geometrically accelerating repeat ticks through `TaskScope::Launch` + `TaskScope::Delay`,
+    combining primary-pointer capture (`cancel_on_leave` bounds monitoring), keyboard Space/Enter repeat swallowing,
+    live composition closure refresh, dynamic `Enabled(false)` cancellation, and unmount teardown cleanup.
 
 ## Remaining framework-bound questions
 

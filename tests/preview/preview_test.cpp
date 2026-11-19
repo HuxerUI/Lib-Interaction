@@ -25,6 +25,7 @@ int main() {
     CHECK(ui.Find(UiSelector::Key("catpaw-demo")).Exists());
     CHECK(ui.Find(UiSelector::Text("boops: 0")).Exists());
     CHECK(ui.Find(UiSelector::Key("pressable-demo")).Exists());
+    CHECK(ui.Find(UiSelector::Key("holdrepeat-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("lift-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("pulse-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("ripple-demo")).Exists());

@@ -4,6 +4,7 @@
 #include "../support/test.h"
 
 #include <chrono>
+#include <cstddef>
 #include <string>
 
 #ifdef INTERACTION_HAS_UI_TESTING
@@ -257,6 +258,349 @@ void CheckPressContracts() {
     CHECK(cui.Find(UiSelector::Text("copy:done")).Exists());
     cui.PumpAndSettle();
     CHECK(cui.Find(UiSelector::Text("copy:idle")).Exists());
+  }
+
+  // HoldRepeat: tap, secondary-button filter, accelerating hold + controller, cancel_on_leave,
+  // fire_on_press=false, dynamic Enabled(false) cutoff, keyboard hold/repeat swallowing, and Cancel().
+  {
+    Application hold_app(
+        []() -> View {
+          auto hr_ctrl = UseHoldRepeatController();
+          auto kbd_ctrl = UseHoldRepeatController();
+
+          auto hr_count = UseState(0);
+          auto hr_last_step = UseState<std::size_t>(0);
+          auto hr_cb_holding = UseState(false);
+
+          auto stay_count = UseState(0);
+          auto delayed_count = UseState(0);
+          auto capped_count = UseState(0);
+          auto capped_holding = UseState(false);
+          auto kbd_count = UseState(0);
+
+          return Column {
+            Row {
+              HoldRepeat(
+                  [](HoldRepeatSnapshot s) -> View {
+                    const std::string label = std::string("kbd:") + (s.holding ? "H" : "-") +
+                                              (s.repeating ? "R" : "-") + ":" + std::to_string(s.trigger_count);
+                    return Text(label).With(Frame{.width = 140.0F, .height = 44.0F});
+                  },
+                  [kbd_count] { kbd_count += 1; },
+                  HoldRepeatStyle{
+                      .initial_delay = std::chrono::milliseconds(150),
+                      .repeat_interval = std::chrono::milliseconds(60),
+                      .controller = kbd_ctrl,
+                  })
+                  .Key("hr-kbd"),
+              Button("cancel-kbd").OnClick([kbd_ctrl] { kbd_ctrl.Cancel(); }).Key("cancel-kbd"),
+            }.With(Spacing(12.0F), CrossAlign(CrossAxisAlignment::Center)),
+            Row {
+              HoldRepeat(
+                  [](HoldRepeatSnapshot s) -> View {
+                    const std::string label = std::string("hr:") + (s.holding ? "H" : "-") +
+                                              (s.repeating ? "R" : "-") + ":" + std::to_string(s.trigger_count);
+                    return Text(label)
+                        .With(Frame{.width = 160.0F, .height = 48.0F}, Background{Color::Rgb(70, 110, 160)});
+                  },
+                  [hr_count, hr_last_step](std::size_t step) {
+                    hr_count += 1;
+                    hr_last_step = step;
+                  },
+                  HoldRepeatStyle{
+                      .initial_delay = std::chrono::milliseconds(200),
+                      .repeat_interval = std::chrono::milliseconds(100),
+                      .minimum_interval = std::chrono::milliseconds(40),
+                      .acceleration = 0.5F,
+                      .cancel_on_leave = true,
+                      .keyboard_focusable = false,
+                      .controller = hr_ctrl,
+                  },
+                  [hr_cb_holding](bool h) { hr_cb_holding = h; })
+                  .Key("hr-accel"),
+              HoldRepeat(
+                  Text("stay").With(Frame{.width = 120.0F, .height = 48.0F}),
+                  [stay_count] { stay_count += 1; },
+                  HoldRepeatStyle{
+                      .initial_delay = std::chrono::milliseconds(150),
+                      .repeat_interval = std::chrono::milliseconds(60),
+                      .cancel_on_leave = false,
+                      .keyboard_focusable = false,
+                  })
+                  .Key("hr-stay"),
+              HoldRepeat(
+                  [](HoldRepeatSnapshot s) -> View {
+                    const std::string label = std::string("delayed:") + (s.holding ? "H" : "-") +
+                                              (s.repeating ? "R" : "-") + ":" + std::to_string(s.trigger_count);
+                    return Text(label).With(Frame{.width = 140.0F, .height = 48.0F});
+                  },
+                  [delayed_count] { delayed_count += 1; },
+                  HoldRepeatStyle{
+                      .initial_delay = std::chrono::milliseconds(150),
+                      .repeat_interval = std::chrono::milliseconds(60),
+                      .fire_on_press = false,
+                      .keyboard_focusable = false,
+                  })
+                  .Key("hr-delayed"),
+              HoldRepeat(
+                  Text("capped").With(Frame{.width = 120.0F, .height = 48.0F}),
+                  [capped_count] { capped_count += 1; },
+                  HoldRepeatStyle{
+                      .initial_delay = std::chrono::milliseconds(120),
+                      .repeat_interval = std::chrono::milliseconds(50),
+                      .keyboard_focusable = false,
+                  },
+                  [capped_holding](bool h) { capped_holding = h; })
+                  .With(Enabled{capped_count.Get() < 3})
+                  .Key("hr-capped"),
+            }.With(Spacing(12.0F), CrossAlign(CrossAxisAlignment::Center)),
+            Text("hr_count: " + std::to_string(hr_count.Get())),
+            Text("hr_last_step: " + std::to_string(hr_last_step.Get())),
+            Text(std::string("hr_cb: ") + (hr_cb_holding.Get() ? "yes" : "no")),
+            Text(std::string("ctrl_hold: ") + (hr_ctrl.IsHolding() ? "yes" : "no")),
+            Text(std::string("ctrl_rep: ") + (hr_ctrl.IsRepeating() ? "yes" : "no")),
+            Text("ctrl_count: " + std::to_string(hr_ctrl.TriggerCount())),
+            Text("stay_count: " + std::to_string(stay_count.Get())),
+            Text("delayed_count: " + std::to_string(delayed_count.Get())),
+            Text("capped_count: " + std::to_string(capped_count.Get())),
+            Text(std::string("capped_hold: ") + (capped_holding.Get() ? "yes" : "no")),
+            Text("kbd_count: " + std::to_string(kbd_count.Get())),
+            Text(std::string("kbd_ctrl_hold: ") + (kbd_ctrl.IsHolding() ? "yes" : "no")),
+          }.With(Padding(16.0F), Spacing(8.0F));
+        },
+        {.window = {.initial_size = {920, 480}}, .show_debug_overlay = false});
+    UiTest hui(hold_app, {.viewport = {920, 480}});
+
+    // Keyboard hold on hr-kbd: Space Down triggers once, OS auto-repeat events are swallowed,
+    // timer drives repeat ticks, Tab focus-loss cancels immediately, and Controller::Cancel stops repeats.
+    hui.PressKey(Key::Tab);
+    hui.PumpAndSettle();
+    CHECK(hui.Find(UiSelector::Key("hr-kbd")).Find(UiSelector::Focused(true)).Exists());
+    hui.SendKey({.type = KeyEventType::Down, .key = Key::Space});
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("kbd_count: 1")).Exists());
+    CHECK(hui.Find(UiSelector::Text("kbd_ctrl_hold: yes")).Exists());
+    CHECK(hui.Find(UiSelector::Text("kbd:H-:1")).Exists());
+    // OS key repeat must be ignored while HoldRepeat timer runs.
+    hui.SendKey({.type = KeyEventType::Down, .key = Key::Space, .repeat = true});
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("kbd_count: 1")).Exists());
+    hui.Pump(std::chrono::milliseconds(160));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("kbd_count: 2")).Exists());
+    CHECK(hui.Find(UiSelector::Text("kbd:HR:2")).Exists());
+    // Tab moves focus away -> stops keyboard hold cleanly.
+    hui.PressKey(Key::Tab);
+    hui.PumpAndSettle();
+    CHECK(hui.Find(UiSelector::Text("kbd_ctrl_hold: no")).Exists());
+    CHECK(hui.Find(UiSelector::Text("kbd:--:0")).Exists());
+    hui.SendKey({.type = KeyEventType::Up, .key = Key::Space});
+    hui.PumpAndSettle();
+    CHECK(hui.Find(UiSelector::Text("kbd_count: 2")).Exists());
+
+    // Refocus hr-kbd with Shift+Tab and verify programmatic Controller::Cancel() mid-hold.
+    hui.PressKey(Key::Tab, {.shift = true});
+    hui.PumpAndSettle();
+    hui.SendKey({.type = KeyEventType::Down, .key = Key::Space});
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("kbd_count: 3")).Exists());
+    CHECK(hui.Find(UiSelector::Text("kbd_ctrl_hold: yes")).Exists());
+    hui.Find(UiSelector::Key("cancel-kbd")).Tap();
+    hui.PumpAndSettle();
+    CHECK(hui.Find(UiSelector::Text("kbd_ctrl_hold: no")).Exists());
+    hui.Pump(std::chrono::milliseconds(220));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("kbd_count: 3")).Exists());
+    hui.SendKey({.type = KeyEventType::Up, .key = Key::Space});
+    hui.PumpAndSettle();
+
+    // Quick primary tap fires exactly once and does not repeat.
+    hui.Find(UiSelector::Key("hr-accel")).Tap();
+    hui.PumpAndSettle();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 1")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_hold: no")).Exists());
+    hui.Pump(std::chrono::milliseconds(300));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 1")).Exists());
+
+    // Secondary pointer button down/hold must be ignored.
+    const Point accel_center = Center(hui.Find(UiSelector::Key("hr-accel")).One().bounds);
+    PointerEvent sec_hold{.type = PointerEventType::Down,
+                          .pointer_id = 30,
+                          .position = accel_center,
+                          .device_kind = PointerDeviceKind::Mouse,
+                          .changed_button = PointerButton::Secondary,
+                          .pressed_buttons = PointerButton::Secondary};
+    hui.SendPointer(sec_hold);
+    hui.Pump(std::chrono::milliseconds(250));
+    hui.Pump();
+    sec_hold.type = PointerEventType::Up;
+    sec_hold.pressed_buttons = PointerButton::None;
+    hui.SendPointer(sec_hold);
+    hui.PumpAndSettle();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 1")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr_cb: no")).Exists());
+
+    // Sustained hold with acceleration (initial 200ms, repeat 100ms * 0.5 -> 50ms -> clamped 40ms).
+    PointerEvent accel_ev{.type = PointerEventType::Down,
+                          .pointer_id = 31,
+                          .position = accel_center,
+                          .device_kind = PointerDeviceKind::Touch,
+                          .changed_button = PointerButton::Primary,
+                          .pressed_buttons = PointerButton::Primary};
+    hui.SendPointer(accel_ev);
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 2")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr_last_step: 1")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr_cb: yes")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_hold: yes")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_rep: no")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_count: 1")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr:H-:1")).Exists());
+
+    // Before initial_delay expires, count remains unchanged.
+    hui.Pump(std::chrono::milliseconds(150));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 2")).Exists());
+
+    // Past initial_delay -> step #2 triggers, repeating starts.
+    hui.Pump(std::chrono::milliseconds(60));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 3")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr_last_step: 2")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_rep: yes")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_count: 2")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr:HR:2")).Exists());
+
+    // First repeat interval (100ms) -> step #3; next interval accelerates to 50ms.
+    hui.Pump(std::chrono::milliseconds(100));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 4")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr_last_step: 3")).Exists());
+
+    // Accelerated interval (50ms < 100ms) -> step #4; next interval clamps at 40ms.
+    hui.Pump(std::chrono::milliseconds(55));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 5")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr_last_step: 4")).Exists());
+
+    // Clamped minimum_interval (40ms) -> step #5.
+    hui.Pump(std::chrono::milliseconds(45));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 6")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr_last_step: 5")).Exists());
+
+    // Pointer Up settles cleanly and stops further repeats.
+    accel_ev.type = PointerEventType::Up;
+    accel_ev.pressed_buttons = PointerButton::None;
+    hui.SendPointer(accel_ev);
+    hui.PumpAndSettle();
+    CHECK(hui.Find(UiSelector::Text("hr_cb: no")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_hold: no")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_rep: no")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_count: 0")).Exists());
+    CHECK(hui.Find(UiSelector::Text("hr:--:0")).Exists());
+    hui.Pump(std::chrono::milliseconds(300));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 6")).Exists());
+
+    // cancel_on_leave = true aborts active hold when pointer moves outside bounds.
+    accel_ev.type = PointerEventType::Down;
+    accel_ev.pointer_id = 32;
+    accel_ev.pressed_buttons = PointerButton::Primary;
+    hui.SendPointer(accel_ev);
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 7")).Exists());
+    CHECK(hui.Find(UiSelector::Text("ctrl_hold: yes")).Exists());
+    PointerEvent leave_move{.type = PointerEventType::Move,
+                           .pointer_id = 32,
+                           .position = {accel_center.x + 250.0F, accel_center.y + 150.0F},
+                           .device_kind = PointerDeviceKind::Touch,
+                           .pressed_buttons = PointerButton::Primary};
+    hui.SendPointer(leave_move);
+    hui.PumpAndSettle();
+    CHECK(hui.Find(UiSelector::Text("ctrl_hold: no")).Exists());
+    hui.Pump(std::chrono::milliseconds(250));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("hr_count: 7")).Exists());
+    leave_move.type = PointerEventType::Up;
+    leave_move.changed_button = PointerButton::Primary;
+    leave_move.pressed_buttons = PointerButton::None;
+    hui.SendPointer(leave_move);
+    hui.PumpAndSettle();
+
+    // cancel_on_leave = false keeps repeating while captured outside bounds until Up.
+    const Point stay_center = Center(hui.Find(UiSelector::Key("hr-stay")).One().bounds);
+    PointerEvent stay_ev{.type = PointerEventType::Down,
+                         .pointer_id = 33,
+                         .position = stay_center,
+                         .device_kind = PointerDeviceKind::Touch,
+                         .changed_button = PointerButton::Primary,
+                         .pressed_buttons = PointerButton::Primary};
+    hui.SendPointer(stay_ev);
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("stay_count: 1")).Exists());
+    stay_ev.type = PointerEventType::Move;
+    stay_ev.changed_button = PointerButton::None;
+    stay_ev.position = {stay_center.x + 250.0F, stay_center.y + 150.0F};
+    hui.SendPointer(stay_ev);
+    hui.Pump(std::chrono::milliseconds(160));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("stay_count: 2")).Exists());
+    stay_ev.type = PointerEventType::Up;
+    stay_ev.changed_button = PointerButton::Primary;
+    stay_ev.pressed_buttons = PointerButton::None;
+    hui.SendPointer(stay_ev);
+    hui.PumpAndSettle();
+
+    // fire_on_press = false skips immediate press fire and emits first tick after initial_delay.
+    const Point delayed_center = Center(hui.Find(UiSelector::Key("hr-delayed")).One().bounds);
+    PointerEvent delayed_ev{.type = PointerEventType::Down,
+                            .pointer_id = 34,
+                            .position = delayed_center,
+                            .device_kind = PointerDeviceKind::Touch,
+                            .changed_button = PointerButton::Primary,
+                            .pressed_buttons = PointerButton::Primary};
+    hui.SendPointer(delayed_ev);
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("delayed_count: 0")).Exists());
+    CHECK(hui.Find(UiSelector::Text("delayed:H-:0")).Exists());
+    hui.Pump(std::chrono::milliseconds(160));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("delayed_count: 1")).Exists());
+    CHECK(hui.Find(UiSelector::Text("delayed:HR:1")).Exists());
+    delayed_ev.type = PointerEventType::Up;
+    delayed_ev.pressed_buttons = PointerButton::None;
+    hui.SendPointer(delayed_ev);
+    hui.PumpAndSettle();
+
+    // Dynamic Enabled(false) when cap reaches 3 stops further repeats and settles holding state.
+    const Point capped_center = Center(hui.Find(UiSelector::Key("hr-capped")).One().bounds);
+    PointerEvent capped_ev{.type = PointerEventType::Down,
+                           .pointer_id = 35,
+                           .position = capped_center,
+                           .device_kind = PointerDeviceKind::Touch,
+                           .changed_button = PointerButton::Primary,
+                           .pressed_buttons = PointerButton::Primary};
+    hui.SendPointer(capped_ev);
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("capped_count: 1")).Exists());
+    CHECK(hui.Find(UiSelector::Text("capped_hold: yes")).Exists());
+    hui.Pump(std::chrono::milliseconds(130));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("capped_count: 2")).Exists());
+    hui.Pump(std::chrono::milliseconds(60));
+    hui.Pump();
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("capped_count: 3")).Exists());
+    CHECK(hui.Find(UiSelector::Text("capped_hold: no")).Exists());
+    hui.Pump(std::chrono::milliseconds(300));
+    hui.Pump();
+    CHECK(hui.Find(UiSelector::Text("capped_count: 3")).Exists());
+    capped_ev.type = PointerEventType::Up;
+    capped_ev.pressed_buttons = PointerButton::None;
+    hui.SendPointer(capped_ev);
+    hui.PumpAndSettle();
   }
 }
 

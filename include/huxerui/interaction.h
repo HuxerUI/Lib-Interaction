@@ -5,6 +5,7 @@
 // press
 #include <huxerui/interaction/press/contextmenu.h>
 #include <huxerui/interaction/press/copyable.h>
+#include <huxerui/interaction/press/holdrepeat.h>
 #include <huxerui/interaction/press/longpress.h>
 #include <huxerui/interaction/press/multiclick.h>
 #include <huxerui/interaction/press/pressable.h>

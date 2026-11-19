@@ -12,24 +12,24 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
    multi-controller frame scheduling (`motion_group.h`), and slot-geometry / auto-scroll / keyboard-reorder machinery
    (`reorder_core.h`) shared between 1D `Reorderable` and 2D `ReorderableGrid`.
 2. **Layer 1 — Headless state, Controllers, and Pipelines**:
-   - **Headless builders** (`InteractiveSurface`, `Hoverable`, `Copyable`, `Popover` trigger builder, `PredictiveBack`
-     builder, `SnapDrag` builder, `SwipeDeck` builder, and builder overloads of `DropZone<T>`, `FileDropZone`,
-     `Dismissible`) run the input/focus/semantics/back/snap/deck state machine and pass live state snapshots
-     (`InteractionSnapshot`, `hovered`, `copied`, `PredictiveBackSnapshot`, `SnapDragSnapshot`, `SwipeDeckCardContext`,
-     `progress`) to caller-supplied view builders.
-   - **Controllers** (`SwipeController`, `SwipeDeckController`, `PanZoomController`, `HoverCardController`,
-     `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `SnapDragController`, `RovingFocusController`,
-     `PredictiveBackController`, `MarqueeSelectController`) use `std::shared_ptr` state handles remembered via
-     `Use*Controller()`, enabling external state reads and programmatic actions while keeping default-constructed
-     handles runtime-free.
+   - **Headless builders** (`InteractiveSurface`, `HoldRepeat`, `Hoverable`, `Copyable`, `Popover` trigger builder,
+     `PredictiveBack` builder, `SnapDrag` builder, `SwipeDeck` builder, and builder overloads of `DropZone<T>`,
+     `FileDropZone`, `Dismissible`) run the input/focus/semantics/repeat/back/snap/deck state machine and pass live
+     state snapshots (`InteractionSnapshot`, `HoldRepeatSnapshot`, `hovered`, `copied`, `PredictiveBackSnapshot`,
+     `SnapDragSnapshot`, `SwipeDeckCardContext`, `progress`) to caller-supplied view builders.
+   - **Controllers** (`HoldRepeatController`, `SwipeController`, `SwipeDeckController`, `PanZoomController`,
+     `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `SnapDragController`,
+     `RovingFocusController`, `PredictiveBackController`, `MarqueeSelectController`) use `std::shared_ptr` state
+     handles remembered via `Use*Controller()`, enabling external state reads and programmatic actions while keeping
+     default-constructed handles runtime-free.
    - **Environment-bridged grips & pipelines**: `ReorderHandle`, `RovingFocusItem`, `MarqueeSelectItem`, and
      `ScrollSpySection` connect to enclosing containers via `Environment` (`ProvideEnvironment` / `UseEnvironment`),
      and `pipe.h` provides left-to-right `operator|` composition via `ViewAdaptor`.
 3. **Layer 2 — Styled presets, Retained modifiers, and `visual/`**:
-   - **Input-driven presets** (`Pressable`, `Copyable`, `HoverLift`, `HoverShadow`, `Magnetic`, `LongPressable`,
-     `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`, `SwipeActions`, `SwipeDeck`,
-     `Dismissible`, `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`, `FileDropZone`, `HoverCard`, `Popover`,
-     `ScrollSpyArea`) build default motion and chrome on top of Layer 1.
+   - **Input-driven presets** (`Pressable`, `HoldRepeat`, `Copyable`, `HoverLift`, `HoverShadow`, `Magnetic`,
+     `LongPressable`, `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`,
+     `SwipeActions`, `SwipeDeck`, `Dismissible`, `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`,
+     `FileDropZone`, `HoverCard`, `Popover`, `ScrollSpyArea`) build default motion and chrome on top of Layer 1.
    - **Retained modifiers** (`Ripple`, `HoldProgressRing`, `Spotlight`, `HoverHighlight`, `ScrollProgress`,
      `ScrollEdgeFade`, `NestedScrollConnection`, `SemanticActions`) attach `NodeExtension` behavior through
      `View::With()` and implement `operator==` so unchanged recompositions skip extension updates.
@@ -43,6 +43,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 | --- | --- | --- | --- | --- |
 | `InteractiveSurface` | `press/surface.h` | Headless builder | `InteractionSnapshot{hovered, pressed, focused}` | Caller-defined |
 | `Pressable` | `press/pressable.h` | Wrapper + `ViewAdaptor` | Built on `InteractiveSurface` (primary button + Space) | `Scale` around `origin` |
+| `HoldRepeat` | `press/holdrepeat.h` | Headless / Wrapper + `HoldRepeatController` | `HoldRepeatSnapshot` + `TaskScope::Delay` accelerating loop | `Scale` + `void()` / `void(step)` repeat ticks |
 | `Copyable` | `press/copyable.h` | Headless / Wrapper + `ViewAdaptor` | `Clipboard::WriteText` + `TaskScope::Delay` reset | Timed `copied` feedback + `on_copied` |
 | `LongPressable` + `HoldProgressRing` | `press/longpress.h` | Wrapper + Modifier | Per-scope `holding` + `on_holding_changed` | `Scale` + optional arc ring |
 | `MultiClickable` / `DoubleClickable` | `press/multiclick.h` | Stateless decorator + `ViewAdaptor` | `MultiTapGesture` (`DoubleClickable` delegates `count = 2`) | Callback + optional Button semantics |
