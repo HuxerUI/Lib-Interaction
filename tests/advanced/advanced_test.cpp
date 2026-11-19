@@ -128,6 +128,124 @@ View ControlledPanZoomApp() {
   }.With(Padding(16.0F), Spacing(16.0F));
 }
 
+/// Cross-feature scenario 5: RovingFocusGroup containing a Popover trigger inside an outer BackHandler scope.
+/// Opening the popover confines Back/Escape to dismissing the popup first before reaching BackHandler.
+View RovingPopoverBackApp() {
+  auto rf = UseRovingFocusController(0);
+  auto pop = UsePopoverController();
+  auto back_hits = UseState(0);
+
+  return Column {
+    (Row {
+      Button("Tab 0").Key("rf-0") | RovingFocusItem(0),
+      Popover(
+          [](PopoverTriggerContext ctx) {
+            return Button("Menu").OnClick(ctx.toggle).Key("rf-1") | RovingFocusItem(1);
+          },
+          [](PopupContext ctx) {
+            return Column {
+              Text("Popover Body"),
+              Button("Close").OnClick([ctx] { ctx.Dismiss(); }).Key("pop-close"),
+            }.With(Padding(8.0F), Spacing(6.0F), Background{Color::Rgb(245, 245, 250)});
+          },
+          {.controller = pop}),
+      Button("Tab 2").Key("rf-2") | RovingFocusItem(2),
+    }.With(Spacing(10.0F))
+     | RovingFocusGroup({.orientation = RovingFocusOrientation::Horizontal, .controller = rf})),
+    Text("rf_active: " + std::to_string(rf.ActiveIndex())),
+    Text(std::string("pop_open: ") + (pop.IsOpen() ? "yes" : "no")),
+    Text("back_hits: " + std::to_string(back_hits.Get())),
+  }.With(Padding(16.0F), Spacing(12.0F))
+         | BackHandler([back_hits] { back_hits += 1; });
+}
+
+/// Cross-feature scenario 6: MarqueeSelectArea + Copyable clipboard export + ShortcutMap bulk actions.
+View MarqueeCopyShortcutApp() {
+  auto marquee = UseMarqueeSelectController();
+  const auto clipboard = UseApplication().Clipboard();
+  auto clip_text = UseState(std::string{});
+
+  const std::vector<std::size_t> selected = marquee.Selection();
+  std::string summary = selected.empty() ? std::string("none") : std::string();
+  for(std::size_t i = 0; i < selected.size(); ++i) {
+    if(i > 0) summary += ",";
+    summary += std::to_string(selected[i]);
+  }
+
+  std::vector<View> tiles;
+  for(std::size_t i = 0; i < 3; ++i) {
+    const Color bg = marquee.IsSelected(i) ? Color::Rgb(31, 111, 235) : Color::Rgb(64, 78, 98);
+    tiles.push_back(Text("M" + std::to_string(i))
+                        .With(Frame{.width = 64.0F, .height = 44.0F}, Background{bg})
+                        .Key("mq-" + std::to_string(i))
+                    | MarqueeSelectItem(i));
+  }
+
+  return Column {
+    Row {
+      Button("Focus").Key("mq-focus"),
+      Copyable(
+          [](bool copied) {
+            return Text(copied ? "copied: yes" : "copied: no").With(Frame{.width = 120.0F, .height = 36.0F});
+          },
+          "sel:" + summary,
+          [clipboard, clip_text](bool ok) {
+            if(ok && clipboard) {
+              clip_text = clipboard->ReadText().value_or("");
+            }
+          },
+          CopyableStyle{.feedback_duration = std::chrono::milliseconds(150)})
+          .Key("mq-copy"),
+    }.With(Spacing(10.0F)),
+    (Row(std::move(tiles))
+         .With(Spacing(12.0F), Padding(12.0F), Frame{.width = 260.0F, .height = 68.0F},
+               Background{Color::Rgb(40, 48, 60)})
+     | MarqueeSelectArea({.controller = marquee})),
+    Text("sel: " + summary),
+    Text("clip: " + clip_text.Get()),
+  }.With(Padding(16.0F), Spacing(10.0F))
+         | ShortcutMap({
+             {.chord = {.key = Key::A, .modifiers = {.control = true}},
+              .on_trigger = [marquee] { marquee.SetSelection({0, 1, 2}); }},
+             {.chord = {.key = Key::D, .modifiers = {.control = true}},
+              .on_trigger = [marquee] { marquee.Clear(); }},
+         });
+}
+
+/// Cross-feature scenario 7: ScrollHideController + ScrollSpy + Expandable dynamic geometry synchronization.
+View ScrollHideSpyExpandableApp() {
+  auto scroll = UseScrollController();
+  auto spy = UseScrollSpyController();
+  auto hide = UseScrollHideController({.extent = 40.0F, .consume_scroll = false});
+  auto expanded = UseState(false);
+
+  return Column {
+    Row {
+      Button("Jump 0").OnClick([spy] { spy.ScrollToSection(0); }).Key("adv-jump-0"),
+      Button("Jump 1").OnClick([spy] { spy.ScrollToSection(1); }).Key("adv-jump-1"),
+      Button("Toggle Exp").OnClick([expanded] { expanded = !expanded.Get(); }).Key("adv-toggle-exp"),
+    }.With(Spacing(8.0F)),
+    (ScrollView(Column {
+       (Column {
+         Text("Sec 0").With(Frame{.width = 240.0F, .height = 80.0F}),
+         Expandable(Text("Extra").With(Frame{.width = 240.0F, .height = 96.0F}), expanded.Get(),
+                    {.motion = TweenSpec{.duration = 0.06, .easing = Easing::Linear}})
+             .Key("adv-exp"),
+       }
+        | ScrollSpySection(0)),
+       Text("Sec 1").With(Frame{.width = 240.0F, .height = 120.0F}) | ScrollSpySection(1),
+       Text("Sec 2").With(Frame{.width = 240.0F, .height = 140.0F}) | ScrollSpySection(2),
+     })
+         .Controller(scroll)
+         .With(Frame{.width = 280.0F, .height = 160.0F}, hide.Connection())
+         .Key("adv-scroll")
+     | ScrollSpyArea({.scroll_controller = scroll, .activation_offset = 16.0F, .controller = spy})),
+    Text("spy_active: " + std::to_string(spy.ActiveSection())),
+    Text(std::string("hide_hid: ") + (hide.IsHidden() ? "yes" : "no")),
+    Text("offset: " + std::to_string(static_cast<int>(std::lround(scroll.Offset())))),
+  }.With(Padding(16.0F), Spacing(10.0F));
+}
+
 } // namespace
 
 int main() {
@@ -226,6 +344,109 @@ int main() {
       ui.PumpAndSettle();
       CHECK(ui.Find(UiSelector::Text("zoom: 100%")).Exists());
       CHECK(Near(ui.Find(UiSelector::Key("canvas")).One().bounds.width, initial.width));
+    }
+
+    // 5. RovingFocusGroup + Popover + BackHandler priority.
+    {
+      Application app(RovingPopoverBackApp, {.window = {.initial_size = {460, 260}}, .show_debug_overlay = false});
+      UiTest ui(app, {.viewport = {460, 260}});
+      ui.Find(UiSelector::Key("rf-0")).Tap();
+      ui.PumpAndSettle();
+      ui.PressKey(Key::ArrowRight);
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("rf_active: 1")).Exists());
+      CHECK(ui.Find(UiSelector::Key("rf-1")).One().focused);
+
+      ui.Find(UiSelector::Key("rf-1")).Tap();
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("pop_open: yes")).Exists());
+      CHECK(ui.Find(UiSelector::Text("Popover Body")).Exists());
+
+      // First Escape dismisses the open Popover layer rather than invoking BackHandler.
+      ui.PressKey(Key::Escape);
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("pop_open: no")).Exists());
+      CHECK(!ui.Find(UiSelector::Text("Popover Body")).Exists());
+      CHECK(ui.Find(UiSelector::Text("back_hits: 0")).Exists());
+
+      // Second Escape reaches BackHandler once no popup layer is active.
+      ui.PressKey(Key::Escape);
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("back_hits: 1")).Exists());
+
+      // Roving continues across the group.
+      ui.Find(UiSelector::Key("rf-1")).Tap();
+      ui.PumpAndSettle();
+      ui.PressKey(Key::Escape);
+      ui.PumpAndSettle();
+      ui.Find(UiSelector::Key("rf-0")).Tap();
+      ui.PumpAndSettle();
+      ui.PressKey(Key::ArrowRight);
+      ui.PressKey(Key::ArrowRight);
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("rf_active: 2")).Exists());
+      CHECK(ui.Find(UiSelector::Key("rf-2")).One().focused);
+    }
+
+    // 6. MarqueeSelectArea + Copyable + ShortcutMap.
+    {
+      Application app(MarqueeCopyShortcutApp, {.window = {.initial_size = {480, 280}}, .show_debug_overlay = false});
+      UiTest ui(app, {.viewport = {480, 280}});
+      const Rect b0 = ui.Find(UiSelector::Key("mq-0")).One().bounds;
+      const Rect b1 = ui.Find(UiSelector::Key("mq-1")).One().bounds;
+      ui.Drag({b0.x + 4.0F, b0.y + 4.0F}, {b1.x + b1.width * 0.5F, b1.y + b1.height - 4.0F},
+              {.duration = std::chrono::duration<double>(0.2), .segments = 8});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("sel: 0,1")).Exists());
+
+      ui.Find(UiSelector::Key("mq-copy")).Tap();
+      ui.Pump();
+      CHECK(ui.Find(UiSelector::Text("copied: yes")).Exists());
+      CHECK(ui.Find(UiSelector::Text("clip: sel:0,1")).Exists());
+      ui.Pump(std::chrono::milliseconds(250));
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("copied: no")).Exists());
+
+      ui.Find(UiSelector::Key("mq-focus")).Tap();
+      ui.PumpAndSettle();
+      ui.PressKey(Key::A, KeyModifiers{.control = true});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("sel: 0,1,2")).Exists());
+
+      ui.PressKey(Key::D, KeyModifiers{.control = true});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("sel: none")).Exists());
+    }
+
+    // 7. ScrollHideController + ScrollSpy + Expandable dynamic geometry sync.
+    {
+      Application app(ScrollHideSpyExpandableApp,
+                      {.window = {.initial_size = {420, 340}}, .show_debug_overlay = false});
+      UiTest ui(app, {.viewport = {420, 340}});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("spy_active: 0")).Exists());
+      CHECK(ui.Find(UiSelector::Text("hide_hid: no")).Exists());
+      CHECK(ui.Find(UiSelector::Key("adv-exp")).One().size.height == 0.0F);
+
+      const Point scroll_center = Center(ui.Find(UiSelector::Key("adv-scroll")).One().bounds);
+      ui.SendScroll({.position = scroll_center, .delta_y = 110.0F});
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("hide_hid: yes")).Exists());
+      CHECK(ui.Find(UiSelector::Text("spy_active: 1")).Exists());
+
+      ui.Find(UiSelector::Key("adv-jump-0")).Tap();
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("spy_active: 0")).Exists());
+
+      ui.Find(UiSelector::Key("adv-toggle-exp")).Tap();
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Key("adv-exp")).One().size.height >= 95.0F);
+
+      ui.Find(UiSelector::Key("adv-jump-1")).Tap();
+      ui.PumpAndSettle();
+      CHECK(ui.Find(UiSelector::Text("spy_active: 1")).Exists());
+      // Expanded Section 0 is 80 + 96 = 176 px tall; jumping to Section 1 lands well past 150 px.
+      CHECK(ui.Find(UiSelector::Text("offset: 176")).Exists());
     }
   });
 }
