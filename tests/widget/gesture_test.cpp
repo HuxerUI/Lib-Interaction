@@ -279,6 +279,133 @@ void CheckGestureContracts() {
     mui.PumpAndSettle();
     CHECK(mui.Find(UiSelector::Text("sel: none")).Exists());
   }
+
+  // SnapDrag (Corners drag & flick, programmatic animated vs instant SnapToAnchor, HorizontalEdges, Custom).
+  {
+    Application snap_app(
+        []() -> View {
+          auto snap_corners = UseSnapDragController();
+          auto snap_edges = UseSnapDragController();
+          auto snap_custom = UseSnapDragController();
+          auto snapped_count = UseState(0);
+          auto last_anchor = UseState<std::size_t>(0);
+
+          return Column {
+            Row {
+              SnapDrag(
+                  [](SnapDragSnapshot s) {
+                    return Text(s.dragging ? "pip-drag" : "pip-rest")
+                        .With(Frame{.width = 60.0F, .height = 40.0F})
+                        .Key("pip-c");
+                  },
+                  {.mode = SnapMode::Corners,
+                   .initial_anchor = 0,
+                   .margin = 10.0F,
+                   .snap_motion = TweenSpec{.duration = 0.2, .easing = Easing::Linear},
+                   .controller = snap_corners},
+                  [snapped_count, last_anchor](std::size_t idx, Point) {
+                    snapped_count += 1;
+                    last_anchor = idx;
+                  })
+                  .With(Frame{.width = 240.0F, .height = 160.0F})
+                  .Key("stage-c"),
+              SnapDrag(
+                  Text("edge").With(Frame{.width = 60.0F, .height = 40.0F}).Key("pip-e"),
+                  {.mode = SnapMode::HorizontalEdges, .initial_anchor = 0, .margin = 10.0F, .controller = snap_edges})
+                  .With(Frame{.width = 200.0F, .height = 160.0F})
+                  .Key("stage-e"),
+              SnapDrag(
+                  Text("cust").With(Frame{.width = 40.0F, .height = 40.0F}).Key("pip-u"),
+                  {.mode = SnapMode::Custom,
+                   .anchors = {{0.0F, 0.5F}, {0.5F, 0.5F}, {1.0F, 0.5F}},
+                   .initial_anchor = 0,
+                   .margin = 10.0F,
+                   .controller = snap_custom})
+                  .With(Frame{.width = 200.0F, .height = 120.0F})
+                  .Key("stage-u"),
+            }.With(Spacing(16.0F)),
+            Row {
+              Button("Snap TR").OnClick([snap_corners] { snap_corners.SnapToAnchor(1, true); }).Key("snap-tr"),
+              Button("Snap BL Instant")
+                  .OnClick([snap_corners] { snap_corners.SnapToAnchor(2, false); })
+                  .Key("snap-bl-now"),
+            }.With(Spacing(8.0F)),
+            Text("c_anchor: " + std::to_string(snap_corners.ActiveAnchor())),
+            Text("c_snaps: " + std::to_string(snapped_count.Get())),
+            Text("e_anchor: " + std::to_string(snap_edges.ActiveAnchor())),
+            Text("u_anchor: " + std::to_string(snap_custom.ActiveAnchor())),
+          }.With(Padding(16.0F), Spacing(10.0F));
+        },
+        {.window = {.initial_size = {740, 320}}, .show_debug_overlay = false});
+    UiTest sui(snap_app, {.viewport = {740, 320}});
+    sui.PumpAndSettle();
+
+    // 1. Starts at TopLeft {margin, margin} inside stage-c.
+    const Rect stage_c = sui.Find(UiSelector::Key("stage-c")).One().bounds;
+    const Rect pip_c0 = sui.Find(UiSelector::Key("pip-c")).One().bounds;
+    CHECK(Near(pip_c0.x, stage_c.x + 10.0F));
+    CHECK(Near(pip_c0.y, stage_c.y + 10.0F));
+    CHECK(sui.Find(UiSelector::Text("c_anchor: 0")).Exists());
+
+    // Drag toward bottom-right corner -> snaps to anchor 3 (BottomRight).
+    sui.Drag(Center(pip_c0), {stage_c.x + stage_c.width - 30.0F, stage_c.y + stage_c.height - 25.0F},
+             {.duration = std::chrono::duration<double>(0.2), .segments = 8});
+    sui.PumpAndSettle();
+    const Rect pip_c3 = sui.Find(UiSelector::Key("pip-c")).One().bounds;
+    CHECK(sui.Find(UiSelector::Text("c_anchor: 3")).Exists());
+    CHECK(sui.Find(UiSelector::Text("c_snaps: 1")).Exists());
+    CHECK(Near(pip_c3.x, stage_c.x + stage_c.width - 10.0F - 60.0F));
+    CHECK(Near(pip_c3.y, stage_c.y + stage_c.height - 10.0F - 40.0F));
+
+    // 2. Animated SnapToAnchor(1, true) moves through intermediate positions before resting at TopRight.
+    sui.Find(UiSelector::Key("snap-tr")).Tap();
+    for(int f = 0; f < 4; ++f) {
+      sui.Pump(std::chrono::milliseconds(16));
+    }
+    const Rect pip_mid = sui.Find(UiSelector::Key("pip-c")).One().bounds;
+    CHECK(pip_mid.y < pip_c3.y - 5.0F);
+    CHECK(pip_mid.y > stage_c.y + 15.0F);
+    sui.PumpAndSettle();
+    const Rect pip_c1 = sui.Find(UiSelector::Key("pip-c")).One().bounds;
+    CHECK(sui.Find(UiSelector::Text("c_anchor: 1")).Exists());
+    CHECK(Near(pip_c1.x, stage_c.x + stage_c.width - 10.0F - 60.0F));
+    CHECK(Near(pip_c1.y, stage_c.y + 10.0F));
+
+    // 3. Instant SnapToAnchor(2, false) reaches BottomLeft in a single zero-duration Pump().
+    sui.Find(UiSelector::Key("snap-bl-now")).Tap();
+    sui.Pump();
+    const Rect pip_c2 = sui.Find(UiSelector::Key("pip-c")).One().bounds;
+    CHECK(Near(pip_c2.x, stage_c.x + 10.0F));
+    CHECK(Near(pip_c2.y, stage_c.y + stage_c.height - 10.0F - 40.0F));
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("c_anchor: 2")).Exists());
+
+    // 4. HorizontalEdges preserves intermediate Y while docking horizontally to Right edge (anchor 1).
+    const Rect stage_e = sui.Find(UiSelector::Key("stage-e")).One().bounds;
+    const Rect pip_e0 = sui.Find(UiSelector::Key("pip-e")).One().bounds;
+    sui.Drag(Center(pip_e0), {stage_e.x + stage_e.width - 40.0F, stage_e.y + 80.0F},
+             {.duration = std::chrono::duration<double>(0.2), .segments = 8});
+    sui.PumpAndSettle();
+    const Rect pip_e1 = sui.Find(UiSelector::Key("pip-e")).One().bounds;
+    CHECK(sui.Find(UiSelector::Text("e_anchor: 1")).Exists());
+    CHECK(Near(pip_e1.x, stage_e.x + stage_e.width - 10.0F - 60.0F));
+    CHECK(pip_e1.y > stage_e.y + 40.0F);
+
+    // 5. Custom anchors: gentle drag lands on center anchor 1, fast flick carries to right anchor 2.
+    const Rect stage_u = sui.Find(UiSelector::Key("stage-u")).One().bounds;
+    const Rect pip_u0 = sui.Find(UiSelector::Key("pip-u")).One().bounds;
+    sui.Drag(Center(pip_u0), Center(stage_u), {.duration = std::chrono::duration<double>(0.8), .segments = 8});
+    sui.PumpAndSettle();
+    const Rect pip_u1 = sui.Find(UiSelector::Key("pip-u")).One().bounds;
+    CHECK(sui.Find(UiSelector::Text("u_anchor: 1")).Exists());
+    CHECK(Near(Center(pip_u1).x, Center(stage_u).x));
+    CHECK(Near(Center(pip_u1).y, Center(stage_u).y));
+
+    sui.Drag(Center(pip_u1), {Center(pip_u1).x + 30.0F, Center(pip_u1).y},
+             {.duration = std::chrono::duration<double>(0.08), .segments = 6});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("u_anchor: 2")).Exists());
+  }
 }
 
 #endif

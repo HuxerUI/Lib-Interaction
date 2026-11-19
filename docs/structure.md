@@ -7,9 +7,10 @@ HuxerUI core:
 - **Layer 0 (`src/internal/`)**: Private validation, multi-controller frame aggregation, and shared slot-reorder
   geometry/session infrastructure. Never exposed in `include/`.
 - **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `Copyable` /
-  `Popover` / `PredictiveBack` / `DropZone` / `FileDropZone` / `Dismissible`, `SwipeController`, `PanZoomController`,
-  `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `RovingFocusController`,
-  `PredictiveBackController`, `MarqueeSelectController`, `ReorderHandle`, and `ViewAdaptor` (`operator|`).
+  `Popover` / `PredictiveBack` / `SnapDrag` / `DropZone` / `FileDropZone` / `Dismissible`, `SwipeController`,
+  `PanZoomController`, `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`,
+  `SnapDragController`, `RovingFocusController`, `PredictiveBackController`, `MarqueeSelectController`, `ReorderHandle`,
+  and `ViewAdaptor` (`operator|`).
 - **Layer 2 (Styled presets, Retained modifiers & `visual/`)**: Ready-to-use composed widgets, retained
   `NodeExtension` paint/scroll/hover/focus/semantics modifiers, and non-interactive visual effects under `visual/`.
 
@@ -23,9 +24,9 @@ include/huxerui/
     press/                            # InteractiveSurface, Pressable, Copyable, LongPressable, HoldProgressRing,
                                       # MultiClickable, DoubleClickable, ContextMenuArea, SecondaryClickable, Ripple
     hover/                            # Hoverable, HoverLift, HoverHighlight, HoverShadow, Spotlight, Magnetic
-    gesture/                          # DragSpring, InertialDrag, MarqueeSelectArea/Item, PanZoom, PinchZoom,
-                                      # PanZoomController, SwipeActions, SwipeController, Dismissible, PressDragHandle,
-                                      # ResizeHandle
+    gesture/                          # DragSpring, InertialDrag, SnapDrag, MarqueeSelectArea/Item, PanZoom, PinchZoom,
+                                      # PanZoomController, SnapDragController, SwipeActions, SwipeController,
+                                      # Dismissible, PressDragHandle, ResizeHandle
     reorder/                          # Reorderable, ReorderableGrid, ReorderHandle
     dragdrop/                         # Draggable, DropZone (exact & predicate-filtered), FileDropZone
     overlay/                          # HoverCard, HoverCardController, Popover, PopoverController

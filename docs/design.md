@@ -13,20 +13,21 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
    (`reorder_core.h`) shared between 1D `Reorderable` and 2D `ReorderableGrid`.
 2. **Layer 1 — Headless state, Controllers, and Pipelines**:
    - **Headless builders** (`InteractiveSurface`, `Hoverable`, `Copyable`, `Popover` trigger builder, `PredictiveBack`
-     builder, and builder overloads of `DropZone<T>`, `FileDropZone`, `Dismissible`) run the input/focus/semantics/back
-     state machine and pass live state snapshots (`InteractionSnapshot`, `hovered`, `copied`, `PredictiveBackSnapshot`,
-     `progress`) to caller-supplied view builders.
+     builder, `SnapDrag` builder, and builder overloads of `DropZone<T>`, `FileDropZone`, `Dismissible`) run the
+     input/focus/semantics/back/snap state machine and pass live state snapshots (`InteractionSnapshot`, `hovered`,
+     `copied`, `PredictiveBackSnapshot`, `SnapDragSnapshot`, `progress`) to caller-supplied view builders.
    - **Controllers** (`SwipeController`, `PanZoomController`, `HoverCardController`, `PopoverController`,
-     `ScrollHideController`, `ScrollSpyController`, `RovingFocusController`, `PredictiveBackController`,
-     `MarqueeSelectController`) use `std::shared_ptr` state handles remembered via `Use*Controller()`, enabling
-     external state reads and programmatic actions while keeping default-constructed handles runtime-free.
+     `ScrollHideController`, `ScrollSpyController`, `SnapDragController`, `RovingFocusController`,
+     `PredictiveBackController`, `MarqueeSelectController`) use `std::shared_ptr` state handles remembered via
+     `Use*Controller()`, enabling external state reads and programmatic actions while keeping default-constructed
+     handles runtime-free.
    - **Environment-bridged grips & pipelines**: `ReorderHandle`, `RovingFocusItem`, `MarqueeSelectItem`, and
      `ScrollSpySection` connect to enclosing containers via `Environment` (`ProvideEnvironment` / `UseEnvironment`),
      and `pipe.h` provides left-to-right `operator|` composition via `ViewAdaptor`.
 3. **Layer 2 — Styled presets, Retained modifiers, and `visual/`**:
    - **Input-driven presets** (`Pressable`, `Copyable`, `HoverLift`, `HoverShadow`, `Magnetic`, `LongPressable`,
-     `DragSpring`, `InertialDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`, `SwipeActions`, `Dismissible`,
-     `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`, `FileDropZone`, `HoverCard`, `Popover`,
+     `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`, `SwipeActions`,
+     `Dismissible`, `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`, `FileDropZone`, `HoverCard`, `Popover`,
      `ScrollSpyArea`) build default motion and chrome on top of Layer 1.
    - **Retained modifiers** (`Ripple`, `HoldProgressRing`, `Spotlight`, `HoverHighlight`, `ScrollProgress`,
      `ScrollEdgeFade`, `NestedScrollConnection`, `SemanticActions`) attach `NodeExtension` behavior through
@@ -53,6 +54,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 | `Spotlight` | `hover/spotlight.h` | Retained modifier (`With`) | Hover position + fade controller | Radial glow behind content |
 | `DragSpring` | `gesture/dragspring.h` | Wrapper + `ViewAdaptor` | Per-scope drag + offset cells | Follow tween, spring return |
 | `InertialDrag` | `gesture/inertialdrag.h` | Wrapper + `ViewAdaptor` | Per-scope drag + projected offset | Velocity-projected settle + `on_settled` |
+| `SnapDrag` | `gesture/snapdrag.h` | Builder / Wrapper + `SnapDragController` | Stage/item bounds + `MotionController::Seek` velocity handoff | Corner / edge / custom anchor spring snap + drag scale |
 | `MarqueeSelectArea` / `MarqueeSelectItem` | `gesture/marqueeselect.h` | Container + Item + `MarqueeSelectController` | `Environment` + `PrepareGeometry` bounds + `DragGesture` | Rubber-band box + multi-index selection |
 | `PanZoom` / `PinchZoom` | `gesture/transform.h` | Wrapper + `PanZoomController` | Pan, scale, rotation (`PinchZoom` disables pan/rotation) | `Scale`, `Rotation`, `Offset` |
 | `SwipeActions` | `gesture/swipe.h` | Wrapper + `SwipeController` | `SwipeActionContext{close, progress}` + `on_open_changed` | Clipped trailing strip + `Offset` |

@@ -35,6 +35,10 @@ static_assert(std::equality_comparable<MagneticStyle>);
 static_assert(std::equality_comparable<HoverShadowStyle>);
 static_assert(std::equality_comparable<MarqueeSelectStyle>);
 static_assert(std::equality_comparable<MarqueeSelectController>);
+static_assert(std::equality_comparable<SnapMode>);
+static_assert(std::equality_comparable<SnapDragSnapshot>);
+static_assert(std::equality_comparable<SnapDragStyle>);
+static_assert(std::equality_comparable<SnapDragController>);
 static_assert(std::equality_comparable<ShortcutMapStyle>);
 static_assert(std::equality_comparable<RovingFocusStyle>);
 static_assert(std::equality_comparable<RovingFocusItemStyle>);
@@ -68,6 +72,8 @@ int main() {
   }
   if(!(ScrollSpyController{} == ScrollSpyController{}) || static_cast<bool>(ScrollSpyController{})) return 1;
   if(!(ScrollSpyStyle{} == ScrollSpyStyle{})) return 1;
+  if(!(SnapDragController{} == SnapDragController{}) || static_cast<bool>(SnapDragController{})) return 1;
+  if(!(SnapDragStyle{} == SnapDragStyle{})) return 1;
 
   View probe = Text("probe")
                    .With(Ripple{}, Spotlight{}, HoverHighlight{}, NestedScrollConnection{})
@@ -80,6 +86,7 @@ int main() {
                | PredictiveBack([] {})
                | ScrollSpySection(0)
                | ScrollSpyArea()
+               | SnapDrag()
                | RovingFocusItem(0)
                | RovingFocusGroup()
                | Copyable("probe")
@@ -104,6 +111,7 @@ int main() {
   (void)RollingNumber(42);
   (void)DragSpring(Text("drag"));
   (void)InertialDrag(Text("inertia"));
+  (void)SnapDrag([](SnapDragSnapshot) { return Text("sd"); });
   (void)PanZoom(Text("panzoom"));
   (void)PinchZoom(Text("pinch"));
   (void)SwipeActions(Text("row"), [](SwipeActionContext) { return Text("act"); });

@@ -51,6 +51,10 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
     composition or cleanup), supporting vertical/horizontal tracking, bottom-of-scroll last-section fallback, and
     configurable `ScrollJumpBehavior::Smooth` (driven via retained `MotionController` + `scroll_motion`, auto-canceled
     on user scroll interruption) or `ScrollJumpBehavior::Instant` `ScrollToSection(index)` jump alignment.
+- **Anchor-Snapping Floating Drag (`SnapDrag`, `SnapDragController`)**:
+  - Combines a non-blocking `SnapDragStageLayout` with `MotionController::Seek(pos, vel)` + `AnimateTo()` to provide
+    velocity-continuous corner (`Corners`), edge (`HorizontalEdges` / `VerticalEdges`), and normalized custom
+    (`Custom`) dock snapping while preserving click-through outside the floating item.
 
 ## Remaining framework-bound questions
 

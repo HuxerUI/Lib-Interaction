@@ -260,4 +260,18 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] {
     (void)ScrollSpyArea(Text("x"), {.scroll_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
   });
+
+  // SnapDrag validation.
+  Throws<std::invalid_argument>([] { (void)SnapDrag(std::function<View(SnapDragSnapshot)>{}); });
+  Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.margin = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.projection_time = -0.1F}); });
+  Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.maximum_velocity = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.drag_scale = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.mode = SnapMode::Custom, .anchors = {}}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SnapDrag(Text("x"), {.mode = SnapMode::Custom, .anchors = {{1.5F, 0.5F}}}); });
+  Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.snap_motion = TweenSpec{.duration = -0.1}}); });
+  Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.snap_motion = SpringSpec{.stiffness = 0.0F}}); });
+  Throws<std::invalid_argument>(
+      [] { (void)SnapDrag(Text("x"), {.snap_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}}); });
 }

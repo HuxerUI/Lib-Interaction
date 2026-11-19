@@ -36,6 +36,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/gesture/marqueeselect.cpp
     src/gesture/pressdraghandle.cpp
     src/gesture/resizehandle.cpp
+    src/gesture/snapdrag.cpp
     src/gesture/swipe.cpp
     src/gesture/transform.cpp
     # reorder

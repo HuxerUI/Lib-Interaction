@@ -65,6 +65,68 @@ View DragSection(const DemoContext& context) {
            })),
       }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
     }).Key("marquee-demo"),
+    Scope([context]() -> View {
+      auto snap = UseSnapDragController(3);
+      auto snap_mode = UseState(SnapMode::Corners);
+      const bool corners = snap_mode.Get() == SnapMode::Corners;
+      const float stage_w = context.expanded ? 560.0F : (context.compact ? 260.0F : 360.0F);
+      static constexpr const char* kCornerNames[] = {"TL", "TR", "BL", "BR"};
+      const auto anchor_label = [corners](std::size_t idx) -> std::string {
+        if(corners) {
+          return idx < 4 ? kCornerNames[idx] : "?";
+        }
+        return idx == 0 ? "Left" : "Right";
+      };
+
+      std::vector<View> quick_btns;
+      const std::size_t btn_count = corners ? 4U : 2U;
+      for(std::size_t i = 0; i < btn_count; ++i) {
+        const bool is_cur = snap.ActiveAnchor() == i;
+        quick_btns.push_back(
+            Stack {
+              Text(anchor_label(i), TextRole::Label)
+                  .With(Foreground(is_cur ? context.colors.on_primary : context.colors.on_surface)),
+            }
+                .With(Padding(EdgeInsets::Symmetric(8.0F, 5.0F)),
+                      Background{is_cur ? context.colors.primary : context.colors.surface_container_high},
+                      CornerRadius(8.0F), PointerCursor(PointerCursorKind::Hand))
+                .OnClick([snap, i] { snap.SnapToAnchor(i); }));
+      }
+      quick_btns.push_back(
+          Stack {
+            Text(corners ? "Corners" : "Edges", TextRole::Label).With(Foreground(context.colors.on_surface)),
+          }
+              .With(Padding(EdgeInsets::Symmetric(8.0F, 5.0F)),
+                    Background{context.colors.surface_container_high},
+                    Border{.color = context.colors.outline, .width = 1.0F}, CornerRadius(8.0F),
+                    PointerCursor(PointerCursorKind::Hand))
+              .OnClick([snap_mode] {
+                snap_mode = snap_mode.Get() == SnapMode::Corners ? SnapMode::HorizontalEdges : SnapMode::Corners;
+              }));
+
+      return Column {
+        Flow {
+          Text("SnapDrag (drag & flick PiP):", TextRole::Label)
+              .With(Foreground(context.colors.on_surface_variant)),
+          Row(std::move(quick_btns)).With(Spacing(6.0F)),
+        }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Center)),
+        SnapDrag(
+            [context, anchor_label](SnapDragSnapshot state) -> View {
+              const Color fg = state.dragging ? context.colors.on_primary : context.colors.on_primary_container;
+              const Color bg = state.dragging ? context.colors.primary : context.colors.primary_container;
+              return Column {
+                Text("PiP · " + anchor_label(state.active_anchor), TextRole::Label).With(Foreground(fg)),
+                Text(state.dragging ? "Dragging" : "Drag me", TextRole::Body).With(Foreground(fg)),
+              }
+                  .With(Frame{.width = 104.0F, .height = 52.0F}, Padding(EdgeInsets::Symmetric(10.0F, 8.0F)),
+                        Spacing(2.0F), Background{bg}, CornerRadius(12.0F),
+                        Shadow{.color = Color::Rgb(0, 0, 0, 0.16F), .offset = {0.0F, 4.0F}, .blur_radius = 12.0F});
+            },
+            {.mode = snap_mode.Get(), .initial_anchor = 3, .margin = 10.0F, .controller = snap})
+            .With(Frame{.width = stage_w, .height = 156.0F},
+                  Background{context.colors.surface_container_low}, CornerRadius(14.0F)),
+      }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
+    }).Key("snapdrag-demo"),
   }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
 }
 

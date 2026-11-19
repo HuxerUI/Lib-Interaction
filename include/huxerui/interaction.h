@@ -23,6 +23,7 @@
 #include <huxerui/interaction/gesture/marqueeselect.h>
 #include <huxerui/interaction/gesture/pressdraghandle.h>
 #include <huxerui/interaction/gesture/resizehandle.h>
+#include <huxerui/interaction/gesture/snapdrag.h>
 #include <huxerui/interaction/gesture/swipe.h>
 #include <huxerui/interaction/gesture/transform.h>
 // reorder
