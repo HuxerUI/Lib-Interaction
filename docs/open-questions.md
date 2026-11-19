@@ -45,6 +45,11 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - `BackHandler` and `PredictiveBack` wrap `NodeExtension::OnBack(ViewNode&, const BackEvent&)` so dynamic
     `enabled = false` bypasses Back dispatch to enclosing scopes or platform navigation without unmounting content,
     while capturing predictive `Begin` → `Update` → `Cancel`/`Commit` transactions cleanly.
+- **Scroll Section Tracking (`ScrollSpyArea`, `ScrollSpySection`, `ScrollSpyController`)**:
+  - Pairs `Environment` section registration with `PrepareGeometry` (`NodeExtension::PrepareGeometry` reading
+    `PresentationBounds()`) and coalesced `TaskScope::Post` synchronization (never posting during `Update()` /
+    composition or cleanup), supporting vertical/horizontal tracking, bottom-of-scroll last-section fallback, and
+    `ScrollToSection(index)` jump alignment.
 
 ## Remaining framework-bound questions
 

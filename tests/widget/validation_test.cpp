@@ -249,4 +249,8 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] { (void)PredictiveBack(Text("x"), {}, {.maximum_offset = -1.0F}); });
   Throws<std::invalid_argument>([] { (void)PredictiveBack(Text("x"), {}, {.minimum_scale = 0.0F}); });
   Throws<std::invalid_argument>([] { (void)PredictiveBack(Text("x"), {}, {.minimum_scale = 1.2F}); });
+
+  // ScrollSpy validation.
+  Throws<std::invalid_argument>([] { (void)ScrollSpyArea(Text("x"), {.activation_offset = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollSpyArea(Text("x"), {.activation_offset = std::nanf("")}); });
 }

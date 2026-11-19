@@ -8,7 +8,7 @@ HuxerUI core:
   geometry/session infrastructure. Never exposed in `include/`.
 - **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `Copyable` /
   `Popover` / `PredictiveBack` / `DropZone` / `FileDropZone` / `Dismissible`, `SwipeController`, `PanZoomController`,
-  `HoverCardController`, `PopoverController`, `ScrollHideController`, `RovingFocusController`,
+  `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `RovingFocusController`,
   `PredictiveBackController`, `MarqueeSelectController`, `ReorderHandle`, and `ViewAdaptor` (`operator|`).
 - **Layer 2 (Styled presets, Retained modifiers & `visual/`)**: Ready-to-use composed widgets, retained
   `NodeExtension` paint/scroll/hover/focus/semantics modifiers, and non-interactive visual effects under `visual/`.
@@ -29,7 +29,8 @@ include/huxerui/
     reorder/                          # Reorderable, ReorderableGrid, ReorderHandle
     dragdrop/                         # Draggable, DropZone (exact & predicate-filtered), FileDropZone
     overlay/                          # HoverCard, HoverCardController, Popover, PopoverController
-    scroll/                           # ScrollProgress, ScrollEdgeFade, NestedScrollConnection, ScrollHideController
+    scroll/                           # ScrollProgress, ScrollEdgeFade, NestedScrollConnection, ScrollHideController,
+                                      # ScrollSpyArea, ScrollSpySection, ScrollSpyController
     accessibility/                    # SemanticActions, KeyboardShortcut, ShortcutMap, BackHandler,
                                       # PredictiveBack, RovingFocusGroup, RovingFocusItem, RovingFocusController
     visual/                           # Expandable, Appear, SharedMorph, Pulsing, Shimmer, Fireworks, RollingNumber,

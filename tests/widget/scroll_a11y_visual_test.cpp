@@ -522,6 +522,101 @@ void CheckScrollA11yAndVisualContracts() {
     window.Retire();
     runtime.Retire();
   }
+
+  // ScrollSpy (vertical + horizontal active tracking, bottom-of-scroll rule, and ScrollToSection).
+  {
+    Application spy_app(
+        []() -> View {
+          auto v_scroll = UseScrollController();
+          auto h_scroll = UseScrollController();
+          auto v_spy = UseScrollSpyController();
+          auto h_spy = UseScrollSpyController();
+          auto v_changes = UseState(0);
+
+          std::vector<View> v_sections;
+          for(std::size_t i = 0; i < 4; ++i) {
+            v_sections.push_back(Text("VSec " + std::to_string(i))
+                                     .With(Frame{.width = 200.0F, .height = i == 3 ? 60.0F : 120.0F})
+                                     .Key("vsec-" + std::to_string(i))
+                                 | ScrollSpySection(i));
+          }
+
+          std::vector<View> h_sections;
+          for(std::size_t i = 0; i < 3; ++i) {
+            h_sections.push_back(Text("HSec " + std::to_string(i))
+                                     .With(Frame{.width = 140.0F, .height = 60.0F})
+                                     .Key("hsec-" + std::to_string(i))
+                                 | ScrollSpySection(i));
+          }
+
+          return Column {
+            Row {
+              (ScrollView(Column(std::move(v_sections)))
+                   .Controller(v_scroll)
+                   .With(Frame{.width = 220.0F, .height = 140.0F})
+                   .Key("vspy-scroll")
+               | ScrollSpyArea({.scroll_controller = v_scroll, .activation_offset = 16.0F, .controller = v_spy},
+                               [v_changes](std::size_t) { v_changes += 1; })),
+              (ScrollView(Row(std::move(h_sections)))
+                   .ScrollAxis(Axis::Horizontal)
+                   .Controller(h_scroll)
+                   .With(Frame{.width = 180.0F, .height = 80.0F})
+                   .Key("hspy-scroll")
+               | ScrollSpyArea({.scroll_controller = h_scroll,
+                                .axis = Axis::Horizontal,
+                                .activation_offset = 16.0F,
+                                .controller = h_spy})),
+            }.With(Spacing(16.0F)),
+            Row {
+              Button("Jump V0").OnClick([v_spy] { v_spy.ScrollToSection(0); }).Key("vjump-0"),
+              Button("Jump V1").OnClick([v_spy] { v_spy.ScrollToSection(1); }).Key("vjump-1"),
+              Button("Jump H0").OnClick([h_spy] { h_spy.ScrollToSection(0); }).Key("hjump-0"),
+            }.With(Spacing(8.0F)),
+            Text("v_active: " + std::to_string(v_spy.ActiveSection())),
+            Text("v_count: " + std::to_string(v_spy.SectionCount())),
+            Text("v_changes: " + std::to_string(v_changes.Get())),
+            Text("h_active: " + std::to_string(h_spy.ActiveSection())),
+          }.With(Padding(16.0F), Spacing(10.0F));
+        },
+        {.window = {.initial_size = {520, 320}}, .show_debug_overlay = false});
+    UiTest sui(spy_app, {.viewport = {520, 320}});
+    sui.PumpAndSettle();
+
+    CHECK(sui.Find(UiSelector::Text("v_active: 0")).Exists());
+    CHECK(sui.Find(UiSelector::Text("v_count: 4")).Exists());
+    CHECK(sui.Find(UiSelector::Text("h_active: 0")).Exists());
+
+    const Point v_center = Center(sui.Find(UiSelector::Key("vspy-scroll")).One().bounds);
+    // Scroll down past Section 0 (height 120) -> Section 1 active.
+    sui.SendScroll({.position = v_center, .delta_y = 120.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("v_active: 1")).Exists());
+
+    // Scroll down further to bottom -> short Section 3 becomes active via bottom-of-scroll rule.
+    sui.SendScroll({.position = v_center, .delta_y = 400.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("v_active: 3")).Exists());
+    CHECK(sui.Find(UiSelector::Text("v_changes: 2")).Exists());
+
+    // Programmatic jump back to Section 1 and Section 0.
+    sui.Find(UiSelector::Key("vjump-1")).Tap();
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("v_active: 1")).Exists());
+
+    sui.Find(UiSelector::Key("vjump-0")).Tap();
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("v_active: 0")).Exists());
+
+    // Horizontal axis ScrollSpy.
+    const Point h_center = Center(sui.Find(UiSelector::Key("hspy-scroll")).One().bounds);
+    sui.SendScroll({.position = h_center, .delta_x = 140.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("h_active: 1")).Exists());
+
+    sui.Find(UiSelector::Key("hjump-0")).Tap();
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("h_active: 0")).Exists());
+  }
 }
 
 #endif

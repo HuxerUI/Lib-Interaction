@@ -17,17 +17,17 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
      state machine and pass live state snapshots (`InteractionSnapshot`, `hovered`, `copied`, `PredictiveBackSnapshot`,
      `progress`) to caller-supplied view builders.
    - **Controllers** (`SwipeController`, `PanZoomController`, `HoverCardController`, `PopoverController`,
-     `ScrollHideController`, `RovingFocusController`, `PredictiveBackController`, `MarqueeSelectController`) use
-     `std::shared_ptr` state handles remembered via `Use*Controller()`, enabling external state reads and programmatic
-     actions while keeping default-constructed handles runtime-free.
-   - **Environment-bridged grips & pipelines**: `ReorderHandle`, `RovingFocusItem`, and `MarqueeSelectItem` connect to
-     enclosing containers via `Environment` (`ProvideEnvironment` / `UseEnvironment`), and `pipe.h` provides
-     left-to-right `operator|` composition via `ViewAdaptor`.
+     `ScrollHideController`, `ScrollSpyController`, `RovingFocusController`, `PredictiveBackController`,
+     `MarqueeSelectController`) use `std::shared_ptr` state handles remembered via `Use*Controller()`, enabling
+     external state reads and programmatic actions while keeping default-constructed handles runtime-free.
+   - **Environment-bridged grips & pipelines**: `ReorderHandle`, `RovingFocusItem`, `MarqueeSelectItem`, and
+     `ScrollSpySection` connect to enclosing containers via `Environment` (`ProvideEnvironment` / `UseEnvironment`),
+     and `pipe.h` provides left-to-right `operator|` composition via `ViewAdaptor`.
 3. **Layer 2 — Styled presets, Retained modifiers, and `visual/`**:
    - **Input-driven presets** (`Pressable`, `Copyable`, `HoverLift`, `HoverShadow`, `Magnetic`, `LongPressable`,
      `DragSpring`, `InertialDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`, `SwipeActions`, `Dismissible`,
-     `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`, `FileDropZone`, `HoverCard`, `Popover`) build default
-     motion and chrome on top of Layer 1.
+     `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`, `FileDropZone`, `HoverCard`, `Popover`,
+     `ScrollSpyArea`) build default motion and chrome on top of Layer 1.
    - **Retained modifiers** (`Ripple`, `HoldProgressRing`, `Spotlight`, `HoverHighlight`, `ScrollProgress`,
      `ScrollEdgeFade`, `NestedScrollConnection`, `SemanticActions`) attach `NodeExtension` behavior through
      `View::With()` and implement `operator==` so unchanged recompositions skip extension updates.
@@ -66,6 +66,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 | `Popover` | `overlay/popover.h` | Headless / Wrapper + `PopoverController` | Click toggle + `Lifecycle` dismiss sync | Anchored focus-trapped popup |
 | `ScrollProgress` / `ScrollEdgeFade` | `scroll/` | Retained modifier (`With`) | Connected `ScrollController` | Proportional thumb / edge gradients |
 | `NestedScrollConnection` / `ScrollHideController` | `scroll/nestedscroll.h` | Modifier + `UseScrollHideController` | Pre/post scroll & fling hooks | Signed clamped deltas + hidden offset state |
+| `ScrollSpyArea` / `ScrollSpySection` | `scroll/scrollspy.h` | Container + Section + `ScrollSpyController` | `Environment` + `PrepareGeometry` (`PresentationBounds`) + `TaskScope::Post` | Active leading section tracking + `ScrollToSection()` |
 | `KeyboardShortcut` / `ShortcutMap` / `SemanticActions` | `accessibility/` | Decorator / Retained modifier | Single or multi-entry `KeyIntercept` / `BuildSemantics` | Chord callbacks / standard a11y routing |
 | `BackHandler` / `PredictiveBack` | `accessibility/backhandler.h` | Decorator / Builder + `PredictiveBackController` | `NodeExtension::OnBack` (`Begin`/`Update`/`Cancel`/`Commit`) | Back interception + predictive offset/scale preview |
 | `RovingFocusGroup` / `RovingFocusItem` | `accessibility/rovingfocus.h` | Group + Item + `RovingFocusController` | `Environment` + `FocusRequester` + `OnFocusChanged` | Arrow / Home / End traversal skipping disabled |

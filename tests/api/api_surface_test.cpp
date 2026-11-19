@@ -26,6 +26,8 @@ static_assert(std::equality_comparable<HoverCardController>);
 static_assert(std::equality_comparable<NestedScrollConnection>);
 static_assert(std::equality_comparable<ScrollHideStyle>);
 static_assert(std::equality_comparable<ScrollHideController>);
+static_assert(std::equality_comparable<ScrollSpyStyle>);
+static_assert(std::equality_comparable<ScrollSpyController>);
 static_assert(std::equality_comparable<ExpandableStyle>);
 static_assert(std::equality_comparable<AppearStyle>);
 static_assert(std::equality_comparable<MagneticStyle>);
@@ -63,6 +65,8 @@ int main() {
   if(!(PredictiveBackController{} == PredictiveBackController{}) || static_cast<bool>(PredictiveBackController{})) {
     return 1;
   }
+  if(!(ScrollSpyController{} == ScrollSpyController{}) || static_cast<bool>(ScrollSpyController{})) return 1;
+  if(!(ScrollSpyStyle{} == ScrollSpyStyle{})) return 1;
 
   View probe = Text("probe")
                    .With(Ripple{}, Spotlight{}, HoverHighlight{}, NestedScrollConnection{})
@@ -73,6 +77,8 @@ int main() {
                | ShortcutMap({{.chord = {.key = Key::S}, .on_trigger = [] {}}})
                | BackHandler([] {})
                | PredictiveBack([] {})
+               | ScrollSpySection(0)
+               | ScrollSpyArea()
                | RovingFocusItem(0)
                | RovingFocusGroup()
                | Copyable("probe")
