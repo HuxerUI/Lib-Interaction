@@ -7,8 +7,8 @@ HuxerUI core:
 - **Layer 0 (`src/internal/`)**: Private validation, multi-controller frame aggregation, and shared slot-reorder
   geometry/session infrastructure. Never exposed in `include/`.
 - **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `HoldRepeat` /
-  `Copyable` / `Popover` / `PredictiveBack` / `StickyHeaderArea` / `ScrollParallax` / `SnapDrag` / `SwipeDeck` /
-  `DropZone` / `FileDropZone` / `Dismissible`, `HoldRepeatController`, `SwipeController`, `SwipeDeckController`,
+  `Copyable` / `Popover` / `PredictiveBack` / `StickyHeaderArea` / `ScrollParallax` / `ScrollReveal` / `SnapDrag` /
+  `SwipeDeck` / `DropZone` / `FileDropZone` / `Dismissible`, `HoldRepeatController`, `SwipeController`, `SwipeDeckController`,
   `PanZoomController`, `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`,
   `StickyHeaderController`, `SnapDragController`, `RovingFocusController`, `PredictiveBackController`,
   `MarqueeSelectController`, `ReorderHandle`, and `ViewAdaptor` (`operator|`).
@@ -33,9 +33,9 @@ include/huxerui/
     dragdrop/                         # Draggable, DropZone (exact & predicate-filtered), FileDropZone
     overlay/                          # HoverCard, HoverCardController, Popover, PopoverController
     scroll/                           # ScrollProgress, ScrollEdgeFade, NestedScrollConnection, ScrollHideController,
-                                      # ScrollParallaxArea, ScrollParallax, ScrollSpyArea, ScrollSpySection,
-                                      # ScrollSpyController, StickyHeaderArea, StickyHeaderSection, StickyHeaderList,
-                                      # StickyHeaderController
+                                      # ScrollParallaxArea, ScrollParallax, ScrollRevealArea, ScrollReveal,
+                                      # ScrollSpyArea, ScrollSpySection, ScrollSpyController, StickyHeaderArea,
+                                      # StickyHeaderSection, StickyHeaderList, StickyHeaderController
     accessibility/                    # SemanticActions, KeyboardShortcut, ShortcutMap, BackHandler,
                                       # PredictiveBack, RovingFocusGroup, RovingFocusItem, RovingFocusController
     visual/                           # Expandable, Appear, SharedMorph, Pulsing, Shimmer, Fireworks, RollingNumber,

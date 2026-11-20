@@ -44,6 +44,7 @@
 #include <huxerui/interaction/scroll/parallax.h>
 #include <huxerui/interaction/scroll/scrolledgefade.h>
 #include <huxerui/interaction/scroll/scrollprogress.h>
+#include <huxerui/interaction/scroll/scrollreveal.h>
 #include <huxerui/interaction/scroll/scrollspy.h>
 #include <huxerui/interaction/scroll/stickyheader.h>
 // accessibility

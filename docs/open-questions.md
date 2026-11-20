@@ -72,6 +72,10 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - Uses stationary `ScrollParallaxPassThroughLayout` wrappers to measure viewport/item `PresentationBounds()` cleanly
     without transform feedback loops, computing normalized `progress`/`visibility`, peak center scale, edge opacity fade,
     standalone `ScrollController` hero shifts, and `FrameInfo::reduced_motion` suppression.
+- **Scroll Reveal (`ScrollRevealArea`, `ScrollReveal`)**:
+  - Measures viewport intersection ratios cleanly on stationary outer `ScrollRevealPassThroughLayout` wrappers with
+    configurable `viewport_margin`, `threshold`, `once` latching vs. exit replay, cancellable `TaskScope::Delay` stagger
+    timers, and unconditional `ScrollController::Metrics()` subscription on initial mount.
 
 ## Remaining framework-bound questions
 

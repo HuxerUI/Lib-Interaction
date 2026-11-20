@@ -308,6 +308,52 @@ View LayoutSection(const DemoContext& context) {
                | ScrollParallaxArea({.scroll_controller = p_scroll})),
             }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
           }).Key("parallax-demo"),
+          Scope([context]() -> View {
+            auto r_scroll = UseScrollController();
+            auto reveal_once = UseState(true);
+            const bool once_mode = reveal_once.Get();
+            std::vector<View> items;
+            for(std::size_t i = 0; i < 5; ++i) {
+              items.push_back(
+                  (Stack {
+                    Column {
+                      Text("Reveal Card " + std::to_string(i + 1), TextRole::Label)
+                          .With(Foreground(context.colors.on_primary_container)),
+                      Text(once_mode ? "Reveals once into view" : "Replays on scroll out/in", TextRole::Body)
+                          .With(Foreground(context.colors.on_surface_variant)),
+                    }.With(Spacing(2.0F)),
+                  }
+                       .With(Frame{.height = 56.0F}, Padding(10.0F),
+                             Background{context.colors.primary_container}, CornerRadius(10.0F))
+                   | ScrollReveal({
+                         .threshold = 0.2F,
+                         .once = once_mode,
+                         .delay = static_cast<double>(i % 2U) * 0.08,
+                         .initial_offset = {0.0F, 18.0F},
+                     })));
+            }
+            return Column {
+              Row {
+                Text("ScrollReveal", TextRole::Label).With(Foreground(context.colors.on_surface_variant)),
+                Stack {
+                  Text(once_mode ? "Once" : "Repeat", TextRole::Label)
+                      .With(Foreground(once_mode ? context.colors.on_primary : context.colors.on_surface)),
+                }
+                    .With(Padding(EdgeInsets::Symmetric(10.0F, 5.0F)),
+                          Background{once_mode ? context.colors.primary : context.colors.surface_container_high},
+                          CornerRadius(8.0F), PointerCursor(PointerCursorKind::Hand))
+                    .OnClick([reveal_once] { reveal_once = !reveal_once.Get(); }),
+              }.With(Frame{.width = 300.0F}, MainAlign(MainAxisAlignment::SpaceBetween),
+                     CrossAlign(CrossAxisAlignment::Center)),
+              (ScrollView(Column(std::move(items)).With(Spacing(8.0F), Padding(8.0F),
+                                                        CrossAlign(CrossAxisAlignment::Stretch)))
+                   .Controller(r_scroll)
+                   .With(Frame{.width = 300.0F, .height = 156.0F},
+                         Background{context.colors.surface_container}, CornerRadius(12.0F),
+                         ScrollProgress{r_scroll})
+               | ScrollRevealArea({.scroll_controller = r_scroll})),
+            }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
+          }).Key("scrollreveal-demo"),
         }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start)),
       }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Start)),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));

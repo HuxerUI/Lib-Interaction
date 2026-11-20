@@ -350,6 +350,27 @@ void CheckValidation() {
   Throws<std::invalid_argument>(
       [] { (void)ScrollParallax(Text("x"), {.origin = {std::numeric_limits<float>::infinity(), 0.5F}}); });
 
+  // ScrollReveal validation.
+  (void)ScrollRevealArea(Text("sc"));
+  (void)ScrollReveal(Text("r"));
+  (void)ScrollReveal([](ScrollRevealSnapshot) { return Text("r"); },
+                     {.threshold = 0.0F, .once = false, .delay = 0.1, .initial_opacity = 0.2F});
+  Throws<std::invalid_argument>([] { (void)ScrollRevealArea(Text("x"), {.viewport_margin = std::nanf("")}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(std::function<View(ScrollRevealSnapshot)>{}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.threshold = -0.1F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.threshold = 1.2F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.delay = -0.1}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.initial_opacity = -0.1F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.initial_opacity = 1.5F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.initial_offset = {std::nanf(""), 0.0F}}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.initial_scale = 0.0F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollReveal(Text("x"), {.origin = {std::numeric_limits<float>::infinity(), 0.0F}}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.motion = TweenSpec{.duration = -0.1}}); });
+  Throws<std::invalid_argument>([] { (void)ScrollReveal(Text("x"), {.motion = SpringSpec{.stiffness = 0.0F}}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollReveal(Text("x"), {.motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}}); });
+
   // SnapDrag validation.
   Throws<std::invalid_argument>([] { (void)SnapDrag(std::function<View(SnapDragSnapshot)>{}); });
   Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.margin = -1.0F}); });

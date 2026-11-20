@@ -30,7 +30,8 @@ CTest and compiled with `-Wall -Wextra -Wpedantic` (or `/W4` on MSVC).
   predicate-filtered `DropZone<T>`, `FileDropZone`.
 - `scroll_a11y_visual_test.cpp`: `ScrollProgress`, `ScrollEdgeFade`, `NestedScrollConnection` + `ScrollHideController`,
   `ScrollParallaxArea`/`ScrollParallax` (viewport-relative & standalone `ScrollController` hero shift, horizontal
-  axis), `ScrollSpyArea`/`ScrollSpySection`/`ScrollSpyController`, `StickyHeaderArea`/`StickyHeaderSection`/
+  axis), `ScrollRevealArea`/`ScrollReveal` (initial visible, `once` threshold/latch, replay, stagger `delay`,
+  `viewport_margin`, horizontal axis), `ScrollSpyArea`/`ScrollSpySection`/`ScrollSpyController`, `StickyHeaderArea`/`StickyHeaderSection`/
   `StickyHeaderList`/`StickyHeaderController` (vertical & horizontal pinning, collision push-up, `pin_at_rest` +
   `sticky_offset`, `Instant` & `Smooth` jumps), `SemanticActions`, `KeyboardShortcut`, `ShortcutMap`,
   `BackHandler`, `PredictiveBack` (Escape commit + predictive `Begin`/`Update`/`Cancel`/`Commit`), `RovingFocusGroup`/

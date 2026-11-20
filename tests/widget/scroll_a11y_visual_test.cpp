@@ -972,6 +972,149 @@ void CheckScrollA11yAndVisualContracts() {
     const Rect h_inner1 = pui.Find(UiSelector::Key("hpar-inner")).One().bounds;
     CHECK(Center(h_inner1).x < Center(h_outer1).x - 2.0F);
   }
+
+  // ScrollReveal (initial visible, once=true threshold, once=false hide/reveal, stagger delay,
+  // viewport_margin expansion, Horizontal axis).
+  {
+    Application reveal_app(
+        []() -> View {
+          auto v_scroll = UseScrollController();
+          auto m_scroll = UseScrollController();
+          auto h_scroll = UseScrollController();
+
+          auto item0_changes = UseState(0);
+          auto item1_changes = UseState(0);
+          auto item2_changes = UseState(0);
+
+          return Column {
+            Row {
+              (ScrollView(Column {
+                 ScrollReveal(
+                     [](ScrollRevealSnapshot s) -> View {
+                       return Text(std::string("s0:") + (s.visible ? "1" : "0") + ":" + (s.in_viewport ? "1" : "0"))
+                           .With(Frame{.width = 180.0F, .height = 60.0F});
+                     },
+                     {.threshold = 0.2F, .once = true}, [item0_changes](bool) { item0_changes += 1; }),
+                 Stack {}.With(Frame{.width = 180.0F, .height = 80.0F}),
+                 ScrollReveal(
+                     [](ScrollRevealSnapshot s) -> View {
+                       return Text(std::string("s1:") + (s.visible ? "1" : "0") + ":" + (s.in_viewport ? "1" : "0"))
+                           .With(Frame{.width = 180.0F, .height = 100.0F});
+                     },
+                     {.threshold = 0.5F, .once = true}, [item1_changes](bool) { item1_changes += 1; }),
+                 ScrollReveal(
+                     [](ScrollRevealSnapshot s) -> View {
+                       return Text(std::string("s2:") + (s.visible ? "1" : "0") + ":" + (s.in_viewport ? "1" : "0"))
+                           .With(Frame{.width = 180.0F, .height = 80.0F});
+                     },
+                     {.threshold = 0.25F, .once = false}, [item2_changes](bool) { item2_changes += 1; }),
+                 ScrollReveal(
+                     [](ScrollRevealSnapshot s) -> View {
+                       return Text(std::string("s3:") + (s.visible ? "1" : "0") + ":" + (s.in_viewport ? "1" : "0"))
+                           .With(Frame{.width = 180.0F, .height = 60.0F});
+                     },
+                     {.threshold = 0.15F, .once = true, .delay = 0.2}),
+               })
+                   .Controller(v_scroll)
+                   .With(Frame{.width = 200.0F, .height = 140.0F})
+                   .Key("vrev-scroll")
+               | ScrollRevealArea({.scroll_controller = v_scroll})),
+              (ScrollView(Column {
+                 Stack {}.With(Frame{.width = 160.0F, .height = 140.0F}),
+                 ScrollReveal(
+                     [](ScrollRevealSnapshot s) -> View {
+                       return Text(std::string("mvis:") + (s.visible ? "1" : "0"))
+                           .With(Frame{.width = 160.0F, .height = 40.0F});
+                     },
+                     {.threshold = 0.2F, .once = true}),
+               })
+                   .Controller(m_scroll)
+                   .With(Frame{.width = 180.0F, .height = 100.0F})
+               | ScrollRevealArea({.scroll_controller = m_scroll, .viewport_margin = 60.0F})),
+              (ScrollView(Row {
+                 Stack {}.With(Frame{.width = 200.0F, .height = 60.0F}),
+                 ScrollReveal(
+                     [](ScrollRevealSnapshot s) -> View {
+                       return Text(std::string("hvis:") + (s.visible ? "1" : "0"))
+                           .With(Frame{.width = 60.0F, .height = 60.0F});
+                     },
+                     {.threshold = 0.25F, .once = true}),
+               })
+                   .ScrollAxis(Axis::Horizontal)
+                   .Controller(h_scroll)
+                   .With(Frame{.width = 160.0F, .height = 80.0F})
+                   .Key("hrev-scroll")
+               | ScrollRevealArea({.scroll_controller = h_scroll, .axis = Axis::Horizontal})),
+            }.With(Spacing(16.0F)),
+            Row {
+              Button("V0").OnClick([v_scroll] { (void)v_scroll.ScrollTo(0.0F); }).Key("vrev-0"),
+              Button("V140").OnClick([v_scroll] { (void)v_scroll.ScrollTo(140.0F); }).Key("vrev-140"),
+              Button("V240").OnClick([v_scroll] { (void)v_scroll.ScrollTo(240.0F); }).Key("vrev-240"),
+            }.With(Spacing(8.0F)),
+            Text("c0: " + std::to_string(item0_changes.Get())),
+            Text("c1: " + std::to_string(item1_changes.Get())),
+            Text("c2: " + std::to_string(item2_changes.Get())),
+          }.With(Padding(16.0F), Spacing(10.0F));
+        },
+        {.window = {.initial_size = {660, 280}}, .show_debug_overlay = false});
+    UiTest rui(reveal_app, {.viewport = {660, 280}});
+    rui.PumpAndSettle();
+
+    // Item 0 & positive viewport_margin item reveal immediately at offset 0; off-screen items stay hidden.
+    CHECK(rui.Find(UiSelector::Text("s0:1:1")).Exists());
+    CHECK(rui.Find(UiSelector::Text("c0: 1")).Exists());
+    CHECK(rui.Find(UiSelector::Text("s1:0:0")).Exists());
+    CHECK(rui.Find(UiSelector::Text("s2:0:0")).Exists());
+    CHECK(rui.Find(UiSelector::Text("s3:0:0")).Exists());
+    CHECK(rui.Find(UiSelector::Text("mvis:1")).Exists());
+    CHECK(rui.Find(UiSelector::Text("hvis:0")).Exists());
+
+    // Item 1 (height 100 at [140, 240], threshold 0.5): 20% intersection stays unrevealed.
+    const Point v_center = Center(rui.Find(UiSelector::Key("vrev-scroll")).One().bounds);
+    rui.SendScroll({.position = v_center, .delta_y = 20.0F});
+    rui.PumpAndSettle();
+    CHECK(rui.Find(UiSelector::Text("s1:0:0")).Exists());
+    CHECK(rui.Find(UiSelector::Text("c1: 0")).Exists());
+
+    // 60% intersection crosses threshold 0.5 -> reveals s1; scrolling back out keeps s1 revealed (once=true).
+    rui.SendScroll({.position = v_center, .delta_y = 40.0F});
+    rui.PumpAndSettle();
+    CHECK(rui.Find(UiSelector::Text("s1:1:1")).Exists());
+    CHECK(rui.Find(UiSelector::Text("c1: 1")).Exists());
+
+    rui.Find(UiSelector::Key("vrev-0")).Tap();
+    rui.PumpAndSettle();
+    CHECK(rui.Find(UiSelector::Text("s1:1:0")).Exists());
+    CHECK(rui.Find(UiSelector::Text("c1: 1")).Exists());
+
+    // Item 2 (once=false): reveals when scrolled in, hides again when scrolled out.
+    rui.Find(UiSelector::Key("vrev-140")).Tap();
+    rui.PumpAndSettle();
+    CHECK(rui.Find(UiSelector::Text("s2:1:1")).Exists());
+    CHECK(rui.Find(UiSelector::Text("c2: 1")).Exists());
+    rui.Find(UiSelector::Key("vrev-0")).Tap();
+    rui.PumpAndSettle();
+    CHECK(rui.Find(UiSelector::Text("s2:0:0")).Exists());
+    CHECK(rui.Find(UiSelector::Text("c2: 2")).Exists());
+
+    // Item 3 (delay=0.2s): stays hidden right after entering viewport and after 100ms, reveals after 200ms.
+    rui.Find(UiSelector::Key("vrev-240")).Tap();
+    rui.Pump();
+    rui.Pump();
+    CHECK(rui.Find(UiSelector::Text("s3:0:1")).Exists());
+    rui.Pump(std::chrono::milliseconds(100));
+    rui.Pump();
+    CHECK(rui.Find(UiSelector::Text("s3:0:1")).Exists());
+    rui.Pump(std::chrono::milliseconds(150));
+    rui.Pump();
+    CHECK(rui.Find(UiSelector::Text("s3:1:1")).Exists());
+
+    // Horizontal axis ScrollReveal.
+    const Point h_center = Center(rui.Find(UiSelector::Key("hrev-scroll")).One().bounds);
+    rui.SendScroll({.position = h_center, .delta_x = 120.0F});
+    rui.PumpAndSettle();
+    CHECK(rui.Find(UiSelector::Text("hvis:1")).Exists());
+  }
 }
 
 #endif
