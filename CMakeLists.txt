@@ -52,6 +52,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/overlay/popover.cpp
     # scroll
     src/scroll/nestedscroll.cpp
+    src/scroll/parallax.cpp
     src/scroll/scrolledgefade.cpp
     src/scroll/scrollprogress.cpp
     src/scroll/scrollspy.cpp

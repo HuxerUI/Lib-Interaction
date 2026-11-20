@@ -33,6 +33,9 @@ static_assert(std::equality_comparable<ScrollSpyController>);
 static_assert(std::equality_comparable<StickyHeaderSnapshot>);
 static_assert(std::equality_comparable<StickyHeaderStyle>);
 static_assert(std::equality_comparable<StickyHeaderController>);
+static_assert(std::equality_comparable<ScrollParallaxSnapshot>);
+static_assert(std::equality_comparable<ScrollParallaxAreaStyle>);
+static_assert(std::equality_comparable<ScrollParallaxStyle>);
 static_assert(std::equality_comparable<ExpandableStyle>);
 static_assert(std::equality_comparable<AppearStyle>);
 static_assert(std::equality_comparable<MagneticStyle>);
@@ -86,6 +89,8 @@ int main() {
   if(!(ScrollSpyStyle{} == ScrollSpyStyle{})) return 1;
   if(!(StickyHeaderController{} == StickyHeaderController{}) || static_cast<bool>(StickyHeaderController{})) return 1;
   if(!(StickyHeaderStyle{} == StickyHeaderStyle{})) return 1;
+  if(!(ScrollParallaxAreaStyle{} == ScrollParallaxAreaStyle{})) return 1;
+  if(!(ScrollParallaxStyle{} == ScrollParallaxStyle{})) return 1;
   if(!(SnapDragController{} == SnapDragController{}) || static_cast<bool>(SnapDragController{})) return 1;
   if(!(SnapDragStyle{} == SnapDragStyle{})) return 1;
   if(!(SwipeDeckController{} == SwipeDeckController{}) || static_cast<bool>(SwipeDeckController{})) return 1;
@@ -107,6 +112,8 @@ int main() {
                | ScrollSpyArea()
                | StickyHeaderSection(0)
                | StickyHeaderArea([](StickyHeaderSnapshot) { return Text("hdr"); })
+               | ScrollParallax()
+               | ScrollParallaxArea()
                | SnapDrag()
                | RovingFocusItem(0)
                | RovingFocusGroup()
@@ -156,6 +163,7 @@ int main() {
   (void)ScrollSpyController{}.ScrollToSection(0, ScrollJumpBehavior::Smooth);
   (void)StickyHeaderList({});
   (void)StickyHeaderController{}.ScrollToSection(0, ScrollJumpBehavior::Smooth);
+  (void)ScrollParallax([](ScrollParallaxSnapshot) { return Text("p"); });
   (void)SemanticActions{Semantics{}, SemanticActionMask(SemanticActionKind::Activate)};
   (void)PredictiveBack([](PredictiveBackSnapshot) { return Text("pb"); }, [] {});
 

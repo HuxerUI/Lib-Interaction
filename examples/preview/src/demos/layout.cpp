@@ -254,6 +254,60 @@ View LayoutSection(const DemoContext& context) {
                         Background{context.colors.surface_container}, CornerRadius(12.0F)),
             }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
           }).Key("stickyheader-demo"),
+          Scope([context]() -> View {
+            auto p_scroll = UseScrollController();
+            std::vector<View> cards;
+            cards.push_back(
+                ScrollParallax(
+                    [context](ScrollParallaxSnapshot s) -> View {
+                      const int pct = static_cast<int>(s.progress * 100.0F);
+                      return Stack {
+                        Column {
+                          Text("Parallax Hero", TextRole::Label).With(Foreground(context.colors.on_primary)),
+                          Text("shift " + std::to_string(pct) + "%", TextRole::Body)
+                              .With(Foreground(context.colors.on_primary)),
+                        }.With(Spacing(2.0F), CrossAlign(CrossAxisAlignment::Center)),
+                      }.With(Frame{.height = 68.0F}, Align(HorizontalAlignment::Center, VerticalAlignment::Center),
+                             Background{context.colors.primary}, Offset(s.offset), CornerRadius(10.0F));
+                    },
+                    {.scroll_controller = p_scroll,
+                     .speed = 0.6F,
+                     .maximum_offset = 24.0F,
+                     .clip_to_bounds = true})
+                    .With(Padding(EdgeInsets::Symmetric(8.0F, 6.0F))));
+
+            for(std::size_t i = 0; i < 3; ++i) {
+              cards.push_back(ScrollParallax(
+                  [context, i](ScrollParallaxSnapshot s) -> View {
+                    const int prog_pct = static_cast<int>(s.progress * 100.0F);
+                    const int vis_pct = static_cast<int>(s.visibility * 100.0F);
+                    return Stack {
+                      Row {
+                        Text("Layer " + std::to_string(i + 1), TextRole::Label)
+                            .With(Foreground(context.colors.on_primary_container)),
+                        Text("p:" + std::to_string(prog_pct) + "% v:" + std::to_string(vis_pct) + "%", TextRole::Body)
+                            .With(Foreground(context.colors.on_surface_variant)),
+                      }.With(MainAlign(MainAxisAlignment::SpaceBetween), CrossAlign(CrossAxisAlignment::Center)),
+                    }.With(Frame{.height = 56.0F}, Padding(10.0F), Background{context.colors.surface_container_low},
+                           CornerRadius(10.0F), Offset(s.offset), Scale(s.scale), Opacity(s.opacity));
+                  },
+                  {.speed = (i % 2 == 0) ? 0.45F : -0.35F,
+                   .maximum_offset = 14.0F,
+                   .center_scale = 1.04F,
+                   .edge_opacity = 0.65F}));
+            }
+
+            return Column {
+              Text("ScrollParallax", TextRole::Label).With(Foreground(context.colors.on_surface_variant)),
+              (ScrollView(Column(std::move(cards)).With(Spacing(8.0F), Padding(8.0F),
+                                                        CrossAlign(CrossAxisAlignment::Stretch)))
+                   .Controller(p_scroll)
+                   .With(Frame{.width = 300.0F, .height = 156.0F},
+                         Background{context.colors.surface_container}, CornerRadius(12.0F),
+                         ScrollProgress{p_scroll})
+               | ScrollParallaxArea({.scroll_controller = p_scroll})),
+            }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
+          }).Key("parallax-demo"),
         }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start)),
       }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Start)),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));

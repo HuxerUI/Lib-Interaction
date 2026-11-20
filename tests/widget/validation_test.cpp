@@ -336,6 +336,20 @@ void CheckValidation() {
                            {.scroll_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
   });
 
+  // ScrollParallax validation.
+  (void)ScrollParallaxArea(Text("sc"));
+  (void)ScrollParallax(Text("p"));
+  (void)ScrollParallax([](ScrollParallaxSnapshot) { return Text("p"); },
+                       {.speed = -0.5F, .maximum_offset = 0.0F, .edge_opacity = 0.5F});
+  Throws<std::invalid_argument>([] { (void)ScrollParallax(std::function<View(ScrollParallaxSnapshot)>{}); });
+  Throws<std::invalid_argument>([] { (void)ScrollParallax(Text("x"), {.speed = std::nanf("")}); });
+  Throws<std::invalid_argument>([] { (void)ScrollParallax(Text("x"), {.maximum_offset = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollParallax(Text("x"), {.center_scale = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollParallax(Text("x"), {.edge_opacity = -0.1F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollParallax(Text("x"), {.edge_opacity = 1.2F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollParallax(Text("x"), {.origin = {std::numeric_limits<float>::infinity(), 0.5F}}); });
+
   // SnapDrag validation.
   Throws<std::invalid_argument>([] { (void)SnapDrag(std::function<View(SnapDragSnapshot)>{}); });
   Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.margin = -1.0F}); });

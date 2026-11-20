@@ -857,6 +857,121 @@ void CheckScrollA11yAndVisualContracts() {
     CHECK(ui.Find(UiSelector::Text("hpinned: 1")).Exists());
     CHECK(Near(ui.Find(UiSelector::Key("h-pin-hdr-1")).One().bounds.x, h_box.x));
   }
+
+  // ScrollParallax (ScrollParallaxArea vertical progress/scale/opacity + positive vs negative speed +
+  // standalone ScrollController hero shift + Horizontal axis).
+  {
+    Application parallax_app(
+        []() -> View {
+          auto v_scroll = UseScrollController();
+          auto hero_scroll = UseScrollController();
+          auto h_scroll = UseScrollController();
+
+          return Column {
+            Row {
+              (ScrollView(Column {
+                 Stack {}.With(Frame{.width = 180.0F, .height = 100.0F}),
+                 ScrollParallax(
+                     [](ScrollParallaxSnapshot s) -> View {
+                       return Text("vp:" + std::to_string(static_cast<int>(s.progress * 100.0F)) + ":op:" +
+                                   std::to_string(static_cast<int>(s.opacity * 100.0F)))
+                           .With(Frame{.width = 160.0F, .height = 40.0F}, Offset(s.offset), Scale(s.scale),
+                                 Opacity(s.opacity))
+                           .Key("vpar-inner");
+                     },
+                     {.speed = 1.0F, .maximum_offset = 20.0F, .center_scale = 1.2F, .edge_opacity = 0.4F})
+                     .Key("vpar-outer"),
+                 (Stack {Text("neg")}.With(Frame{.width = 160.0F, .height = 40.0F}).Key("vpar-neg-inner")
+                  | ScrollParallax({.speed = -1.0F, .maximum_offset = 20.0F}))
+                     .Key("vpar-neg-outer"),
+                 Stack {}.With(Frame{.width = 180.0F, .height = 220.0F}),
+               })
+                   .Controller(v_scroll)
+                   .With(Frame{.width = 200.0F, .height = 140.0F})
+                   .Key("vpar-scroll")
+               | ScrollParallaxArea({.scroll_controller = v_scroll})),
+              ScrollView(Column {
+                (Stack {Text("hero")}.With(Frame{.width = 160.0F, .height = 60.0F}).Key("hero-inner")
+                 | ScrollParallax({.scroll_controller = hero_scroll,
+                                   .speed = 0.5F,
+                                   .maximum_offset = 60.0F,
+                                   .clip_to_bounds = true}))
+                    .Key("hero-outer"),
+                Stack {}.With(Frame{.width = 160.0F, .height = 300.0F}),
+              })
+                  .Controller(hero_scroll)
+                  .With(Frame{.width = 180.0F, .height = 140.0F})
+                  .Key("hero-scroll"),
+              (ScrollView(Row {
+                 Stack {}.With(Frame{.width = 120.0F, .height = 80.0F}),
+                 (Stack {Text("hitem")}.With(Frame{.width = 40.0F, .height = 80.0F}).Key("hpar-inner")
+                  | ScrollParallax({.speed = 1.0F, .maximum_offset = 24.0F}))
+                     .Key("hpar-outer"),
+                 Stack {}.With(Frame{.width = 200.0F, .height = 80.0F}),
+               })
+                   .ScrollAxis(Axis::Horizontal)
+                   .Controller(h_scroll)
+                   .With(Frame{.width = 160.0F, .height = 100.0F})
+                   .Key("hpar-scroll")
+               | ScrollParallaxArea({.scroll_controller = h_scroll, .axis = Axis::Horizontal})),
+            }.With(Spacing(16.0F)),
+            Row {
+              Button("Hero80").OnClick([hero_scroll] { (void)hero_scroll.ScrollTo(80.0F); }).Key("hero-80"),
+              Button("Hero200").OnClick([hero_scroll] { (void)hero_scroll.ScrollTo(200.0F); }).Key("hero-200"),
+            }.With(Spacing(8.0F)),
+          }.With(Padding(16.0F), Spacing(10.0F));
+        },
+        {.window = {.initial_size = {660, 260}}, .show_debug_overlay = false});
+    UiTest pui(parallax_app, {.viewport = {660, 260}});
+    pui.PumpAndSettle();
+
+    // Area mode (Vertical): item spans [100, 140] in [0, 140] viewport (center 120 > vp_center 70 -> progress > 0).
+    const Rect v_outer0 = pui.Find(UiSelector::Key("vpar-outer")).One().bounds;
+    const Rect v_inner0 = pui.Find(UiSelector::Key("vpar-inner")).One().bounds;
+    CHECK(Center(v_inner0).y > Center(v_outer0).y + 2.0F);
+
+    // Opposite sign speed shifts in the opposite direction from stationary outer bounds.
+    const Rect neg_outer0 = pui.Find(UiSelector::Key("vpar-neg-outer")).One().bounds;
+    const Rect neg_inner0 = pui.Find(UiSelector::Key("vpar-neg-inner")).One().bounds;
+    CHECK(Center(neg_inner0).y < Center(neg_outer0).y - 2.0F);
+
+    // Scroll down 50px so item [100, 140] centers at [50, 90] (center 70 == vp_center 70 -> progress == 0).
+    const Point vp_center = Center(pui.Find(UiSelector::Key("vpar-scroll")).One().bounds);
+    pui.SendScroll({.position = vp_center, .delta_y = 50.0F});
+    pui.PumpAndSettle();
+    const Rect v_outer1 = pui.Find(UiSelector::Key("vpar-outer")).One().bounds;
+    const Rect v_inner1 = pui.Find(UiSelector::Key("vpar-inner")).One().bounds;
+    CHECK(Near(Center(v_inner1).y, Center(v_outer1).y));
+    CHECK(v_inner1.width > v_outer1.width * 1.15F);
+    CHECK(pui.Find(UiSelector::Text("vp:0:op:100")).Exists());
+
+    // Scroll further down (+60px -> total 110px) so item exits top (center 10 < vp_center 70 -> progress < 0).
+    pui.SendScroll({.position = vp_center, .delta_y = 60.0F});
+    pui.PumpAndSettle();
+    const Rect v_outer2 = pui.Find(UiSelector::Key("vpar-outer")).One().bounds;
+    const Rect v_inner2 = pui.Find(UiSelector::Key("vpar-inner")).One().bounds;
+    CHECK(Center(v_inner2).y < Center(v_outer2).y - 2.0F);
+
+    // Standalone ScrollController mode: hero banner shifts +0.5*offset (clamped at 60px).
+    const float hero_y0 = pui.Find(UiSelector::Key("hero-inner")).One().bounds.y;
+    pui.Find(UiSelector::Key("hero-80")).Tap();
+    pui.PumpAndSettle();
+    CHECK(Near(pui.Find(UiSelector::Key("hero-inner")).One().bounds.y, hero_y0 - 40.0F));
+    pui.Find(UiSelector::Key("hero-200")).Tap();
+    pui.PumpAndSettle();
+    CHECK(Near(pui.Find(UiSelector::Key("hero-inner")).One().bounds.y, hero_y0 - 140.0F));
+
+    // Horizontal ScrollParallaxArea shifts along X-axis across scroll.
+    const Rect h_outer0 = pui.Find(UiSelector::Key("hpar-outer")).One().bounds;
+    const Rect h_inner0 = pui.Find(UiSelector::Key("hpar-inner")).One().bounds;
+    CHECK(Center(h_inner0).x > Center(h_outer0).x + 2.0F);
+    const Point hp_center = Center(pui.Find(UiSelector::Key("hpar-scroll")).One().bounds);
+    pui.SendScroll({.position = hp_center, .delta_x = 120.0F});
+    pui.PumpAndSettle();
+    const Rect h_outer1 = pui.Find(UiSelector::Key("hpar-outer")).One().bounds;
+    const Rect h_inner1 = pui.Find(UiSelector::Key("hpar-inner")).One().bounds;
+    CHECK(Center(h_inner1).x < Center(h_outer1).x - 2.0F);
+  }
 }
 
 #endif

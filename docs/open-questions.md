@@ -68,6 +68,10 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
     registration, `PrepareGeometry` scroll-invariant content bounds, `ScrollController::Metrics()` subscription on the
     overlay scope only (keeping list body subtrees out of scroll recomposition), push-up collision offset calculations,
     and shared `internal::ScrollAnimator` `Smooth`/`Instant` jumps.
+- **Scroll Parallax (`ScrollParallaxArea`, `ScrollParallax`)**:
+  - Uses stationary `ScrollParallaxPassThroughLayout` wrappers to measure viewport/item `PresentationBounds()` cleanly
+    without transform feedback loops, computing normalized `progress`/`visibility`, peak center scale, edge opacity fade,
+    standalone `ScrollController` hero shifts, and `FrameInfo::reduced_motion` suppression.
 
 ## Remaining framework-bound questions
 

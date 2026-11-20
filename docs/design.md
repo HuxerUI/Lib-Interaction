@@ -13,11 +13,12 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
    (`reorder_core.h`) shared between 1D `Reorderable` and 2D `ReorderableGrid`.
 2. **Layer 1 — Headless state, Controllers, and Pipelines**:
    - **Headless builders** (`InteractiveSurface`, `HoldRepeat`, `Hoverable`, `Copyable`, `Popover` trigger builder,
-     `PredictiveBack` builder, `StickyHeaderArea` builder, `SnapDrag` builder, `SwipeDeck` builder, and builder overloads
-     of `DropZone<T>`, `FileDropZone`, `Dismissible`) run the input/focus/semantics/repeat/back/sticky/snap/deck state
-     machine and pass live state snapshots (`InteractionSnapshot`, `HoldRepeatSnapshot`, `StickyHeaderSnapshot`,
-     `hovered`, `copied`, `PredictiveBackSnapshot`, `SnapDragSnapshot`, `SwipeDeckCardContext`, `progress`) to
-     caller-supplied view builders.
+     `PredictiveBack` builder, `StickyHeaderArea` builder, `ScrollParallax` builder, `SnapDrag` builder, `SwipeDeck`
+     builder, and builder overloads of `DropZone<T>`, `FileDropZone`, `Dismissible`) run the
+     input/focus/semantics/repeat/back/sticky/parallax/snap/deck state machine and pass live state snapshots
+     (`InteractionSnapshot`, `HoldRepeatSnapshot`, `StickyHeaderSnapshot`, `ScrollParallaxSnapshot`, `hovered`, `copied`,
+     `PredictiveBackSnapshot`, `SnapDragSnapshot`, `SwipeDeckCardContext`, `progress`) to caller-supplied view
+     builders.
    - **Controllers** (`HoldRepeatController`, `SwipeController`, `SwipeDeckController`, `PanZoomController`,
      `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `StickyHeaderController`,
      `SnapDragController`, `RovingFocusController`, `PredictiveBackController`, `MarqueeSelectController`) use
@@ -31,8 +32,8 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
    - **Input-driven presets** (`Pressable`, `HoldRepeat`, `Copyable`, `HoverLift`, `HoverShadow`, `Magnetic`,
      `LongPressable`, `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`,
      `SwipeActions`, `SwipeDeck`, `Dismissible`, `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`,
-     `FileDropZone`, `HoverCard`, `Popover`, `ScrollSpyArea`, `StickyHeaderList`) build default motion and chrome on
-     top of Layer 1.
+     `FileDropZone`, `HoverCard`, `Popover`, `ScrollParallax`, `ScrollSpyArea`, `StickyHeaderList`) build default motion
+     and chrome on top of Layer 1.
    - **Retained modifiers** (`Ripple`, `HoldProgressRing`, `Spotlight`, `HoverHighlight`, `ScrollProgress`,
      `ScrollEdgeFade`, `NestedScrollConnection`, `SemanticActions`) attach `NodeExtension` behavior through
      `View::With()` and implement `operator==` so unchanged recompositions skip extension updates.
@@ -73,6 +74,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 | `HoverCard` | `overlay/hovercard.h` | Wrapper + `HoverCardController` | Anchored `PopupHandle` + dismiss sync | Delayed hover / touch popup |
 | `Popover` | `overlay/popover.h` | Headless / Wrapper + `PopoverController` | Click toggle + `Lifecycle` dismiss sync | Anchored focus-trapped popup |
 | `ScrollProgress` / `ScrollEdgeFade` | `scroll/` | Retained modifier (`With`) | Connected `ScrollController` | Proportional thumb / edge gradients |
+| `ScrollParallaxArea` / `ScrollParallax` | `scroll/parallax.h` | Viewport + Builder / Wrapper + `ViewAdaptor` | `Environment` + `PrepareGeometry` / `ScrollController::Metrics()` + `reduced_motion` | Viewport-relative `Offset`, peak `Scale`, edge `Opacity`, optional `ClipChildren` |
 | `NestedScrollConnection` / `ScrollHideController` | `scroll/nestedscroll.h` | Modifier + `UseScrollHideController` | Pre/post scroll & fling hooks | Signed clamped deltas + hidden offset state |
 | `ScrollSpyArea` / `ScrollSpySection` | `scroll/scrollspy.h` | Container + Section + `ScrollSpyController` | `Environment` + `PrepareGeometry` (`PresentationBounds`) + `TaskScope::Post` | Active leading section tracking + `Smooth` / `Instant` `ScrollToSection()` (`scroll_motion`) |
 | `StickyHeaderArea` / `StickyHeaderSection` / `StickyHeaderList` | `scroll/stickyheader.h` | Overlay stage + Section + List + `StickyHeaderController` | `StickyHeaderStageLayout` + `Environment` + `PrepareGeometry` + `ScrollController::Metrics()` | Zero-lag pinned section overlay, collision push-up offset, `Smooth` / `Instant` `ScrollToSection()` |

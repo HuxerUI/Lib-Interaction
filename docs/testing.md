@@ -29,9 +29,10 @@ CTest and compiled with `-Wall -Wextra -Wpedantic` (or `/W4` on MSVC).
 - `reorder_dragdrop_test.cpp`: vertical/horizontal `Reorderable`, `ReorderableGrid`, `Draggable<T>`, headless &
   predicate-filtered `DropZone<T>`, `FileDropZone`.
 - `scroll_a11y_visual_test.cpp`: `ScrollProgress`, `ScrollEdgeFade`, `NestedScrollConnection` + `ScrollHideController`,
-  `ScrollSpyArea`/`ScrollSpySection`/`ScrollSpyController`, `StickyHeaderArea`/`StickyHeaderSection`/`StickyHeaderList`/
-  `StickyHeaderController` (vertical & horizontal pinning, collision push-up, `pin_at_rest` + `sticky_offset`,
-  `Instant` & `Smooth` jumps), `SemanticActions`, `KeyboardShortcut`, `ShortcutMap`,
+  `ScrollParallaxArea`/`ScrollParallax` (viewport-relative & standalone `ScrollController` hero shift, horizontal
+  axis), `ScrollSpyArea`/`ScrollSpySection`/`ScrollSpyController`, `StickyHeaderArea`/`StickyHeaderSection`/
+  `StickyHeaderList`/`StickyHeaderController` (vertical & horizontal pinning, collision push-up, `pin_at_rest` +
+  `sticky_offset`, `Instant` & `Smooth` jumps), `SemanticActions`, `KeyboardShortcut`, `ShortcutMap`,
   `BackHandler`, `PredictiveBack` (Escape commit + predictive `Begin`/`Update`/`Cancel`/`Commit`), `RovingFocusGroup`/
   `RovingFocusItem`, `Expandable`, `Appear`, `SharedMorph`, `Pulsing`, `Shimmer`, `RollingNumber`, `UsePop`/`Popped`,
   `UseShake`/`Shaken`, `UseRevealOnTap`.
