@@ -31,7 +31,9 @@ CTest and compiled with `-Wall -Wextra -Wpedantic` (or `/W4` on MSVC).
 - `scroll_a11y_visual_test.cpp`: `ScrollProgress`, `ScrollEdgeFade`, `NestedScrollConnection` + `ScrollHideController`,
   `ScrollParallaxArea`/`ScrollParallax` (viewport-relative & standalone `ScrollController` hero shift, horizontal
   axis), `ScrollRevealArea`/`ScrollReveal` (initial visible, `once` threshold/latch, replay, stagger `delay`,
-  `viewport_margin`, horizontal axis), `ScrollSpyArea`/`ScrollSpySection`/`ScrollSpyController`, `StickyHeaderArea`/`StickyHeaderSection`/
+  `viewport_margin`, horizontal axis), `ScrollSpyArea`/`ScrollSpySection`/`ScrollSpyController`, `ScrollToTop`/
+  `ScrollToTopTrigger`/`ScrollToTopController` (threshold reveal, margin alignment, `Smooth` animation + wheel
+  interruption, `Instant` non-zero `target_offset`, `show_on_scroll_up` hysteresis), `StickyHeaderArea`/`StickyHeaderSection`/
   `StickyHeaderList`/`StickyHeaderController` (vertical & horizontal pinning, collision push-up, `pin_at_rest` +
   `sticky_offset`, `Instant` & `Smooth` jumps), `SemanticActions`, `KeyboardShortcut`, `ShortcutMap`,
   `BackHandler`, `PredictiveBack` (Escape commit + predictive `Begin`/`Update`/`Cancel`/`Commit`), `RovingFocusGroup`/

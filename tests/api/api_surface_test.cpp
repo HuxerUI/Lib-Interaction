@@ -39,6 +39,9 @@ static_assert(std::equality_comparable<ScrollParallaxStyle>);
 static_assert(std::equality_comparable<ScrollRevealSnapshot>);
 static_assert(std::equality_comparable<ScrollRevealAreaStyle>);
 static_assert(std::equality_comparable<ScrollRevealStyle>);
+static_assert(std::equality_comparable<ScrollToTopContext>);
+static_assert(std::equality_comparable<ScrollToTopController>);
+static_assert(std::equality_comparable<ScrollToTopStyle>);
 static_assert(std::equality_comparable<ExpandableStyle>);
 static_assert(std::equality_comparable<AppearStyle>);
 static_assert(std::equality_comparable<MagneticStyle>);
@@ -96,6 +99,9 @@ int main() {
   if(!(ScrollParallaxStyle{} == ScrollParallaxStyle{})) return 1;
   if(!(ScrollRevealAreaStyle{} == ScrollRevealAreaStyle{})) return 1;
   if(!(ScrollRevealStyle{} == ScrollRevealStyle{})) return 1;
+  if(!(ScrollToTopContext{} == ScrollToTopContext{})) return 1;
+  if(!(ScrollToTopStyle{} == ScrollToTopStyle{})) return 1;
+  if(!(ScrollToTopController{} == ScrollToTopController{}) || static_cast<bool>(ScrollToTopController{})) return 1;
   if(!(SnapDragController{} == SnapDragController{}) || static_cast<bool>(SnapDragController{})) return 1;
   if(!(SnapDragStyle{} == SnapDragStyle{})) return 1;
   if(!(SwipeDeckController{} == SwipeDeckController{}) || static_cast<bool>(SwipeDeckController{})) return 1;
@@ -121,6 +127,9 @@ int main() {
                | ScrollParallaxArea()
                | ScrollReveal()
                | ScrollRevealArea()
+               | ScrollToTop(Text("top"))
+               | ScrollToTop([](ScrollToTopContext) { return Text("top"); })
+               | ScrollToTopTrigger()
                | SnapDrag()
                | RovingFocusItem(0)
                | RovingFocusGroup()
@@ -172,6 +181,9 @@ int main() {
   (void)StickyHeaderController{}.ScrollToSection(0, ScrollJumpBehavior::Smooth);
   (void)ScrollParallax([](ScrollParallaxSnapshot) { return Text("p"); });
   (void)ScrollReveal([](ScrollRevealSnapshot) { return Text("r"); });
+  (void)ScrollToTop(Text("c"), [](ScrollToTopContext) { return Text("t"); });
+  (void)ScrollToTop(Text("c"), Text("t"));
+  (void)ScrollToTopTrigger(Text("t"));
   (void)SemanticActions{Semantics{}, SemanticActionMask(SemanticActionKind::Activate)};
   (void)PredictiveBack([](PredictiveBackSnapshot) { return Text("pb"); }, [] {});
 

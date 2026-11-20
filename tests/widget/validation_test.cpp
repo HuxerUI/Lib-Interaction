@@ -414,4 +414,38 @@ void CheckValidation() {
     (void)SwipeDeck(std::vector<View>{Text("a")}, {},
                          {.rewind_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
   });
+
+  // ScrollToTop validation.
+  (void)ScrollToTop(Text("x"), Text("top"));
+  (void)ScrollToTop(Text("x"), [](ScrollToTopContext) { return Text("top"); });
+  (void)ScrollToTopTrigger(Text("top"));
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollToTop(Text("x"), std::function<View(ScrollToTopContext)>{}); });
+  Throws<std::invalid_argument>([] { (void)ScrollToTop(Text("x"), Text("top"), {.threshold = -1.0F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollToTop(Text("x"), Text("top"), {.threshold = std::numeric_limits<float>::quiet_NaN()}); });
+  Throws<std::invalid_argument>([] { (void)ScrollToTop(Text("x"), Text("top"), {.target_offset = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollToTop(Text("x"), Text("top"), {.scroll_up_delta = -0.5F}); });
+  Throws<std::invalid_argument>([] { (void)ScrollToTop(Text("x"), Text("top"), {.margin = {.top = -1.0F}}); });
+  Throws<std::invalid_argument>([] { (void)ScrollToTop(Text("x"), Text("top"), {.margin = {.right = -1.0F}}); });
+  Throws<std::invalid_argument>([] { (void)ScrollToTop(Text("x"), Text("top"), {.margin = {.bottom = -1.0F}}); });
+  Throws<std::invalid_argument>([] { (void)ScrollToTop(Text("x"), Text("top"), {.margin = {.left = -1.0F}}); });
+  Throws<std::invalid_argument>([] {
+    (void)ScrollToTop(Text("x"), Text("top"), {.margin = {.top = std::numeric_limits<float>::quiet_NaN()}});
+  });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollToTop(Text("x"), Text("top"), {.scroll_motion = TweenSpec{.duration = -0.1}}); });
+  Throws<std::invalid_argument>([] {
+    (void)ScrollToTop(Text("x"), Text("top"), {.scroll_motion = SpringSpec{.stiffness = 0.0F, .damping_ratio = 1.0F}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)ScrollToTop(Text("x"), Text("top"),
+                      {.scroll_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
+  });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollToTop(Text("x"), Text("top"), {.reveal_motion = {.initial_opacity = -0.1F}}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollToTop(Text("x"), Text("top"), {.reveal_motion = {.initial_scale = 0.0F}}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrollToTop(Text("x"), Text("top"), {.reveal_motion = {.delay = -0.1}}); });
 }

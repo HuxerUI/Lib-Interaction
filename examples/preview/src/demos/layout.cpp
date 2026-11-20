@@ -354,6 +354,65 @@ View LayoutSection(const DemoContext& context) {
                | ScrollRevealArea({.scroll_controller = r_scroll})),
             }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
           }).Key("scrollreveal-demo"),
+          Scope([context]() -> View {
+            auto t_scroll = UseScrollController();
+            auto top_ctrl = UseScrollToTopController();
+            auto smooth_mode = UseState(true);
+            const bool is_smooth = smooth_mode.Get();
+            std::vector<View> rows;
+            for(std::size_t i = 0; i < 12; ++i) {
+              rows.push_back(
+                  Stack {
+                    Row {
+                      Text("Feed Item " + std::to_string(i + 1), TextRole::Label)
+                          .With(Foreground(context.colors.on_surface)),
+                      Text("Row #" + std::to_string(i + 1), TextRole::Body)
+                          .With(Foreground(context.colors.on_surface_variant)),
+                    }.With(MainAlign(MainAxisAlignment::SpaceBetween), CrossAlign(CrossAxisAlignment::Center)),
+                  }
+                      .With(Frame{.height = 42.0F}, Padding(EdgeInsets::Symmetric(10.0F, 6.0F)),
+                            Background{context.colors.surface_container_low}, CornerRadius(8.0F)));
+            }
+            return Column {
+              Row {
+                Text("ScrollToTop", TextRole::Label).With(Foreground(context.colors.on_surface_variant)),
+                Stack {
+                  Text(is_smooth ? "Smooth" : "Instant", TextRole::Label)
+                      .With(Foreground(is_smooth ? context.colors.on_primary : context.colors.on_surface)),
+                }
+                    .With(Padding(EdgeInsets::Symmetric(10.0F, 5.0F)),
+                          Background{is_smooth ? context.colors.primary : context.colors.surface_container_high},
+                          CornerRadius(8.0F), PointerCursor(PointerCursorKind::Hand))
+                    .OnClick([smooth_mode] { smooth_mode = !smooth_mode.Get(); }),
+              }.With(Frame{.width = 300.0F}, MainAlign(MainAxisAlignment::SpaceBetween),
+                     CrossAlign(CrossAxisAlignment::Center)),
+              (ScrollView(Column(std::move(rows))
+                              .With(Spacing(6.0F), Padding(8.0F), CrossAlign(CrossAxisAlignment::Stretch)))
+                   .Controller(t_scroll)
+                   .With(Frame{.width = 300.0F, .height = 156.0F},
+                         Background{context.colors.surface_container}, CornerRadius(12.0F),
+                         ScrollProgress{t_scroll})
+               | ScrollToTop(
+                     [context](ScrollToTopContext ctx) -> View {
+                       const int pct = static_cast<int>(ctx.progress * 100.0F);
+                       return Stack {
+                         Text("↑ Top (" + std::to_string(pct) + "%)", TextRole::Label)
+                             .With(Foreground(context.colors.on_primary)),
+                       }
+                           .With(Padding(EdgeInsets::Symmetric(10.0F, 6.0F)),
+                                 Background{context.colors.primary}, CornerRadius(16.0F),
+                                 PointerCursor(PointerCursorKind::Hand))
+                           .OnClick([ctx] { ctx.ScrollToTop(); });
+                     },
+                     {
+                         .scroll_controller = t_scroll,
+                         .threshold = 80.0F,
+                         .jump_behavior = is_smooth ? ScrollJumpBehavior::Smooth : ScrollJumpBehavior::Instant,
+                         .margin = EdgeInsets::All(10.0F),
+                         .controller = top_ctrl,
+                     })),
+            }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
+          }).Key("scrolltotop-demo"),
         }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start)),
       }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Start)),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));

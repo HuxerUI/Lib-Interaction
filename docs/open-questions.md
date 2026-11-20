@@ -76,6 +76,11 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - Measures viewport intersection ratios cleanly on stationary outer `ScrollRevealPassThroughLayout` wrappers with
     configurable `viewport_margin`, `threshold`, `once` latching vs. exit replay, cancellable `TaskScope::Delay` stagger
     timers, and unconditional `ScrollController::Metrics()` subscription on initial mount.
+- **Scroll-to-Top (`ScrollToTop`, `ScrollToTopTrigger`, `ScrollToTopController`)**:
+  - Pairs `ScrollToTopStageLayout` (`ClipChildren()`, unplaced overlay when hidden) with `Appear`-animated floating
+    trigger alignment (`horizontal_alignment`, `vertical_alignment`, `margin`), threshold & `show_on_scroll_up`
+    hysteresis (`scroll_up_delta`), `Smooth`/`Instant` jumping via `internal::ScrollAnimator` with user-scroll
+    interruption detection, and environment/controller-bound `ScrollToTopTrigger`.
 
 ## Remaining framework-bound questions
 

@@ -57,6 +57,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/scroll/scrollprogress.cpp
     src/scroll/scrollreveal.cpp
     src/scroll/scrollspy.cpp
+    src/scroll/scrolltotop.cpp
     src/scroll/stickyheader.cpp
     # accessibility
     src/accessibility/backhandler.cpp

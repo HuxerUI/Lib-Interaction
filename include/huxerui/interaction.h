@@ -46,6 +46,7 @@
 #include <huxerui/interaction/scroll/scrollprogress.h>
 #include <huxerui/interaction/scroll/scrollreveal.h>
 #include <huxerui/interaction/scroll/scrollspy.h>
+#include <huxerui/interaction/scroll/scrolltotop.h>
 #include <huxerui/interaction/scroll/stickyheader.h>
 // accessibility
 #include <huxerui/interaction/accessibility/backhandler.h>

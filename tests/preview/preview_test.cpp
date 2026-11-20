@@ -42,6 +42,7 @@ int main() {
     CHECK(ui.Find(UiSelector::Key("stickyheader-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("parallax-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("scrollreveal-demo")).Exists());
+    CHECK(ui.Find(UiSelector::Key("scrolltotop-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("pinch-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("dragspring-demo")).Exists());
     CHECK(ui.Find(UiSelector::Text("clicks: 0")).Exists());

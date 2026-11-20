@@ -14,25 +14,25 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 2. **Layer 1 — Headless state, Controllers, and Pipelines**:
    - **Headless builders** (`InteractiveSurface`, `HoldRepeat`, `Hoverable`, `Copyable`, `Popover` trigger builder,
      `PredictiveBack` builder, `StickyHeaderArea` builder, `ScrollParallax` builder, `ScrollReveal` builder,
-     `SnapDrag` builder, `SwipeDeck` builder, and builder overloads of `DropZone<T>`, `FileDropZone`, `Dismissible`)
-     run the input/focus/semantics/repeat/back/sticky/parallax/reveal/snap/deck state machine and pass live state
-     snapshots (`InteractionSnapshot`, `HoldRepeatSnapshot`, `StickyHeaderSnapshot`, `ScrollParallaxSnapshot`,
-     `ScrollRevealSnapshot`, `hovered`, `copied`, `PredictiveBackSnapshot`, `SnapDragSnapshot`, `SwipeDeckCardContext`,
-     `progress`) to caller-supplied view builders.
+     `ScrollToTop` builder, `SnapDrag` builder, `SwipeDeck` builder, and builder overloads of `DropZone<T>`,
+     `FileDropZone`, `Dismissible`) run the input/focus/semantics/repeat/back/sticky/parallax/reveal/scroll-to-top/snap/deck
+     state machine and pass live state snapshots (`InteractionSnapshot`, `HoldRepeatSnapshot`, `StickyHeaderSnapshot`,
+     `ScrollParallaxSnapshot`, `ScrollRevealSnapshot`, `ScrollToTopContext`, `hovered`, `copied`,
+     `PredictiveBackSnapshot`, `SnapDragSnapshot`, `SwipeDeckCardContext`, `progress`) to caller-supplied view builders.
    - **Controllers** (`HoldRepeatController`, `SwipeController`, `SwipeDeckController`, `PanZoomController`,
-     `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `StickyHeaderController`,
-     `SnapDragController`, `RovingFocusController`, `PredictiveBackController`, `MarqueeSelectController`) use
-     `std::shared_ptr` state handles remembered via `Use*Controller()`, enabling external state reads and programmatic
-     actions while keeping default-constructed handles runtime-free.
+     `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `ScrollToTopController`,
+     `StickyHeaderController`, `SnapDragController`, `RovingFocusController`, `PredictiveBackController`,
+     `MarqueeSelectController`) use `std::shared_ptr` state handles remembered via `Use*Controller()`, enabling
+     external state reads and programmatic actions while keeping default-constructed handles runtime-free.
    - **Environment-bridged grips & pipelines**: `ReorderHandle`, `RovingFocusItem`, `MarqueeSelectItem`,
-     `ScrollSpySection`, and `StickyHeaderSection` connect to enclosing containers via `Environment`
+     `ScrollSpySection`, `ScrollToTopTrigger`, and `StickyHeaderSection` connect to enclosing containers via `Environment`
      (`ProvideEnvironment` / `UseEnvironment`), and `pipe.h` provides left-to-right `operator|` composition via
      `ViewAdaptor`.
 3. **Layer 2 — Styled presets, Retained modifiers, and `visual/`**:
    - **Input-driven presets** (`Pressable`, `HoldRepeat`, `Copyable`, `HoverLift`, `HoverShadow`, `Magnetic`,
      `LongPressable`, `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`,
      `SwipeActions`, `SwipeDeck`, `Dismissible`, `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`,
-     `FileDropZone`, `HoverCard`, `Popover`, `ScrollParallax`, `ScrollReveal`, `ScrollSpyArea`, `StickyHeaderList`)
+     `FileDropZone`, `HoverCard`, `Popover`, `ScrollParallax`, `ScrollReveal`, `ScrollSpyArea`, `ScrollToTop`, `StickyHeaderList`)
      build default motion and chrome on top of Layer 1.
    - **Retained modifiers** (`Ripple`, `HoldProgressRing`, `Spotlight`, `HoverHighlight`, `ScrollProgress`,
      `ScrollEdgeFade`, `NestedScrollConnection`, `SemanticActions`) attach `NodeExtension` behavior through
@@ -79,6 +79,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 | `NestedScrollConnection` / `ScrollHideController` | `scroll/nestedscroll.h` | Modifier + `UseScrollHideController` | Pre/post scroll & fling hooks | Signed clamped deltas + hidden offset state |
 | `ScrollSpyArea` / `ScrollSpySection` | `scroll/scrollspy.h` | Container + Section + `ScrollSpyController` | `Environment` + `PrepareGeometry` (`PresentationBounds`) + `TaskScope::Post` | Active leading section tracking + `Smooth` / `Instant` `ScrollToSection()` (`scroll_motion`) |
 | `StickyHeaderArea` / `StickyHeaderSection` / `StickyHeaderList` | `scroll/stickyheader.h` | Overlay stage + Section + List + `StickyHeaderController` | `StickyHeaderStageLayout` + `Environment` + `PrepareGeometry` + `ScrollController::Metrics()` | Zero-lag pinned section overlay, collision push-up offset, `Smooth` / `Instant` `ScrollToSection()` |
+| `ScrollToTop` / `ScrollToTopTrigger` | `scroll/scrolltotop.h` | Overlay stage + Trigger wrapper + `ScrollToTopController` | `ScrollToTopStageLayout` + `Appear` + `ScrollAnimator` + `ScrollController::Metrics()` | Threshold & `show_on_scroll_up` reveal, aligned overlay with `margin`, `Smooth`/`Instant` jump, user-scroll interrupt |
 | `KeyboardShortcut` / `ShortcutMap` / `SemanticActions` | `accessibility/` | Decorator / Retained modifier | Single or multi-entry `KeyIntercept` / `BuildSemantics` | Chord callbacks / standard a11y routing |
 | `BackHandler` / `PredictiveBack` | `accessibility/backhandler.h` | Decorator / Builder + `PredictiveBackController` | `NodeExtension::OnBack` (`Begin`/`Update`/`Cancel`/`Commit`) | Back interception + predictive offset/scale preview |
 | `RovingFocusGroup` / `RovingFocusItem` | `accessibility/rovingfocus.h` | Group + Item + `RovingFocusController` | `Environment` + `FocusRequester` + `OnFocusChanged` | Arrow / Home / End traversal skipping disabled |

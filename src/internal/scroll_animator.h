@@ -33,14 +33,15 @@ public:
 
   [[nodiscard]] bool IsActive() const noexcept { return active_; }
 
-  NodeExtension::FrameResult Advance(const ScrollController& sc, const FrameInfo& frame) {
+  NodeExtension::FrameResult Advance(const ScrollController& sc, const FrameInfo& frame,
+                                     bool interrupt_on_user_scroll = true) {
     if(!active_ || !sc.IsConnected()) {
       Cancel();
       return {};
     }
     const ScrollMetrics metrics = sc.Metrics();
     const float live_offset = metrics.offset;
-    if(has_applied_ && std::abs(live_offset - last_applied_) > 1.0F) {
+    if(interrupt_on_user_scroll && has_applied_ && std::abs(live_offset - last_applied_) > 1.0F) {
       Cancel();
       motion_.Set(live_offset);
       return {};

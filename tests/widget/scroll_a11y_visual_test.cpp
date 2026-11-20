@@ -1115,6 +1115,203 @@ void CheckScrollA11yAndVisualContracts() {
     rui.PumpAndSettle();
     CHECK(rui.Find(UiSelector::Text("hvis:1")).Exists());
   }
+
+  // ScrollToTop: threshold visibility, margin alignment, smooth animation, user interruption,
+  // instant non-zero target, ScrollToTopTrigger (env & explicit controller), and show_on_scroll_up.
+  {
+    Application top_app(
+        []() -> View {
+          auto sc = UseScrollController();
+          auto top_ctrl = UseScrollToTopController();
+          auto wrapped_hits = UseState(0);
+          auto inline_trigger_hits = UseState(0);
+          auto ext_trigger_hits = UseState(0);
+          const auto off = static_cast<int>(std::lround(top_ctrl.Offset()));
+          const auto pct = static_cast<int>(std::lround(top_ctrl.Progress() * 100.0F));
+          const int vis = top_ctrl.IsVisible() ? 1 : 0;
+          const int anim = top_ctrl.IsScrollingToTop() ? 1 : 0;
+          return Column {
+            Row {
+              Text("tvis:" + std::to_string(vis) + " tanim:" + std::to_string(anim) + " toff:" + std::to_string(off)
+                   + " tpct:" + std::to_string(pct)),
+              Text("thits:" + std::to_string(wrapped_hits.Get()) + ":" + std::to_string(ext_trigger_hits.Get())
+                   + ":" + std::to_string(inline_trigger_hits.Get())),
+              ScrollToTopTrigger(Text("ext-jump").Key("top-ext-trigger"), top_ctrl, ScrollJumpBehavior::Instant,
+                                 [ext_trigger_hits] { ext_trigger_hits = ext_trigger_hits.Get() + 1; }),
+            }.With(Spacing(8.0F)),
+            ScrollToTop(
+                ScrollView(
+                    Column {
+                      Stack{ScrollToTopTrigger(Text("in-jump").Key("top-inline-trigger"), {},
+                                               ScrollJumpBehavior::Instant,
+                                               [inline_trigger_hits] {
+                                                 inline_trigger_hits = inline_trigger_hits.Get() + 1;
+                                               })}
+                          .With(Frame{.height = 40.0F}),
+                      Stack{Text("row-1")}.With(Frame{.height = 120.0F}),
+                      Stack{Text("row-2")}.With(Frame{.height = 120.0F}),
+                      Stack{Text("row-3")}.With(Frame{.height = 120.0F}),
+                      Stack{Text("row-4")}.With(Frame{.height = 120.0F}),
+                    }.With(CrossAlign(CrossAxisAlignment::Stretch)))
+                    .Controller(sc)
+                    .Key("top-scroll")
+                    .With(Frame{.width = 240.0F, .height = 120.0F}),
+                Stack{Text("TOP").Key("top-fab-label")}.Key("top-fab").With(Frame{.width = 50.0F, .height = 24.0F}),
+                {
+                    .scroll_controller = sc,
+                    .threshold = 100.0F,
+                    .target_offset = 0.0F,
+                    .jump_behavior = ScrollJumpBehavior::Smooth,
+                    .scroll_motion = TweenSpec{.duration = 0.25, .easing = Easing::Linear},
+                    .reveal_motion = {.motion = TweenSpec{.duration = 0.0}, .animate_on_mount = false},
+                    .horizontal_alignment = HorizontalAlignment::End,
+                    .vertical_alignment = VerticalAlignment::End,
+                    .margin = {.top = 8.0F, .right = 12.0F, .bottom = 14.0F, .left = 10.0F},
+                    .controller = top_ctrl,
+                },
+                [wrapped_hits] { wrapped_hits = wrapped_hits.Get() + 1; })
+                .Key("top-stage"),
+          }.With(Spacing(6.0F));
+        },
+        {.window = {.initial_size = {420, 300}}, .show_debug_overlay = false});
+    UiTest tui(top_app, {.viewport = {420, 300}});
+
+    tui.PumpAndSettle();
+    const Rect vp = tui.Find(UiSelector::Key("top-scroll")).One().bounds;
+    const Point sc_center = Center(vp);
+
+    // Initially at offset 0 (< threshold 100): hidden and non-mounted.
+    CHECK(tui.Find(UiSelector::Text("tvis:0 tanim:0 toff:0 tpct:0")).Exists());
+    CHECK(!tui.Find(UiSelector::Key("top-fab")).Exists());
+
+    // Scroll 180px down (>= threshold 100): visible, aligned with bottom-right margin (right=12, bottom=14).
+    tui.SendScroll({.position = sc_center, .delta_y = 180.0F});
+    tui.PumpAndSettle();
+    CHECK(tui.Find(UiSelector::Key("top-fab")).Exists());
+    const Rect fab_bounds = tui.Find(UiSelector::Key("top-fab")).One().bounds;
+    CHECK(std::abs((fab_bounds.x + fab_bounds.width) - (vp.x + vp.width - 12.0F)) <= 2.0F);
+    CHECK(std::abs((fab_bounds.y + fab_bounds.height) - (vp.y + vp.height - 14.0F)) <= 2.0F);
+    CHECK(tui.Find(UiSelector::Text("tvis:1 tanim:0 toff:180 tpct:45")).Exists());
+
+    // Tap wrapped FAB: animates smoothly mid-flight, settles at 0, hides FAB, fires on_triggered once.
+    tui.TapAt(Center(fab_bounds));
+    tui.Pump(std::chrono::milliseconds(16));
+    tui.Pump(std::chrono::milliseconds(80));
+    CHECK(tui.Find(UiSelector::Text("thits:1:0:0")).Exists());
+    tui.Pump(std::chrono::milliseconds(16));
+    const float row1_y_mid = tui.Find(UiSelector::Text("row-1")).One().bounds.y;
+    CHECK(row1_y_mid > vp.y - 140.0F);
+    CHECK(row1_y_mid < vp.y + 40.0F);
+    tui.PumpAndSettle();
+    CHECK(tui.Find(UiSelector::Text("tvis:0 tanim:0 toff:0 tpct:0")).Exists());
+    CHECK(!tui.Find(UiSelector::Key("top-fab")).Exists());
+
+    // Smooth animation interrupted by user wheel scroll stays scrolled rather than returning to 0.
+    tui.SendScroll({.position = sc_center, .delta_y = 280.0F});
+    tui.PumpAndSettle();
+    CHECK(tui.Find(UiSelector::Key("top-fab")).Exists());
+    tui.TapAt(Center(tui.Find(UiSelector::Key("top-fab")).One().bounds));
+    tui.Pump(std::chrono::milliseconds(16));
+    tui.Pump(std::chrono::milliseconds(16));
+    tui.SendScroll({.position = sc_center, .delta_y = 60.0F});
+    tui.PumpAndSettle();
+    CHECK(tui.Find(UiSelector::Text("thits:2:0:0")).Exists());
+    CHECK(tui.Find(UiSelector::Key("top-fab")).Exists());
+    const float row1_y_interrupted = tui.Find(UiSelector::Text("row-1")).One().bounds.y;
+    CHECK(row1_y_interrupted < vp.y - 100.0F);
+
+    // Inline ScrollToTopTrigger (environment-bound) and external ScrollToTopTrigger (controller-bound).
+    tui.Find(UiSelector::Key("top-ext-trigger")).Tap();
+    tui.PumpAndSettle();
+    CHECK(tui.Find(UiSelector::Text("thits:3:1:0")).Exists());
+    CHECK(tui.Find(UiSelector::Text("tvis:0 tanim:0 toff:0 tpct:0")).Exists());
+
+    tui.SendScroll({.position = sc_center, .delta_y = 140.0F});
+    tui.PumpAndSettle();
+    CHECK(tui.Find(UiSelector::Key("top-fab")).Exists());
+  }
+
+  // Non-zero target_offset, inline ScrollToTopTrigger, and show_on_scroll_up hysteresis.
+  {
+    Application up_app(
+        []() -> View {
+          auto sc = UseScrollController();
+          auto top_ctrl = UseScrollToTopController();
+          auto env_hits = UseState(0);
+          auto area_hits = UseState(0);
+          const auto off = static_cast<int>(std::lround(top_ctrl.Offset()));
+          const int vis = top_ctrl.IsVisible() ? 1 : 0;
+          return Column {
+            Text("uvis:" + std::to_string(vis) + " uoff:" + std::to_string(off)),
+            Text("uhits:" + std::to_string(env_hits.Get()) + ":" + std::to_string(area_hits.Get())),
+            ScrollToTop(
+                Column {
+                  Stack{Text("jump40").Key("env-jump-40")}.With(Frame{.height = 24.0F})
+                      | ScrollToTopTrigger({}, ScrollJumpBehavior::Instant,
+                                           [env_hits] { env_hits = env_hits.Get() + 1; }),
+                  ScrollView(
+                      Column {
+                        Stack{Text("u-0")}.With(Frame{.height = 140.0F}),
+                        Stack{Text("u-1")}.With(Frame{.height = 140.0F}),
+                        Stack{Text("u-2")}.With(Frame{.height = 140.0F}),
+                        Stack{Text("u-3")}.With(Frame{.height = 140.0F}),
+                      }.With(CrossAlign(CrossAxisAlignment::Stretch)))
+                      .Controller(sc)
+                      .Key("up-scroll")
+                      .With(Frame{.width = 220.0F, .height = 120.0F}),
+                }.With(CrossAlign(CrossAxisAlignment::Start)),
+                Text("UPFAB").Key("up-fab"),
+                {
+                    .scroll_controller = sc,
+                    .threshold = 100.0F,
+                    .target_offset = 40.0F,
+                    .show_on_scroll_up = true,
+                    .scroll_up_delta = 12.0F,
+                    .jump_behavior = ScrollJumpBehavior::Instant,
+                    .reveal_motion = {.motion = TweenSpec{.duration = 0.0}, .animate_on_mount = false},
+                    .controller = top_ctrl,
+                },
+                [area_hits] { area_hits = area_hits.Get() + 1; }),
+          }.With(Spacing(6.0F));
+        },
+        {.window = {.initial_size = {360, 260}}, .show_debug_overlay = false});
+    UiTest sui(up_app, {.viewport = {360, 260}});
+
+    sui.PumpAndSettle();
+    const Point up_center = Center(sui.Find(UiSelector::Key("up-scroll")).One().bounds);
+
+    // Scrolling down past threshold (0 -> 240) keeps overlay hidden while scrolling downward.
+    sui.SendScroll({.position = up_center, .delta_y = 240.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("uvis:0 uoff:240")).Exists());
+    CHECK(!sui.Find(UiSelector::Key("up-fab")).Exists());
+
+    // Small upward scroll (-6px < scroll_up_delta 12px) stays hidden.
+    sui.SendScroll({.position = up_center, .delta_y = -6.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("uvis:0 uoff:234")).Exists());
+
+    // Larger upward scroll (-20px -> peak 240 - 214 = 26 >= 12px) reveals overlay!
+    sui.SendScroll({.position = up_center, .delta_y = -20.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("uvis:1 uoff:214")).Exists());
+    CHECK(sui.Find(UiSelector::Key("up-fab")).Exists());
+
+    // Scrolling forward again (+20px >= 12px from trough 214 -> 234) hides overlay again.
+    sui.SendScroll({.position = up_center, .delta_y = 20.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("uvis:0 uoff:234")).Exists());
+    CHECK(!sui.Find(UiSelector::Key("up-fab")).Exists());
+
+    // Scroll back up past 12px above threshold (-30 -> 204), then activate environment-bound ScrollToTopTrigger to target 40.
+    sui.SendScroll({.position = up_center, .delta_y = -30.0F});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("uvis:1 uoff:204")).Exists());
+    sui.Find(UiSelector::Key("env-jump-40")).Tap();
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("uhits:1:1")).Exists());
+    CHECK(sui.Find(UiSelector::Text("uvis:0 uoff:40")).Exists());
+  }
 }
 
 #endif
