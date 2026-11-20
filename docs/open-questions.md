@@ -65,6 +65,11 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
     modifier changes cause zero mid-drag jumps while `step` quantization snaps cleanly relative to `min_value` / `0`,
     pairing `drag_slop`, `Escape` revert (without `on_commit`), virtual-clock double-click reset, `SemanticRole::Slider`
     semantics (bounded `SemanticRange` when finite), and arrow/Home/End/PageUp/PageDown keys.
+- **Rotary Dial / Multi-Turn Encoder (`RadialDial`, `RadialDialController`)**:
+  - Uses wrapped shortest-signed angular deltas (`(-180°, 180°]`) from `atan2` so circular dragging across the West
+    `±180°` seam is seamless in both `Bounded` arc mode and `Continuous` multi-turn mode (`turns`), with center
+    dead-zone jitter suppression, `Shift` fine precision, `Escape` drag revert, `ViewEvents::ScrollInput` wheel steps,
+    double-click reset, arrow/Home/End/PageUp/PageDown keys, `Slider` semantics, and preset `DrawArc`/`DrawLine` chrome.
 - **Stacked Card Deck (`SwipeDeck`, `SwipeDeckController`)**:
   - Coordinates top-card drag/tilt/exit and background depth promotion via `MotionController::Seek` and stable keyed
     stack reconciliation (`Key(card_index)`), allowing smooth `Swipe()`, `Rewind()` history undo, and `Reset()` even

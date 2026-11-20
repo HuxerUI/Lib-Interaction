@@ -250,6 +250,62 @@ View GestureSection(const DemoState& state, const DemoContext& context) {
               }),
         }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
       }).Key("scrubvalue-demo"),
+      Scope([context]() -> View {
+        auto gain_dial = UseRadialDialController(35.0);
+        auto spin_dial = UseRadialDialController(0.0);
+        const int gain_val = static_cast<int>(std::lround(gain_dial.Value()));
+        const int spin_deg = static_cast<int>(std::lround(spin_dial.Value()));
+        const int spin_turns_x10 = static_cast<int>(std::lround((spin_dial.Value() / 360.0) * 10.0));
+        return Column {
+          Row {
+            Text("RadialDial", TextRole::Title),
+            Spacer{},
+            Button("Reset").OnClick([gain_dial, spin_dial] {
+              gain_dial.Reset();
+              spin_dial.Reset();
+            }),
+          }.With(Frame{.width = 300.0F}, CrossAlign(CrossAxisAlignment::Center)),
+          Row {
+            Column {
+              RadialDial({
+                  .mode = RadialDialMode::Bounded,
+                  .initial_value = 35.0,
+                  .min_value = 0.0,
+                  .max_value = 100.0,
+                  .track_color = context.colors.surface_container_highest,
+                  .active_color = context.colors.primary,
+                  .knob_color = context.colors.surface_container_low,
+                  .controller = gain_dial,
+              }),
+              Text("Gain: " + std::to_string(gain_val) + "%", TextRole::Label)
+                  .With(Foreground(context.colors.on_surface)),
+              Text("Bounded 270° · Wheel / Drag", TextRole::Body)
+                  .With(Foreground(context.colors.on_surface_variant)),
+            }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Center)),
+            Column {
+              RadialDial({
+                  .mode = RadialDialMode::Continuous,
+                  .initial_value = 0.0,
+                  .min_value = -std::numeric_limits<double>::infinity(),
+                  .max_value = std::numeric_limits<double>::infinity(),
+                  .start_angle_degrees = -90.0,
+                  .value_per_turn = 360.0,
+                  .track_color = context.colors.surface_container_highest,
+                  .active_color = context.colors.secondary,
+                  .knob_color = context.colors.surface_container_low,
+                  .controller = spin_dial,
+              }),
+              Text("Angle: " + std::to_string(spin_deg) + "° (" + std::to_string(spin_turns_x10 / 10) + "."
+                   + std::to_string(std::abs(spin_turns_x10 % 10)) + "t)",
+                   TextRole::Label)
+                  .With(Foreground(context.colors.on_surface)),
+              Text("Continuous Multi-Turn", TextRole::Body)
+                  .With(Foreground(context.colors.on_surface_variant)),
+            }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Center)),
+          }.With(Frame{.width = 300.0F}, MainAlign(MainAxisAlignment::SpaceEvenly),
+                 CrossAlign(CrossAxisAlignment::Start)),
+        }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start));
+      }).Key("radialdial-demo"),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
   });
 }

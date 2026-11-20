@@ -846,6 +846,231 @@ void CheckGestureContracts() {
     sui.PumpAndSettle();
     CHECK(sui.Find(UiSelector::Text("vy:40")).Exists());
   }
+
+  // RadialDial: bounded 270-deg sweep crossing +-180 seam, Shift fine drag, dead-zone guard,
+  // Escape revert, wheel, keyboard, double-click reset, controller, and continuous multi-turn rotation.
+  {
+    Application dial_app(
+        []() -> View {
+          auto b_ctrl = UseRadialDialController(0.0);
+          auto c_ctrl = UseRadialDialController(0.0);
+          auto b_commits = UseState(0);
+          const int bv10 = static_cast<int>(std::lround(b_ctrl.Value() * 10.0));
+          const int ba = static_cast<int>(std::lround(b_ctrl.AngleDegrees()));
+          const int cv = static_cast<int>(std::lround(c_ctrl.Value()));
+          const int ct10 = static_cast<int>(std::lround((c_ctrl.Value() / 360.0) * 10.0));
+          return Column {
+            RadialDial(
+                [](RadialDialSnapshot s) -> View {
+                  const int v10 = static_cast<int>(std::lround(s.value * 10.0));
+                  return Column {
+                    Text("bv10:" + std::to_string(v10) + " bf:" + (s.focused ? "1" : "0")
+                         + " bd:" + (s.dragging ? "1" : "0")),
+                  }.Key("dial-b-box").With(Frame{.width = 100.0F, .height = 100.0F});
+                },
+                {
+                    .mode = RadialDialMode::Bounded,
+                    .initial_value = 0.0,
+                    .default_value = 25.0,
+                    .min_value = 0.0,
+                    .max_value = 100.0,
+                    .start_angle_degrees = 135.0,
+                    .sweep_degrees = 270.0,
+                    .keyboard_step = 5.0,
+                    .fine_multiplier = 0.2,
+                    .center_dead_zone = 6.0F,
+                    .wheel_step = 5.0,
+                    .controller = b_ctrl,
+                },
+                {}, [b_commits](double) { b_commits = b_commits.Get() + 1; })
+                .Key("dial-b"),
+            RadialDial(
+                [](RadialDialSnapshot s) -> View {
+                  return Text("snap_c:" + std::to_string(static_cast<int>(std::lround(s.turns * 10.0))))
+                      .Key("dial-c-box")
+                      .With(Frame{.width = 100.0F, .height = 100.0F});
+                },
+                {
+                    .mode = RadialDialMode::Continuous,
+                    .initial_value = 0.0,
+                    .min_value = -std::numeric_limits<double>::infinity(),
+                    .max_value = std::numeric_limits<double>::infinity(),
+                    .start_angle_degrees = -90.0,
+                    .value_per_turn = 360.0,
+                    .controller = c_ctrl,
+                })
+                .Key("dial-c"),
+            Row {
+              Text("ba:" + std::to_string(ba)),
+              Text("bvctl:" + std::to_string(bv10) + " bcmt:" + std::to_string(b_commits.Get())),
+            }.With(Spacing(6.0F)),
+            Text("cv:" + std::to_string(cv) + " ct10:" + std::to_string(ct10)),
+            Row {
+              Button("S60").Key("dial-s60").OnClick([b_ctrl] { b_ctrl.SetValue(60.0); }),
+              Button("N15").Key("dial-n15").OnClick([b_ctrl] { b_ctrl.Nudge(15.0); }),
+              Button("Rst").Key("dial-rst").OnClick([b_ctrl] { b_ctrl.Reset(); }),
+            }.With(Spacing(6.0F)),
+          }.With(Spacing(8.0F), Padding(16.0F));
+        },
+        {.window = {.initial_size = {360, 400}}, .show_debug_overlay = false});
+    UiTest dui(dial_app, {.viewport = {360, 400}});
+    dui.PumpAndSettle();
+
+    const Point bc = Center(dui.Find(UiSelector::Key("dial-b-box")).One().bounds);
+    const Point cc = Center(dui.Find(UiSelector::Key("dial-c-box")).One().bounds);
+    constexpr double kDeg2Rad = 3.14159265358979323846 / 180.0;
+    auto polar = [](Point origin, double deg, float r = 34.0F) -> Point {
+      return {
+          origin.x + r * static_cast<float>(std::cos(deg * kDeg2Rad)),
+          origin.y + r * static_cast<float>(std::sin(deg * kDeg2Rad)),
+      };
+    };
+
+    CHECK(dui.Find(UiSelector::Text("bv10:0 bf:0 bd:0")).Exists());
+    CHECK(dui.Find(UiSelector::Text("ba:135")).Exists());
+    CHECK(dui.Find(UiSelector::Text("bvctl:0 bcmt:0")).Exists());
+
+    // Clockwise drag from 135 deg -> 175 -> -175 (crossing +-180 seam!) -> -90 (50%) -> 45 (100%) -> 90 (clamped).
+    dui.SendPointer({.type = PointerEventType::Down,
+                     .pointer_id = 1,
+                     .position = polar(bc, 135.0),
+                     .changed_button = PointerButton::Primary,
+                     .pressed_buttons = PointerButton::Primary});
+    for(double a : {175.0, -175.0, -90.0}) {
+      dui.SendPointer({.type = PointerEventType::Move,
+                       .pointer_id = 1,
+                       .position = polar(bc, a),
+                       .pressed_buttons = PointerButton::Primary});
+    }
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("bv10:500 bf:1 bd:1")).Exists());
+    CHECK(dui.Find(UiSelector::Text("ba:270")).Exists());
+    CHECK(dui.Find(UiSelector::Text("bvctl:500 bcmt:0")).Exists());
+
+    for(double a : {-45.0, 0.0, 45.0, 90.0}) {
+      dui.SendPointer({.type = PointerEventType::Move,
+                       .pointer_id = 1,
+                       .position = polar(bc, a),
+                       .pressed_buttons = PointerButton::Primary});
+    }
+    dui.SendPointer({.type = PointerEventType::Up,
+                     .pointer_id = 1,
+                     .position = polar(bc, 90.0),
+                     .changed_button = PointerButton::Primary});
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("bv10:1000 bf:1 bd:0")).Exists());
+    CHECK(dui.Find(UiSelector::Text("ba:405")).Exists());
+    CHECK(dui.Find(UiSelector::Text("bvctl:1000 bcmt:1")).Exists());
+
+    // Dead-zone guard inside center_dead_zone (< 6px): tiny center movement changes nothing.
+    dui.SendPointer({.type = PointerEventType::Down,
+                     .pointer_id = 2,
+                     .position = bc,
+                     .changed_button = PointerButton::Primary,
+                     .pressed_buttons = PointerButton::Primary});
+    dui.SendPointer({.type = PointerEventType::Move,
+                     .pointer_id = 2,
+                     .position = {bc.x + 2.0F, bc.y - 2.0F},
+                     .pressed_buttons = PointerButton::Primary});
+    dui.SendPointer({.type = PointerEventType::Up,
+                     .pointer_id = 2,
+                     .position = {bc.x + 2.0F, bc.y - 2.0F},
+                     .changed_button = PointerButton::Primary});
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("ba:405")).Exists());
+    CHECK(dui.Find(UiSelector::Text("bvctl:1000 bcmt:1")).Exists());
+
+    // Shift fine drag counter-clockwise by 90 deg (-90 -> 180): -90/270 * 100 * 0.2 = -6.67 -> 93.3.
+    dui.SendPointer({.type = PointerEventType::Down,
+                     .pointer_id = 3,
+                     .position = polar(bc, -90.0),
+                     .changed_button = PointerButton::Primary,
+                     .pressed_buttons = PointerButton::Primary});
+    dui.SendPointer({.type = PointerEventType::Move,
+                     .pointer_id = 3,
+                     .position = polar(bc, 180.0),
+                     .pressed_buttons = PointerButton::Primary,
+                     .modifiers = {.shift = true}});
+    dui.SendPointer({.type = PointerEventType::Up,
+                     .pointer_id = 3,
+                     .position = polar(bc, 180.0),
+                     .changed_button = PointerButton::Primary});
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("ba:387")).Exists());
+    CHECK(dui.Find(UiSelector::Text("bvctl:933 bcmt:2")).Exists());
+
+    // Escape during drag reverts value without committing.
+    dui.SendPointer({.type = PointerEventType::Down,
+                     .pointer_id = 4,
+                     .position = polar(bc, 180.0),
+                     .changed_button = PointerButton::Primary,
+                     .pressed_buttons = PointerButton::Primary});
+    dui.SendPointer({.type = PointerEventType::Move,
+                     .pointer_id = 4,
+                     .position = polar(bc, 150.0),
+                     .pressed_buttons = PointerButton::Primary});
+    dui.PumpAndSettle();
+    dui.PressKey(Key::Escape);
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("ba:387")).Exists());
+    CHECK(dui.Find(UiSelector::Text("bvctl:933 bcmt:2")).Exists());
+
+    // Wheel up/down & keyboard End/Home/ArrowRight while focused.
+    dui.SendScroll({.position = bc, .delta_y = -120.0F});
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("bvctl:983 bcmt:3")).Exists());
+
+    dui.PressKey(Key::Home);
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("ba:135")).Exists());
+    CHECK(dui.Find(UiSelector::Text("bvctl:0 bcmt:4")).Exists());
+    dui.PressKey(Key::ArrowRight);
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("bvctl:50 bcmt:5")).Exists());
+    dui.PressKey(Key::End);
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("ba:405")).Exists());
+    CHECK(dui.Find(UiSelector::Text("bvctl:1000 bcmt:6")).Exists());
+
+    // Double-click center resets to default_value (25.0).
+    dui.TapAt(bc);
+    dui.Pump(std::chrono::milliseconds(80));
+    dui.TapAt(bc);
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("bvctl:250 bcmt:7")).Exists());
+
+    // Controller SetValue, Nudge, Reset.
+    dui.Find(UiSelector::Key("dial-s60")).Tap();
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("bvctl:600 bcmt:8")).Exists());
+    dui.Find(UiSelector::Key("dial-n15")).Tap();
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("bvctl:750 bcmt:9")).Exists());
+    dui.Find(UiSelector::Key("dial-rst")).Tap();
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("bvctl:250 bcmt:10")).Exists());
+
+    // Continuous multi-turn encoder: 1.5 clockwise turns (-90 -> ... -> 450 deg = 540, 1.5 turns).
+    dui.SendPointer({.type = PointerEventType::Down,
+                     .pointer_id = 5,
+                     .position = polar(cc, -90.0),
+                     .changed_button = PointerButton::Primary,
+                     .pressed_buttons = PointerButton::Primary});
+    for(int step = 1; step <= 12; ++step) {
+      const double a = -90.0 + static_cast<double>(step) * 45.0;
+      dui.SendPointer({.type = PointerEventType::Move,
+                       .pointer_id = 5,
+                       .position = polar(cc, a),
+                       .pressed_buttons = PointerButton::Primary});
+    }
+    dui.SendPointer({.type = PointerEventType::Up,
+                     .pointer_id = 5,
+                     .position = polar(cc, 90.0),
+                     .changed_button = PointerButton::Primary});
+    dui.PumpAndSettle();
+    CHECK(dui.Find(UiSelector::Text("cv:540 ct10:15")).Exists());
+    CHECK(dui.Find(UiSelector::Text("snap_c:15")).Exists());
+  }
 }
 
 #endif

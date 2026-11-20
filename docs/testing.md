@@ -25,7 +25,9 @@ CTest and compiled with `-Wall -Wextra -Wpedantic` (or `/W4` on MSVC).
 - `gesture_test.cpp`: `CompareSlider` (horizontal/vertical split, unsquished `before` clip geometry, custom handle,
   double-click reset, controller `SetProgress`/`Reset`, keyboard steps, `drag_anywhere = false`), `ScrubValue`
   (`drag_slop`, live `Shift` fine / `Alt` coarse multipliers, `Escape` revert without commit, double-click reset,
-  vertical axis, keyboard & controller `SetValue`/`Nudge`/`Reset`), `PinchZoom`, `PanZoom`, `InertialDrag`, `SnapDrag`
+  vertical axis, keyboard & controller `SetValue`/`Nudge`/`Reset`), `RadialDial` (`Bounded` `270°` arc crossing
+  `±180°` seam, `Shift` fine precision, center dead-zone, `Escape` revert, wheel, keyboard, double-click reset,
+  controller `SetValue`/`Nudge`/`Reset`, `Continuous` multi-turn rotation), `PinchZoom`, `PanZoom`, `InertialDrag`, `SnapDrag`
   (`Corners`, `HorizontalEdges`, `Custom`, animated/instant controller jumps), `MarqueeSelectArea`/`MarqueeSelectItem`,
   `SwipeActions` + `SwipeActionContext`, `SwipeDeck` (`Swipe()`, `Rewind()`, `Reset()`, empty state), `Dismissible`
   (custom background builder),

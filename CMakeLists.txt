@@ -37,6 +37,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/gesture/inertialdrag.cpp
     src/gesture/marqueeselect.cpp
     src/gesture/pressdraghandle.cpp
+    src/gesture/radialdial.cpp
     src/gesture/resizehandle.cpp
     src/gesture/scrubvalue.cpp
     src/gesture/snapdrag.cpp

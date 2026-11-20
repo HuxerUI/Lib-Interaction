@@ -47,6 +47,7 @@ int main() {
     CHECK(ui.Find(UiSelector::Key("dragspring-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("compareslider-demo")).Exists());
     CHECK(ui.Find(UiSelector::Key("scrubvalue-demo")).Exists());
+    CHECK(ui.Find(UiSelector::Key("radialdial-demo")).Exists());
     CHECK(ui.Find(UiSelector::Text("clicks: 0")).Exists());
     const Rect toe_rest = ui.Find(UiSelector::Key("catpaw-toe")).One().bounds;
     const Rect paw_bounds = ui.Find(UiSelector::Key("catpaw-demo")).One().bounds;

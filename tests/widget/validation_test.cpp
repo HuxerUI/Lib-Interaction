@@ -502,4 +502,28 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.step = 0.0}); });
   Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.keyboard_step = 0.0}); });
   Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.drag_slop = -1.0F}); });
+
+  // RadialDial validation.
+  (void)RadialDial();
+  (void)RadialDial([](RadialDialSnapshot) { return Text("rd"); });
+  Throws<std::invalid_argument>([] { (void)UseRadialDialController(std::numeric_limits<double>::quiet_NaN()); });
+  Throws<std::invalid_argument>([] { (void)UseRadialDialController(std::numeric_limits<double>::infinity()); });
+  Throws<std::invalid_argument>([] { (void)RadialDial(std::function<View(RadialDialSnapshot)>{}); });
+  Throws<std::invalid_argument>(
+      [] { (void)RadialDial({.mode = RadialDialMode::Bounded, .min_value = -std::numeric_limits<double>::infinity()}); });
+  Throws<std::invalid_argument>(
+      [] { (void)RadialDial({.mode = RadialDialMode::Bounded, .min_value = 100.0, .max_value = 100.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.sweep_degrees = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.sweep_degrees = 361.0}); });
+  Throws<std::invalid_argument>(
+      [] { (void)RadialDial({.mode = RadialDialMode::Continuous, .value_per_turn = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.initial_value = -1.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.default_value = 101.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.step = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.keyboard_step = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.fine_multiplier = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.center_dead_zone = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.wheel_step = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.diameter = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)RadialDial({.track_thickness = 0.0F}); });
 }

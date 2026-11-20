@@ -24,6 +24,7 @@
 #include <huxerui/interaction/gesture/inertialdrag.h>
 #include <huxerui/interaction/gesture/marqueeselect.h>
 #include <huxerui/interaction/gesture/pressdraghandle.h>
+#include <huxerui/interaction/gesture/radialdial.h>
 #include <huxerui/interaction/gesture/resizehandle.h>
 #include <huxerui/interaction/gesture/scrubvalue.h>
 #include <huxerui/interaction/gesture/snapdrag.h>
