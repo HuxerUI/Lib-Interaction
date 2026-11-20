@@ -477,4 +477,29 @@ void CheckValidation() {
   Throws<std::invalid_argument>([] {
     (void)CompareSlider(Text("b"), Text("a"), {.motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
   });
+
+  // ScrubValue validation.
+  (void)ScrubValue(Text("s"));
+  (void)ScrubValue([](ScrubValueSnapshot) { return Text("s"); });
+  Throws<std::invalid_argument>([] { (void)UseScrubValueController(std::numeric_limits<double>::quiet_NaN()); });
+  Throws<std::invalid_argument>([] { (void)UseScrubValueController(std::numeric_limits<double>::infinity()); });
+  Throws<std::invalid_argument>([] { (void)ScrubValue(std::function<View(ScrubValueSnapshot)>{}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrubValue(Text("s"), {.min_value = std::numeric_limits<double>::quiet_NaN()}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrubValue(Text("s"), {.min_value = std::numeric_limits<double>::infinity()}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrubValue(Text("s"), {.max_value = -std::numeric_limits<double>::infinity()}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrubValue(Text("s"), {.initial_value = 5.0, .min_value = 10.0, .max_value = 0.0}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrubValue(Text("s"), {.initial_value = -1.0, .min_value = 0.0, .max_value = 10.0}); });
+  Throws<std::invalid_argument>(
+      [] { (void)ScrubValue(Text("s"), {.initial_value = 5.0, .default_value = 11.0, .min_value = 0.0, .max_value = 10.0}); });
+  Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.sensitivity = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.fine_multiplier = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.coarse_multiplier = -1.0}); });
+  Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.step = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.keyboard_step = 0.0}); });
+  Throws<std::invalid_argument>([] { (void)ScrubValue(Text("s"), {.drag_slop = -1.0F}); });
 }

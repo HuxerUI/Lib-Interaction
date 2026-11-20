@@ -171,6 +171,85 @@ View GestureSection(const DemoState& state, const DemoContext& context) {
                     Border{.color = context.colors.outline, .width = 1.0F}),
         }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start));
       }).Key("compareslider-demo"),
+      Scope([context]() -> View {
+        auto x_ctrl = UseScrubValueController(0.0);
+        auto op_ctrl = UseScrubValueController(100.0);
+        auto scale_ctrl = UseScrubValueController(1.0);
+
+        auto pill = [context](const std::string& title, const std::string& val_text,
+                              const std::string& hint, bool active, ScrubPrecision tier) -> View {
+          const Color border = active ? context.colors.primary : context.colors.outline;
+          const std::string tier_label =
+              tier == ScrubPrecision::Fine ? " [Fine 0.1x]"
+                                           : (tier == ScrubPrecision::Coarse ? " [Coarse 10x]" : "");
+          return Column {
+            Row {
+              Text(title, TextRole::Label).With(Foreground(context.colors.on_surface_variant)),
+              Spacer{},
+              Text(val_text + tier_label, TextRole::Label)
+                  .With(Foreground(active ? context.colors.primary : context.colors.on_surface)),
+            }.With(CrossAlign(CrossAxisAlignment::Center)),
+            Text(hint, TextRole::Body).With(Foreground(context.colors.on_surface_variant)),
+          }
+              .With(Frame{.width = 300.0F}, Padding(EdgeInsets::Symmetric(12.0F, 8.0F)), Spacing(2.0F),
+                    Background{context.colors.surface_container_low},
+                    Border{.color = border, .width = active ? 2.0F : 1.0F}, CornerRadius(10.0F));
+        };
+
+        return Column {
+          Row {
+            Text("ScrubValue", TextRole::Title),
+            Spacer{},
+            Button("Reset All").OnClick([x_ctrl, op_ctrl, scale_ctrl] {
+              x_ctrl.Reset();
+              op_ctrl.Reset();
+              scale_ctrl.Reset();
+            }),
+          }.With(Frame{.width = 300.0F}, CrossAlign(CrossAxisAlignment::Center)),
+          ScrubValue(
+              [&](ScrubValueSnapshot s) -> View {
+                const int iv = static_cast<int>(std::lround(s.value));
+                return pill("X Offset (H)", std::to_string(iv) + " px",
+                            "Drag horizontally · Shift fine · Alt coarse · Dbl-click reset",
+                            s.scrubbing || s.focused, s.precision);
+              },
+              {
+                  .initial_value = 0.0,
+                  .min_value = -200.0,
+                  .max_value = 200.0,
+                  .step = 1.0,
+                  .controller = x_ctrl,
+              }),
+          ScrubValue(
+              [&](ScrubValueSnapshot s) -> View {
+                const int iv = static_cast<int>(std::lround(s.value));
+                return pill("Opacity (H)", std::to_string(iv) + "%",
+                            "Clamped [0, 100], step 1", s.scrubbing || s.focused, s.precision);
+              },
+              {
+                  .initial_value = 100.0,
+                  .min_value = 0.0,
+                  .max_value = 100.0,
+                  .step = 1.0,
+                  .controller = op_ctrl,
+              }),
+          ScrubValue(
+              [&](ScrubValueSnapshot s) -> View {
+                const int pct = static_cast<int>(std::lround(s.value * 100.0));
+                return pill("Scale (V)", std::to_string(pct) + "%",
+                            "Drag vertically · step 0.05", s.scrubbing || s.focused, s.precision);
+              },
+              {
+                  .initial_value = 1.0,
+                  .min_value = 0.25,
+                  .max_value = 4.0,
+                  .sensitivity = 0.02,
+                  .step = 0.05,
+                  .axis = Axis::Vertical,
+                  .controller = scale_ctrl,
+              }),
+        }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
+      }).Key("scrubvalue-demo"),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
   });
 }

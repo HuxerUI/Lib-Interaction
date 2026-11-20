@@ -60,6 +60,11 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
     `ClipChildren()` along `axis * progress`) inside `CompareSliderStageLayout`, supporting both `drag_anywhere` and
     `handle_hit_extent`-restricted dragging, virtual-clock double-click reset, `Shift` fine keyboard adjustment,
     `SemanticRole::Slider` `Increment`/`Decrement` actions, and `MotionController` transitions honoring `reduced_motion`.
+- **Precision Numeric Scrubbing (`ScrubValue`, `ScrubValueController`)**:
+  - Accumulates continuous unquantized raw delta across pointer moves so live `Shift` (`Fine`) and `Alt` (`Coarse`)
+    modifier changes cause zero mid-drag jumps while `step` quantization snaps cleanly relative to `min_value` / `0`,
+    pairing `drag_slop`, `Escape` revert (without `on_commit`), virtual-clock double-click reset, `SemanticRole::Slider`
+    semantics (bounded `SemanticRange` when finite), and arrow/Home/End/PageUp/PageDown keys.
 - **Stacked Card Deck (`SwipeDeck`, `SwipeDeckController`)**:
   - Coordinates top-card drag/tilt/exit and background depth promotion via `MotionController::Seek` and stable keyed
     stack reconciliation (`Key(card_index)`), allowing smooth `Swipe()`, `Rewind()` history undo, and `Reset()` even

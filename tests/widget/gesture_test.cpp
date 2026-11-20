@@ -659,6 +659,193 @@ void CheckGestureContracts() {
     vui.PumpAndSettle();
     CHECK(vui.Find(UiSelector::Text("vpct:75")).Exists());
   }
+
+  // ScrubValue: drag_slop, horizontal scrub with mid-drag Shift (Fine) & Alt (Coarse) multipliers,
+  // Escape cancel without commit, double-click reset to default_value, vertical axis, keyboard, and controller.
+  {
+    Application scrub_app(
+        []() -> View {
+          auto h_ctrl = UseScrubValueController(0.0);
+          auto v_ctrl = UseScrubValueController(10.0);
+          auto changes = UseState(0);
+          auto commits = UseState(0);
+          const auto h_x10 = static_cast<int>(std::lround(h_ctrl.Value() * 10.0));
+          const auto v_val = static_cast<int>(std::lround(v_ctrl.Value()));
+          return Column {
+            ScrubValue(
+                [](ScrubValueSnapshot s) -> View {
+                  const int x10 = static_cast<int>(std::lround(s.value * 10.0));
+                  const int dx10 = static_cast<int>(std::lround(s.drag_delta * 10.0));
+                  const char* tier =
+                      s.precision == ScrubPrecision::Fine ? "F"
+                                                          : (s.precision == ScrubPrecision::Coarse ? "C" : "N");
+                  return Column {
+                    Text("sx:" + std::to_string(x10) + " sd:" + std::to_string(dx10)
+                         + " ss:" + (s.scrubbing ? "1" : "0") + " sp:" + tier),
+                    Text("sf:" + std::string(s.focused ? "1" : "0")),
+                  }.Key("scrub-h-box").With(Frame{.width = 220.0F, .height = 52.0F}, Padding(6.0F));
+                },
+                {
+                    .initial_value = 0.0,
+                    .default_value = 12.0,
+                    .min_value = -50.0,
+                    .max_value = 100.0,
+                    .sensitivity = 1.0,
+                    .fine_multiplier = 0.1,
+                    .coarse_multiplier = 10.0,
+                    .step = 0.5,
+                    .axis = Axis::Horizontal,
+                    .drag_slop = 4.0F,
+                    .controller = h_ctrl,
+                },
+                [changes](double) { changes = changes.Get() + 1; },
+                [commits](double) { commits = commits.Get() + 1; })
+                .Key("scrub-h"),
+            ScrubValue(
+                Text("vy:" + std::to_string(v_val)).Key("scrub-v-txt").With(Frame{.width = 120.0F, .height = 48.0F}),
+                {
+                    .initial_value = 10.0,
+                    .min_value = 0.0,
+                    .max_value = 100.0,
+                    .sensitivity = 1.0,
+                    .step = 1.0,
+                    .axis = Axis::Vertical,
+                    .controller = v_ctrl,
+                })
+                .Key("scrub-v"),
+            Text("hv:" + std::to_string(h_x10)),
+            Text(changes.Get() > 0 ? "chg>0" : "chg:0"),
+            Text("cmt:" + std::to_string(commits.Get())),
+            Row {
+              Button("Set33").Key("scrub-s33").OnClick([h_ctrl] { h_ctrl.SetValue(33.3); }),
+              Button("Nudge").Key("scrub-nud").OnClick([h_ctrl] { h_ctrl.Nudge(5.0); }),
+              Button("Reset").Key("scrub-rst").OnClick([h_ctrl] { h_ctrl.Reset(); }),
+            }.With(Spacing(6.0F)),
+          }.With(Spacing(8.0F), Padding(16.0F));
+        },
+        {.window = {.initial_size = {320, 260}}, .show_debug_overlay = false});
+    UiTest sui(scrub_app, {.viewport = {320, 260}});
+    sui.PumpAndSettle();
+
+    const Point h_center = Center(sui.Find(UiSelector::Key("scrub-h-box")).One().bounds);
+    const Point v_center = Center(sui.Find(UiSelector::Key("scrub-v-txt")).One().bounds);
+    CHECK(sui.Find(UiSelector::Text("sx:0 sd:0 ss:0 sp:N")).Exists());
+    CHECK(sui.Find(UiSelector::Text("cmt:0")).Exists());
+
+    // Drag inside drag_slop (< 4px) does not start scrubbing or emit change/commit.
+    sui.SendPointer({.type = PointerEventType::Down,
+                     .pointer_id = 1,
+                     .position = h_center,
+                     .changed_button = PointerButton::Primary,
+                     .pressed_buttons = PointerButton::Primary});
+    sui.PumpAndSettle();
+    sui.SendPointer({.type = PointerEventType::Move,
+                     .pointer_id = 1,
+                     .position = {h_center.x + 2.0F, h_center.y},
+                     .pressed_buttons = PointerButton::Primary});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("sx:0 sd:0 ss:0 sp:N")).Exists());
+    CHECK(sui.Find(UiSelector::Text("chg:0")).Exists());
+
+    // Move past slop (+10px -> value 10.0), then switch to Shift fine (+50px * 0.1 = +5.0 -> 15.0),
+    // then Alt coarse (+5px * 10.0 = +50.0 -> 65.0) without any jump on modifier transitions.
+    sui.SendPointer({.type = PointerEventType::Move,
+                     .pointer_id = 1,
+                     .position = {h_center.x + 10.0F, h_center.y},
+                     .pressed_buttons = PointerButton::Primary});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("sx:100 sd:100 ss:1 sp:N")).Exists());
+    CHECK(sui.Find(UiSelector::Text("cmt:0")).Exists());
+
+    sui.SendPointer({.type = PointerEventType::Move,
+                     .pointer_id = 1,
+                     .position = {h_center.x + 60.0F, h_center.y},
+                     .pressed_buttons = PointerButton::Primary,
+                     .modifiers = {.shift = true}});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("sx:150 sd:150 ss:1 sp:F")).Exists());
+
+    sui.SendPointer({.type = PointerEventType::Move,
+                     .pointer_id = 1,
+                     .position = {h_center.x + 65.0F, h_center.y},
+                     .pressed_buttons = PointerButton::Primary,
+                     .modifiers = {.alt = true}});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("sx:650 sd:650 ss:1 sp:C")).Exists());
+
+    sui.SendPointer({.type = PointerEventType::Up,
+                     .pointer_id = 1,
+                     .position = {h_center.x + 65.0F, h_center.y},
+                     .changed_button = PointerButton::Primary});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("sx:650 sd:0 ss:0 sp:N")).Exists());
+    CHECK(sui.Find(UiSelector::Text("cmt:1")).Exists());
+
+    // Verify initial focus & Tab / Shift+Tab focus navigation on scrub-h, then drag +20px -> 85.0 and Escape.
+    CHECK(sui.Find(UiSelector::Text("sf:1")).Exists());
+    sui.PressKey(Key::Tab);
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("sf:0")).Exists());
+    sui.PressKey(Key::Tab, {.shift = true});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("sf:1")).Exists());
+
+    sui.SendPointer({.type = PointerEventType::Down,
+                     .pointer_id = 2,
+                     .position = h_center,
+                     .changed_button = PointerButton::Primary,
+                     .pressed_buttons = PointerButton::Primary});
+    sui.SendPointer({.type = PointerEventType::Move,
+                     .pointer_id = 2,
+                     .position = {h_center.x + 20.0F, h_center.y},
+                     .pressed_buttons = PointerButton::Primary});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:850")).Exists());
+    sui.PressKey(Key::Escape);
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:650")).Exists());
+    CHECK(sui.Find(UiSelector::Text("cmt:1")).Exists());
+
+    // Keyboard adjustments while focused: ArrowRight (+0.5 -> 65.5), Shift+ArrowRight (raw clamped step -> 65.5 -> min),
+    // Alt+ArrowRight (+5.0 -> 70.5), End (100.0), Home (-50.0).
+    sui.PressKey(Key::ArrowRight);
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:655")).Exists());
+    CHECK(sui.Find(UiSelector::Text("cmt:2")).Exists());
+    sui.PressKey(Key::ArrowRight, {.alt = true});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:705")).Exists());
+    sui.PressKey(Key::End);
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:1000")).Exists());
+    sui.PressKey(Key::Home);
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:-500")).Exists());
+
+    // Double-click resets to default_value (12.0 -> hv:120).
+    sui.TapAt(h_center);
+    sui.Pump(std::chrono::milliseconds(80));
+    sui.TapAt(h_center);
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:120")).Exists());
+
+    // Controller SetValue(33.3 -> quantized to step 0.5 = 33.5), Nudge(+5.0 -> 38.5), Reset (-> 12.0).
+    sui.Find(UiSelector::Key("scrub-s33")).Tap();
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:335")).Exists());
+    sui.Find(UiSelector::Key("scrub-nud")).Tap();
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:385")).Exists());
+    sui.Find(UiSelector::Key("scrub-rst")).Tap();
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("hv:120")).Exists());
+
+    // Vertical axis scrubber: upward drag (-dy) increases value (10 -> 40).
+    sui.Drag(v_center, {v_center.x, v_center.y - 30.0F},
+             {.duration = std::chrono::duration<double>(0.1), .segments = 5});
+    sui.PumpAndSettle();
+    CHECK(sui.Find(UiSelector::Text("vy:40")).Exists());
+  }
 }
 
 #endif

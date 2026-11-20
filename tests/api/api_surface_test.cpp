@@ -51,6 +51,10 @@ static_assert(std::equality_comparable<MarqueeSelectController>);
 static_assert(std::equality_comparable<CompareSliderSnapshot>);
 static_assert(std::equality_comparable<CompareSliderStyle>);
 static_assert(std::equality_comparable<CompareSliderController>);
+static_assert(std::equality_comparable<ScrubPrecision>);
+static_assert(std::equality_comparable<ScrubValueSnapshot>);
+static_assert(std::equality_comparable<ScrubValueStyle>);
+static_assert(std::equality_comparable<ScrubValueController>);
 static_assert(std::equality_comparable<SnapMode>);
 static_assert(std::equality_comparable<SnapDragSnapshot>);
 static_assert(std::equality_comparable<SnapDragStyle>);
@@ -109,6 +113,9 @@ int main() {
   if(!(CompareSliderStyle{} == CompareSliderStyle{})) return 1;
   if(!(CompareSliderController{} == CompareSliderController{}) || static_cast<bool>(CompareSliderController{}))
     return 1;
+  if(!(ScrubValueSnapshot{} == ScrubValueSnapshot{})) return 1;
+  if(!(ScrubValueStyle{} == ScrubValueStyle{})) return 1;
+  if(!(ScrubValueController{} == ScrubValueController{}) || static_cast<bool>(ScrubValueController{})) return 1;
   if(!(SnapDragController{} == SnapDragController{}) || static_cast<bool>(SnapDragController{})) return 1;
   if(!(SnapDragStyle{} == SnapDragStyle{})) return 1;
   if(!(SwipeDeckController{} == SwipeDeckController{}) || static_cast<bool>(SwipeDeckController{})) return 1;
@@ -137,6 +144,7 @@ int main() {
                | ScrollToTop(Text("top"))
                | ScrollToTop([](ScrollToTopContext) { return Text("top"); })
                | ScrollToTopTrigger()
+               | ScrubValue()
                | SnapDrag()
                | RovingFocusItem(0)
                | RovingFocusGroup()
@@ -175,6 +183,8 @@ int main() {
   (void)Dismissible(Text("dismiss"), [] {});
   (void)PressDragHandle(Text("grip"));
   (void)ResizeHandle(Axis::Horizontal, [](float) {});
+  (void)ScrubValue(Text("v"));
+  (void)ScrubValue([](ScrubValueSnapshot) { return Text("sv"); });
   (void)Reorderable({Text("a"), Text("b")});
   (void)ReorderableGrid({Text("a")});
   (void)ReorderHandle(Text("grip"));
