@@ -303,6 +303,39 @@ void CheckValidation() {
     (void)ScrollSpyArea(Text("x"), {.scroll_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
   });
 
+  // StickyHeader validation.
+  (void)StickyHeaderSection(Text("sec"), 0);
+  (void)StickyHeaderArea(Text("ok"), [](StickyHeaderSnapshot) { return Text("h"); });
+  (void)StickyHeaderList({});
+  (void)StickyHeaderList({StickyHeaderGroup{.header = [](StickyHeaderSnapshot) { return Text("h"); }, .body = Text("b")}});
+  Throws<std::invalid_argument>(
+      [] { (void)StickyHeaderArea(Text("x"), std::function<View(StickyHeaderSnapshot)>{}); });
+  Throws<std::invalid_argument>([] {
+    (void)StickyHeaderList({StickyHeaderGroup{.header = {}, .body = Text("b")}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)StickyHeaderArea(Text("x"), [](StickyHeaderSnapshot) { return Text("h"); }, {.sticky_offset = -1.0F});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)StickyHeaderArea(Text("x"), [](StickyHeaderSnapshot) { return Text("h"); },
+                           {.sticky_offset = std::nanf("")});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)StickyHeaderList({}, {.section_spacing = -2.0F});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)StickyHeaderArea(Text("x"), [](StickyHeaderSnapshot) { return Text("h"); },
+                           {.scroll_motion = TweenSpec{.duration = -0.1}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)StickyHeaderArea(Text("x"), [](StickyHeaderSnapshot) { return Text("h"); },
+                           {.scroll_motion = SpringSpec{.stiffness = 0.0F}});
+  });
+  Throws<std::invalid_argument>([] {
+    (void)StickyHeaderArea(Text("x"), [](StickyHeaderSnapshot) { return Text("h"); },
+                           {.scroll_motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
+  });
+
   // SnapDrag validation.
   Throws<std::invalid_argument>([] { (void)SnapDrag(std::function<View(SnapDragSnapshot)>{}); });
   Throws<std::invalid_argument>([] { (void)SnapDrag(Text("x"), {.margin = -1.0F}); });

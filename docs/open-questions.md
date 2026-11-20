@@ -63,6 +63,11 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - Drives initial-delay and geometrically accelerating repeat ticks through `TaskScope::Launch` + `TaskScope::Delay`,
     combining primary-pointer capture (`cancel_on_leave` bounds monitoring), keyboard Space/Enter repeat swallowing,
     live composition closure refresh, dynamic `Enabled(false)` cancellation, and unmount teardown cleanup.
+- **Sticky Section Pinning (`StickyHeaderArea`, `StickyHeaderSection`, `StickyHeaderList`, `StickyHeaderController`)**:
+  - Pairs `StickyHeaderStageLayout` (`ClipChildren()`, unplaced overlay when unpinned) with `Environment` section
+    registration, `PrepareGeometry` scroll-invariant content bounds, `ScrollController::Metrics()` subscription on the
+    overlay scope only (keeping list body subtrees out of scroll recomposition), push-up collision offset calculations,
+    and shared `internal::ScrollAnimator` `Smooth`/`Instant` jumps.
 
 ## Remaining framework-bound questions
 

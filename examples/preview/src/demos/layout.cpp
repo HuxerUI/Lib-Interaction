@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <string>
+#include <vector>
 
 namespace interaction_demo {
 using namespace huxerui;
@@ -179,6 +180,80 @@ View LayoutSection(const DemoContext& context) {
                                 .controller = spy})),
             }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
           }).Key("scrollspy-demo"),
+          Scope([context]() -> View {
+            auto sticky_ctrl = UseStickyHeaderController();
+            const std::optional<std::size_t> pinned = sticky_ctrl.PinnedSection();
+            constexpr const char* kShortLabels[] = {"A", "B", "C", "D"};
+            constexpr const char* kGroupNames[] = {"A — Actions", "B — Feedback", "C — Gestures", "D — Scroll"};
+
+            std::vector<View> jump_pills;
+            std::vector<StickyHeaderGroup> groups;
+            jump_pills.reserve(4);
+            groups.reserve(4);
+            for(std::size_t i = 0; i < 4; ++i) {
+              const bool is_active = pinned == std::optional<std::size_t>{i};
+              jump_pills.push_back(
+                  Stack {
+                    Text(kShortLabels[i], TextRole::Label)
+                        .With(Foreground(is_active ? context.colors.on_primary : context.colors.on_surface)),
+                  }
+                      .With(Padding(EdgeInsets::Symmetric(10.0F, 5.0F)),
+                            Background{is_active ? context.colors.primary : context.colors.surface_container_high},
+                            CornerRadius(8.0F), PointerCursor(PointerCursorKind::Hand))
+                      .OnClick([sticky_ctrl, i] { sticky_ctrl.ScrollToSection(i); }));
+
+              const char* title = kGroupNames[i];
+              groups.push_back(StickyHeaderGroup{
+                  .header =
+                      [context, title](StickyHeaderSnapshot s) -> View {
+                    return Stack {
+                      Row {
+                        Text(title, TextRole::Label)
+                            .With(Foreground(s.pinned ? context.colors.on_primary
+                                                      : context.colors.on_primary_container)),
+                        s.pinned ? View(Text("PINNED", TextRole::Label).With(Foreground(context.colors.on_primary)))
+                                 : View(Stack{}),
+                      }.With(MainAlign(MainAxisAlignment::SpaceBetween), CrossAlign(CrossAxisAlignment::Center)),
+                    }.With(Padding(EdgeInsets::Symmetric(10.0F, 6.0F)),
+                           Background{s.pinned ? context.colors.primary : context.colors.primary_container},
+                           Opacity(s.pinned ? (1.0F - s.push_progress * 0.25F) : 1.0F));
+                  },
+                  .body = Column {
+                    Stack {
+                      Text(std::string(title) + " · Item 1", TextRole::Body)
+                          .With(Foreground(context.colors.on_surface)),
+                    }.With(Padding(EdgeInsets::Symmetric(10.0F, 6.0F)),
+                           Background{context.colors.surface_container_low}),
+                    Stack {
+                      Text(std::string(title) + " · Item 2", TextRole::Body)
+                          .With(Foreground(context.colors.on_surface)),
+                    }.With(Padding(EdgeInsets::Symmetric(10.0F, 6.0F)),
+                           Background{context.colors.surface_container_low}),
+                    Stack {
+                      Text(std::string(title) + " · Item 3", TextRole::Body)
+                          .With(Foreground(context.colors.on_surface)),
+                    }.With(Padding(EdgeInsets::Symmetric(10.0F, 6.0F)),
+                           Background{context.colors.surface_container_low}),
+                  }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Stretch), Padding(EdgeInsets::Symmetric(0.0F, 4.0F))),
+              });
+            }
+
+            return Column {
+              Flow {
+                Text("StickyHeader", TextRole::Label)
+                    .With(Foreground(context.colors.on_surface_variant)),
+                Row(std::move(jump_pills)).With(Spacing(6.0F)),
+              }.With(Frame{.width = 300.0F}, Spacing(8.0F), CrossAlign(CrossAxisAlignment::Center)),
+              StickyHeaderList(std::move(groups),
+                               StickyHeaderStyle{
+                                   .pin_at_rest = true,
+                                   .section_spacing = 4.0F,
+                                   .controller = sticky_ctrl,
+                               })
+                  .With(Frame{.width = 300.0F, .height = 156.0F},
+                        Background{context.colors.surface_container}, CornerRadius(12.0F)),
+            }.With(Spacing(8.0F), CrossAlign(CrossAxisAlignment::Start));
+          }).Key("stickyheader-demo"),
         }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start)),
       }.With(Spacing(24.0F), CrossAlign(CrossAxisAlignment::Start)),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));

@@ -670,6 +670,193 @@ void CheckScrollA11yAndVisualContracts() {
     sui.PumpAndSettle();
     CHECK(sui.Find(UiSelector::Text("h_active: 0")).Exists());
   }
+
+  // StickyHeader (unpinned at rest -> pinned -> push-up collision -> switch -> Instant/Smooth jump ->
+  // pin_at_rest + sticky_offset -> Horizontal axis).
+  {
+    Application sticky_app(
+        []() -> View {
+          auto v_scroll = UseScrollController();
+          auto v_sticky = UseStickyHeaderController();
+          auto v_changes = UseState(0);
+
+          auto r_scroll = UseScrollController();
+          auto r_sticky = UseStickyHeaderController();
+
+          auto h_scroll = UseScrollController();
+          auto h_sticky = UseStickyHeaderController();
+
+          std::vector<StickyHeaderGroup> v_groups;
+          for(std::size_t i = 0; i < 3; ++i) {
+            v_groups.push_back(StickyHeaderGroup{
+                .header =
+                    [i](StickyHeaderSnapshot s) -> View {
+                  return Stack {
+                    Text((s.pinned ? "vpin:" : "vflow:") + std::to_string(s.index)),
+                  }
+                      .With(Frame{.height = 30.0F}, Background{Color::Rgb(50, 90, 150)})
+                      .Key((s.pinned ? "v-pin-hdr-" : "v-flow-hdr-") + std::to_string(s.index));
+                },
+                .body = Stack {Text("vbody:" + std::to_string(i))}.With(Frame{.height = 120.0F}),
+            });
+          }
+
+          std::vector<StickyHeaderGroup> h_groups;
+          for(std::size_t i = 0; i < 3; ++i) {
+            h_groups.push_back(StickyHeaderGroup{
+                .header =
+                    [i](StickyHeaderSnapshot s) -> View {
+                  return Stack {
+                    Text((s.pinned ? "hpin:" : "hflow:") + std::to_string(s.index)),
+                  }
+                      .With(Frame{.width = 40.0F}, Background{Color::Rgb(80, 120, 90)})
+                      .Key((s.pinned ? "h-pin-hdr-" : "h-flow-hdr-") + std::to_string(s.index));
+                },
+                .body = Stack {Text("hbody:" + std::to_string(i))}.With(Frame{.width = 110.0F}),
+            });
+          }
+
+          const auto vpinned = v_sticky.PinnedSection();
+          const auto rpinned = r_sticky.PinnedSection();
+          const auto hpinned = h_sticky.PinnedSection();
+          const int push_pct = static_cast<int>(v_sticky.PushProgress() * 100.0F);
+
+          return Column {
+            Row {
+              StickyHeaderList(
+                  std::move(v_groups),
+                  StickyHeaderStyle{
+                      .scroll_controller = v_scroll,
+                      .controller = v_sticky,
+                  },
+                  [v_changes](std::optional<std::size_t>) { v_changes += 1; })
+                  .With(Frame{.width = 220.0F, .height = 140.0F})
+                  .Key("v-sticky-box"),
+              (ScrollView(Column {
+                 (Column {
+                   Stack {Text("rest-flow-0")}.With(Frame{.height = 28.0F}),
+                   Stack {Text("rest-body-0")}.With(Frame{.height = 120.0F}),
+                 } | StickyHeaderSection(0)),
+                 (Column {
+                   Stack {Text("rest-flow-1")}.With(Frame{.height = 28.0F}),
+                   Stack {Text("rest-body-1")}.With(Frame{.height = 120.0F}),
+                 } | StickyHeaderSection(1)),
+               })
+                   .Controller(r_scroll)
+                   .With(Frame{.width = 200.0F, .height = 140.0F})
+               | StickyHeaderArea(
+                   [](StickyHeaderSnapshot s) -> View {
+                     return Stack {Text("rest-pin:" + std::to_string(s.index))}
+                         .With(Frame{.height = 28.0F})
+                         .Key("rest-pin-" + std::to_string(s.index));
+                   },
+                   StickyHeaderStyle{
+                       .scroll_controller = r_scroll,
+                       .sticky_offset = 12.0F,
+                       .pin_at_rest = true,
+                       .controller = r_sticky,
+                   }))
+                  .Key("rest-sticky-box"),
+              StickyHeaderList(
+                  std::move(h_groups),
+                  StickyHeaderStyle{
+                      .scroll_controller = h_scroll,
+                      .axis = Axis::Horizontal,
+                      .controller = h_sticky,
+                  })
+                  .With(Frame{.width = 200.0F, .height = 100.0F})
+                  .Key("h-sticky-box"),
+            }.With(Spacing(16.0F), CrossAlign(CrossAxisAlignment::Start)),
+            Row {
+              Button("VJump2").OnClick([v_sticky] { v_sticky.ScrollToSection(2, ScrollJumpBehavior::Instant); }).Key("vsticky-jump2"),
+              Button("VJump0").OnClick([v_sticky] { v_sticky.ScrollToSection(0, ScrollJumpBehavior::Smooth); }).Key("vsticky-jump0"),
+              Button("VPush").OnClick([v_scroll] { (void)v_scroll.ScrollTo(135.0F); }).Key("vsticky-push"),
+            }.With(Spacing(8.0F)),
+            Text("vpinned: " + (vpinned.has_value() ? std::to_string(*vpinned) : std::string("none"))),
+            Text("vcount: " + std::to_string(v_sticky.SectionCount())),
+            Text("vchanges: " + std::to_string(v_changes.Get())),
+            Text("vpush_pct: " + std::to_string(push_pct)),
+            Text("rpinned: " + (rpinned.has_value() ? std::to_string(*rpinned) : std::string("none"))),
+            Text("hpinned: " + (hpinned.has_value() ? std::to_string(*hpinned) : std::string("none"))),
+          }.With(Padding(16.0F), Spacing(10.0F));
+        },
+        {.window = {.initial_size = {720, 380}}, .show_debug_overlay = false});
+    UiTest ui(sticky_app, {.viewport = {720, 380}});
+    ui.PumpAndSettle();
+
+    const Rect v_box = ui.Find(UiSelector::Key("v-sticky-box")).One().bounds;
+    const Rect r_box = ui.Find(UiSelector::Key("rest-sticky-box")).One().bounds;
+    const Rect h_box = ui.Find(UiSelector::Key("h-sticky-box")).One().bounds;
+
+    // Initial unpinned state at offset 0 (pin_at_rest = false), while pin_at_rest = true pins at sticky_offset.
+    CHECK(ui.Find(UiSelector::Text("vpinned: none")).Exists());
+    CHECK(ui.Find(UiSelector::Text("vcount: 3")).Exists());
+    CHECK(!ui.Find(UiSelector::Key("v-pin-hdr-0")).Exists());
+    CHECK(ui.Find(UiSelector::Text("rpinned: 0")).Exists());
+    CHECK(ui.Find(UiSelector::Key("rest-pin-0")).Exists());
+    CHECK(Near(ui.Find(UiSelector::Key("rest-pin-0")).One().bounds.y, r_box.y + 12.0F));
+
+    // Scroll into Section 0 -> pins Section 0 flush at viewport top.
+    const Point v_center = Center(v_box);
+    ui.SendScroll({.position = v_center, .delta_y = 60.0F});
+    ui.PumpAndSettle();
+    CHECK(ui.Find(UiSelector::Text("vpinned: 0")).Exists());
+    CHECK(ui.Find(UiSelector::Key("v-pin-hdr-0")).Exists());
+    CHECK(Near(ui.Find(UiSelector::Key("v-pin-hdr-0")).One().bounds.y, v_box.y));
+    CHECK(ui.Find(UiSelector::Text("vpush_pct: 0")).Exists());
+
+    // Scroll into push-up collision (offset 135; Section 1 starts at 150, header height 30 -> ~15px push upward).
+    ui.Find(UiSelector::Key("vsticky-push")).Tap();
+    ui.PumpAndSettle();
+    CHECK(ui.Find(UiSelector::Text("vpinned: 0")).Exists());
+    const float pushed_y = ui.Find(UiSelector::Key("v-pin-hdr-0")).One().bounds.y;
+    CHECK(pushed_y < v_box.y - 10.0F);
+    CHECK(pushed_y > v_box.y - 20.0F);
+    CHECK(ui.Find(UiSelector::Text("vpush_pct: 50")).Exists());
+
+    // Scroll past Section 1 boundary -> Section 1 takes over cleanly at v_box.y with 0 push.
+    ui.SendScroll({.position = v_center, .delta_y = 30.0F});
+    ui.PumpAndSettle();
+    CHECK(ui.Find(UiSelector::Text("vpinned: 1")).Exists());
+    CHECK(!ui.Find(UiSelector::Key("v-pin-hdr-0")).Exists());
+    CHECK(ui.Find(UiSelector::Key("v-pin-hdr-1")).Exists());
+    CHECK(Near(ui.Find(UiSelector::Key("v-pin-hdr-1")).One().bounds.y, v_box.y));
+    CHECK(ui.Find(UiSelector::Text("vpush_pct: 0")).Exists());
+
+    // Instant jump to Section 2 lands immediately in a single 0ms Pump().
+    ui.Find(UiSelector::Key("vsticky-jump2")).Tap();
+    ui.Pump();
+    CHECK(ui.Find(UiSelector::Key("v-pin-hdr-2")).Exists());
+    ui.PumpAndSettle();
+    CHECK(ui.Find(UiSelector::Text("vpinned: 2")).Exists());
+
+    // Smooth jump back to Section 0 animates smoothly before settling unpinned at offset 0.
+    ui.Find(UiSelector::Key("vsticky-jump0")).Tap();
+    for(int f = 0; f < 4; ++f) {
+      ui.Pump(std::chrono::milliseconds(16));
+    }
+    CHECK(ui.Find(UiSelector::Key("v-pin-hdr-0")).Exists() || ui.Find(UiSelector::Key("v-pin-hdr-1")).Exists());
+    ui.PumpAndSettle();
+    CHECK(ui.Find(UiSelector::Text("vpinned: none")).Exists());
+
+    // Horizontal axis StickyHeaderList pins along X and pushes left before Section 1.
+    const Point h_center = Center(h_box);
+    ui.SendScroll({.position = h_center, .delta_x = 50.0F});
+    ui.PumpAndSettle();
+    CHECK(ui.Find(UiSelector::Text("hpinned: 0")).Exists());
+    CHECK(ui.Find(UiSelector::Key("h-pin-hdr-0")).Exists());
+    CHECK(Near(ui.Find(UiSelector::Key("h-pin-hdr-0")).One().bounds.x, h_box.x));
+
+    ui.SendScroll({.position = h_center, .delta_x = 80.0F});
+    ui.PumpAndSettle();
+    CHECK(ui.Find(UiSelector::Text("hpinned: 0")).Exists());
+    CHECK(ui.Find(UiSelector::Key("h-pin-hdr-0")).One().bounds.x < h_box.x - 10.0F);
+
+    ui.SendScroll({.position = h_center, .delta_x = 30.0F});
+    ui.PumpAndSettle();
+    CHECK(ui.Find(UiSelector::Text("hpinned: 1")).Exists());
+    CHECK(Near(ui.Find(UiSelector::Key("h-pin-hdr-1")).One().bounds.x, h_box.x));
+  }
 }
 
 #endif

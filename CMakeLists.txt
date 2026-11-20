@@ -55,6 +55,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/scroll/scrolledgefade.cpp
     src/scroll/scrollprogress.cpp
     src/scroll/scrollspy.cpp
+    src/scroll/stickyheader.cpp
     # accessibility
     src/accessibility/backhandler.cpp
     src/accessibility/keyboardshortcut.cpp

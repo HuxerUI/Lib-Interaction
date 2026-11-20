@@ -30,6 +30,9 @@ static_assert(std::equality_comparable<ScrollHideController>);
 static_assert(std::equality_comparable<ScrollJumpBehavior>);
 static_assert(std::equality_comparable<ScrollSpyStyle>);
 static_assert(std::equality_comparable<ScrollSpyController>);
+static_assert(std::equality_comparable<StickyHeaderSnapshot>);
+static_assert(std::equality_comparable<StickyHeaderStyle>);
+static_assert(std::equality_comparable<StickyHeaderController>);
 static_assert(std::equality_comparable<ExpandableStyle>);
 static_assert(std::equality_comparable<AppearStyle>);
 static_assert(std::equality_comparable<MagneticStyle>);
@@ -81,6 +84,8 @@ int main() {
   }
   if(!(ScrollSpyController{} == ScrollSpyController{}) || static_cast<bool>(ScrollSpyController{})) return 1;
   if(!(ScrollSpyStyle{} == ScrollSpyStyle{})) return 1;
+  if(!(StickyHeaderController{} == StickyHeaderController{}) || static_cast<bool>(StickyHeaderController{})) return 1;
+  if(!(StickyHeaderStyle{} == StickyHeaderStyle{})) return 1;
   if(!(SnapDragController{} == SnapDragController{}) || static_cast<bool>(SnapDragController{})) return 1;
   if(!(SnapDragStyle{} == SnapDragStyle{})) return 1;
   if(!(SwipeDeckController{} == SwipeDeckController{}) || static_cast<bool>(SwipeDeckController{})) return 1;
@@ -100,6 +105,8 @@ int main() {
                | PredictiveBack([] {})
                | ScrollSpySection(0)
                | ScrollSpyArea()
+               | StickyHeaderSection(0)
+               | StickyHeaderArea([](StickyHeaderSnapshot) { return Text("hdr"); })
                | SnapDrag()
                | RovingFocusItem(0)
                | RovingFocusGroup()
@@ -147,6 +154,8 @@ int main() {
   (void)ScrollEdgeFade(ScrollController{});
   (void)ScrollSpyStyle{.jump_behavior = ScrollJumpBehavior::Instant};
   (void)ScrollSpyController{}.ScrollToSection(0, ScrollJumpBehavior::Smooth);
+  (void)StickyHeaderList({});
+  (void)StickyHeaderController{}.ScrollToSection(0, ScrollJumpBehavior::Smooth);
   (void)SemanticActions{Semantics{}, SemanticActionMask(SemanticActionKind::Activate)};
   (void)PredictiveBack([](PredictiveBackSnapshot) { return Text("pb"); }, [] {});
 
