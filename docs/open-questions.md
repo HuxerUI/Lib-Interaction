@@ -55,6 +55,11 @@ Architectural decisions reviewed during scaffolding and the v0.2 separation refa
   - Combines a non-blocking `SnapDragStageLayout` with `MotionController::Seek(pos, vel)` + `AnimateTo()` to provide
     velocity-continuous corner (`Corners`), edge (`HorizontalEdges` / `VerticalEdges`), and normalized custom
     (`Custom`) dock snapping while preserving click-through outside the floating item.
+- **Before/After Curtain Split (`CompareSlider`, `CompareSliderController`)**:
+  - Pairs `CompareBeforeClipLayout` (measuring `before` at full tight stage dimensions while clipping its layout box via
+    `ClipChildren()` along `axis * progress`) inside `CompareSliderStageLayout`, supporting both `drag_anywhere` and
+    `handle_hit_extent`-restricted dragging, virtual-clock double-click reset, `Shift` fine keyboard adjustment,
+    `SemanticRole::Slider` `Increment`/`Decrement` actions, and `MotionController` transitions honoring `reduced_motion`.
 - **Stacked Card Deck (`SwipeDeck`, `SwipeDeckController`)**:
   - Coordinates top-card drag/tilt/exit and background depth promotion via `MotionController::Seek` and stable keyed
     stack reconciliation (`Key(card_index)`), allowing smooth `Swipe()`, `Rewind()` history undo, and `Reset()` even

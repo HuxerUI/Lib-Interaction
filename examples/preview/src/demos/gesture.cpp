@@ -123,6 +123,54 @@ View GestureSection(const DemoState& state, const DemoContext& context) {
           }.With(Spacing(10.0F)),
         }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start));
       }).Key("swipedeck-demo"),
+      Scope([context]() -> View {
+        auto compare = UseCompareSliderController(0.5F);
+        auto vertical_axis = UseState(false);
+        const Axis axis = vertical_axis.Get() ? Axis::Vertical : Axis::Horizontal;
+        const int pct = static_cast<int>(compare.Progress() * 100.0F + 0.5F);
+
+        View before_card = Stack {
+          Column {
+            Text("BEFORE", TextRole::Label).With(Foreground(context.colors.on_primary)),
+            Text("Wireframe / Original", TextRole::Title).With(Foreground(context.colors.on_primary)),
+            Text("Full-bleed curtain layer clipped without squishing", TextRole::Body)
+                .With(Foreground(context.colors.on_primary)),
+          }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::Start)),
+        }.With(Frame{.width = 300.0F, .height = 148.0F}, Padding(14.0F),
+               Align(HorizontalAlignment::Start, VerticalAlignment::Center), Background{context.colors.primary});
+
+        View after_card = Stack {
+          Column {
+            Text("AFTER", TextRole::Label).With(Foreground(context.colors.on_surface_variant)),
+            Text("Rendered / Graded", TextRole::Title).With(Foreground(context.colors.on_surface)),
+            Text("Drag divider, double-click to reset, or use Arrow keys", TextRole::Body)
+                .With(Foreground(context.colors.on_surface_variant)),
+          }.With(Spacing(4.0F), CrossAlign(CrossAxisAlignment::End)),
+        }.With(Frame{.width = 300.0F, .height = 148.0F}, Padding(14.0F),
+               Align(HorizontalAlignment::End, VerticalAlignment::Center),
+               Background{context.colors.surface_container_high});
+
+        return Column {
+          Text("CompareSlider", TextRole::Title),
+          Row {
+            Text(std::to_string(pct) + "% split · " + (axis == Axis::Horizontal ? "Horizontal" : "Vertical"),
+                 TextRole::Label)
+                .With(Foreground(context.colors.on_surface_variant)),
+            Spacer{},
+            Button(axis == Axis::Horizontal ? "Axis: H" : "Axis: V")
+                .OnClick([vertical_axis] { vertical_axis = !vertical_axis.Get(); }),
+            Button("Reset").OnClick([compare] { compare.Reset(); }),
+          }.With(Frame{.width = 300.0F}, Spacing(8.0F), CrossAlign(CrossAxisAlignment::Center)),
+          CompareSlider(std::move(before_card), std::move(after_card),
+                        CompareSliderStyle{
+                            .axis = axis,
+                            .handle_accent_color = context.colors.primary,
+                            .controller = compare,
+                        })
+              .With(Frame{.width = 300.0F, .height = 148.0F}, CornerRadius(12.0F),
+                    Border{.color = context.colors.outline, .width = 1.0F}),
+        }.With(Spacing(10.0F), CrossAlign(CrossAxisAlignment::Start));
+      }).Key("compareslider-demo"),
     }.With(Spacing(20.0F), CrossAlign(CrossAxisAlignment::Stretch));
   });
 }

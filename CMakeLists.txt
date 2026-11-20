@@ -31,6 +31,7 @@ huxerui_add_library(huxerui_interaction SOURCES
     src/hover/magnetic.cpp
     src/hover/spotlight.cpp
     # gesture
+    src/gesture/compareslider.cpp
     src/gesture/dismissible.cpp
     src/gesture/dragspring.cpp
     src/gesture/inertialdrag.cpp

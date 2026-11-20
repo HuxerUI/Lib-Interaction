@@ -506,6 +506,159 @@ void CheckGestureContracts() {
     CHECK(dui.Find(UiSelector::Text("rem: 3")).Exists());
     CHECK(dui.Find(UiSelector::Text("rewind: no")).Exists());
   }
+
+  // CompareSlider: horizontal curtain geometry, clamping, custom handle, double-click reset,
+  // controller SetProgress/Reset, keyboard steps, and vertical drag_anywhere=false.
+  {
+    Application cmp_app(
+        []() -> View {
+          auto ctrl = UseCompareSliderController(0.5F);
+          auto changes = UseState(0);
+          auto last_pct = UseState(50);
+          const int pct = static_cast<int>(std::lround(ctrl.Progress() * 100.0F));
+          return Column {
+            CompareSlider(
+                Stack{Text("BEFORE").Key("cmp-b-txt")}.Key("cmp-before").With(Frame{.width = 300.0F, .height = 140.0F}),
+                Stack{Text("AFTER").Key("cmp-a-txt")}.Key("cmp-after").With(Frame{.width = 300.0F, .height = 140.0F}),
+                [](CompareSliderSnapshot snap) -> View {
+                  return Stack {
+                    Text(std::string("focus:") + (snap.focused ? "1" : "0") + " drag:" + (snap.dragging ? "1" : "0")),
+                  }.Key("cmp-handle").With(Frame{.width = 24.0F, .height = 24.0F});
+                },
+                {
+                    .axis = Axis::Horizontal,
+                    .initial_progress = 0.5F,
+                    .min_progress = 0.2F,
+                    .max_progress = 0.85F,
+                    .keyboard_step = 0.05F,
+                    .controller = ctrl,
+                },
+                [changes, last_pct](float p) {
+                  changes = changes.Get() + 1;
+                  last_pct = static_cast<int>(std::lround(p * 100.0F));
+                })
+                .Key("cmp-stage")
+                .With(Frame{.width = 300.0F, .height = 140.0F}),
+            Row {
+              Text("cpct:" + std::to_string(pct)),
+              Text("clast:" + std::to_string(last_pct.Get())),
+              Text(changes.Get() > 0 ? "cchg>0" : "cchg:0"),
+            }.With(Spacing(8.0F)),
+            Row {
+              Button("Jump25").Key("cmp-j25").OnClick([ctrl] { ctrl.SetProgress(0.25F, false); }),
+              Button("Reset").Key("cmp-rst").OnClick([ctrl] { ctrl.Reset(true); }),
+            }.With(Spacing(8.0F)),
+          }.With(Spacing(8.0F), Padding(16.0F));
+        },
+        {.window = {.initial_size = {380, 260}}, .show_debug_overlay = false});
+    UiTest cui(cmp_app, {.viewport = {380, 260}});
+    cui.PumpAndSettle();
+
+    const Rect stage = cui.Find(UiSelector::Key("cmp-stage")).One().bounds;
+    const Rect before0 = cui.Find(UiSelector::Key("cmp-before")).One().bounds;
+    const Rect after0 = cui.Find(UiSelector::Key("cmp-after")).One().bounds;
+    const Rect handle0 = cui.Find(UiSelector::Key("cmp-handle")).One().bounds;
+    CHECK(Near(before0.width, 300.0F));
+    CHECK(Near(after0.width, 300.0F));
+    CHECK(std::abs(Center(handle0).x - (stage.x + 150.0F)) <= 1.5F);
+    CHECK(std::abs(Center(handle0).y - (stage.y + 70.0F)) <= 1.5F);
+    CHECK(cui.Find(UiSelector::Text("cpct:50")).Exists());
+    CHECK(cui.Find(UiSelector::Text("cchg:0")).Exists());
+    CHECK(cui.Find(UiSelector::Text("clast:50")).Exists());
+
+    // Drag right past max_progress -> clamps at 85% while keeping `cmp-before` unsquished at 300px wide.
+    cui.Drag({stage.x + 150.0F, stage.y + 70.0F}, {stage.x + 295.0F, stage.y + 70.0F},
+             {.duration = std::chrono::duration<double>(0.15), .segments = 6});
+    cui.PumpAndSettle();
+    const Rect before1 = cui.Find(UiSelector::Key("cmp-before")).One().bounds;
+    const Rect handle1 = cui.Find(UiSelector::Key("cmp-handle")).One().bounds;
+    CHECK(Near(before1.width, 300.0F));
+    CHECK(std::abs(Center(handle1).x - (stage.x + 255.0F)) <= 2.0F);
+    CHECK(cui.Find(UiSelector::Text("cpct:85")).Exists());
+    CHECK(cui.Find(UiSelector::Text("cchg>0")).Exists());
+    CHECK(cui.Find(UiSelector::Text("clast:85")).Exists());
+
+    // Double-click near handle -> animates smoothly back to initial_progress (50%).
+    const Point dbl_pt = Center(handle1);
+    cui.TapAt(dbl_pt);
+    cui.Pump(std::chrono::milliseconds(80));
+    cui.TapAt(dbl_pt);
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("cpct:50")).Exists());
+
+    // Programmatic SetProgress(0.25, false) & Reset(true).
+    cui.Find(UiSelector::Key("cmp-j25")).Tap();
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("cpct:25")).Exists());
+    cui.Find(UiSelector::Key("cmp-rst")).Tap();
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("cpct:50")).Exists());
+
+    // Keyboard control: Tab focuses slider (first focusable), ArrowRight (+5%), Shift+ArrowRight (+1%),
+    // PageUp (+25%), End (85%), Home (20%).
+    cui.PressKey(Key::Tab);
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("focus:1 drag:0")).Exists());
+    cui.PressKey(Key::ArrowRight);
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("cpct:55")).Exists());
+    cui.PressKey(Key::ArrowRight, {.shift = true});
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("cpct:56")).Exists());
+    cui.PressKey(Key::PageUp);
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("cpct:81")).Exists());
+    cui.PressKey(Key::End);
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("cpct:85")).Exists());
+    cui.PressKey(Key::Home);
+    cui.PumpAndSettle();
+    CHECK(cui.Find(UiSelector::Text("cpct:20")).Exists());
+  }
+
+  // Vertical axis + drag_anywhere = false: ignores drags outside handle_hit_extent, scrubs from divider.
+  {
+    Application vcmp_app(
+        []() -> View {
+          auto ctrl = UseCompareSliderController(0.4F);
+          const int pct = static_cast<int>(std::lround(ctrl.Progress() * 100.0F));
+          return Column {
+            CompareSlider(
+                Stack{Text("VB")}.Key("vcmp-b").With(Frame{.width = 240.0F, .height = 200.0F}),
+                Stack{Text("VA")}.Key("vcmp-a").With(Frame{.width = 240.0F, .height = 200.0F}),
+                {
+                    .axis = Axis::Vertical,
+                    .initial_progress = 0.4F,
+                    .min_progress = 0.1F,
+                    .max_progress = 0.9F,
+                    .drag_anywhere = false,
+                    .handle_hit_extent = 24.0F,
+                    .controller = ctrl,
+                })
+                .Key("vcmp-stage")
+                .With(Frame{.width = 240.0F, .height = 200.0F}),
+            Text("vpct:" + std::to_string(pct)),
+          }.With(Spacing(8.0F), Padding(16.0F));
+        },
+        {.window = {.initial_size = {320, 280}}, .show_debug_overlay = false});
+    UiTest vui(vcmp_app, {.viewport = {320, 280}});
+    vui.PumpAndSettle();
+
+    const Rect vstage = vui.Find(UiSelector::Key("vcmp-stage")).One().bounds;
+    CHECK(vui.Find(UiSelector::Text("vpct:40")).Exists());
+
+    // Drag far below split (0.85 * 200 = 170 vs split 80, > 12px half hit extent) -> ignored.
+    vui.Drag({vstage.x + 120.0F, vstage.y + 170.0F}, {vstage.x + 120.0F, vstage.y + 40.0F},
+             {.duration = std::chrono::duration<double>(0.1), .segments = 5});
+    vui.PumpAndSettle();
+    CHECK(vui.Find(UiSelector::Text("vpct:40")).Exists());
+
+    // Drag directly from vertical split (y0 + 80) to y0 + 150 (75%) -> updates cleanly.
+    vui.Drag({vstage.x + 120.0F, vstage.y + 80.0F}, {vstage.x + 120.0F, vstage.y + 150.0F},
+             {.duration = std::chrono::duration<double>(0.15), .segments = 6});
+    vui.PumpAndSettle();
+    CHECK(vui.Find(UiSelector::Text("vpct:75")).Exists());
+  }
 }
 
 #endif

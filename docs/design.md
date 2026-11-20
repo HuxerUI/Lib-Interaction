@@ -14,23 +14,25 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 2. **Layer 1 — Headless state, Controllers, and Pipelines**:
    - **Headless builders** (`InteractiveSurface`, `HoldRepeat`, `Hoverable`, `Copyable`, `Popover` trigger builder,
      `PredictiveBack` builder, `StickyHeaderArea` builder, `ScrollParallax` builder, `ScrollReveal` builder,
-     `ScrollToTop` builder, `SnapDrag` builder, `SwipeDeck` builder, and builder overloads of `DropZone<T>`,
-     `FileDropZone`, `Dismissible`) run the input/focus/semantics/repeat/back/sticky/parallax/reveal/scroll-to-top/snap/deck
+     `ScrollToTop` builder, `CompareSlider` handle builder, `SnapDrag` builder, `SwipeDeck` builder, and builder overloads of
+     `DropZone<T>`, `FileDropZone`, `Dismissible`) run the input/focus/semantics/repeat/back/sticky/parallax/reveal/scroll-to-top/split/snap/deck
      state machine and pass live state snapshots (`InteractionSnapshot`, `HoldRepeatSnapshot`, `StickyHeaderSnapshot`,
-     `ScrollParallaxSnapshot`, `ScrollRevealSnapshot`, `ScrollToTopContext`, `hovered`, `copied`,
-     `PredictiveBackSnapshot`, `SnapDragSnapshot`, `SwipeDeckCardContext`, `progress`) to caller-supplied view builders.
-   - **Controllers** (`HoldRepeatController`, `SwipeController`, `SwipeDeckController`, `PanZoomController`,
-     `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `ScrollToTopController`,
-     `StickyHeaderController`, `SnapDragController`, `RovingFocusController`, `PredictiveBackController`,
-     `MarqueeSelectController`) use `std::shared_ptr` state handles remembered via `Use*Controller()`, enabling
-     external state reads and programmatic actions while keeping default-constructed handles runtime-free.
+     `ScrollParallaxSnapshot`, `ScrollRevealSnapshot`, `ScrollToTopContext`, `CompareSliderSnapshot`, `hovered`,
+     `copied`, `PredictiveBackSnapshot`, `SnapDragSnapshot`, `SwipeDeckCardContext`, `progress`) to caller-supplied
+     view builders.
+   - **Controllers** (`HoldRepeatController`, `CompareSliderController`, `SwipeController`, `SwipeDeckController`,
+     `PanZoomController`, `HoverCardController`, `PopoverController`, `ScrollHideController`, `ScrollSpyController`,
+     `ScrollToTopController`, `StickyHeaderController`, `SnapDragController`, `RovingFocusController`,
+     `PredictiveBackController`, `MarqueeSelectController`) use `std::shared_ptr` state handles remembered via
+     `Use*Controller()`, enabling external state reads and programmatic actions while keeping default-constructed
+     handles runtime-free.
    - **Environment-bridged grips & pipelines**: `ReorderHandle`, `RovingFocusItem`, `MarqueeSelectItem`,
      `ScrollSpySection`, `ScrollToTopTrigger`, and `StickyHeaderSection` connect to enclosing containers via `Environment`
      (`ProvideEnvironment` / `UseEnvironment`), and `pipe.h` provides left-to-right `operator|` composition via
      `ViewAdaptor`.
 3. **Layer 2 — Styled presets, Retained modifiers, and `visual/`**:
    - **Input-driven presets** (`Pressable`, `HoldRepeat`, `Copyable`, `HoverLift`, `HoverShadow`, `Magnetic`,
-     `LongPressable`, `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`,
+     `LongPressable`, `CompareSlider`, `DragSpring`, `InertialDrag`, `SnapDrag`, `MarqueeSelectArea`, `PanZoom`, `PinchZoom`,
      `SwipeActions`, `SwipeDeck`, `Dismissible`, `Reorderable`, `ReorderableGrid`, `Draggable`, `DropZone`,
      `FileDropZone`, `HoverCard`, `Popover`, `ScrollParallax`, `ScrollReveal`, `ScrollSpyArea`, `ScrollToTop`, `StickyHeaderList`)
      build default motion and chrome on top of Layer 1.
@@ -58,6 +60,7 @@ Lib-Interaction owns no rendering backend and no timing source; every animation 
 | `HoverShadow` | `hover/hovershadow.h` | Wrapper + `ViewAdaptor` | Pointer position + fade/axis controllers | Pointer-following outer shadow/glow + radial rim highlight |
 | `HoverHighlight` | `hover/highlight.h` | Retained modifier (`With`) | `InteractionState` controllers | Hover/press/focus tint overlay |
 | `Spotlight` | `hover/spotlight.h` | Retained modifier (`With`) | Hover position + fade controller | Radial glow behind content |
+| `CompareSlider` | `gesture/compareslider.h` | Handle builder / Preset + `CompareSliderController` | `CompareBeforeClipLayout` + `CompareSliderStageLayout` + `MotionController` + `Slider` semantics | Full-bleed `ClipChildren` before/after curtain split, drag anywhere/handle band, keyboard steps, double-click reset |
 | `DragSpring` | `gesture/dragspring.h` | Wrapper + `ViewAdaptor` | Per-scope drag + offset cells | Follow tween, spring return |
 | `InertialDrag` | `gesture/inertialdrag.h` | Wrapper + `ViewAdaptor` | Per-scope drag + projected offset | Velocity-projected settle + `on_settled` |
 | `SnapDrag` | `gesture/snapdrag.h` | Builder / Wrapper + `SnapDragController` | Stage/item bounds + `MotionController::Seek` velocity handoff | Corner / edge / custom anchor spring snap + drag scale |

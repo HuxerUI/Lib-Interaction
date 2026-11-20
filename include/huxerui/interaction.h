@@ -18,6 +18,7 @@
 #include <huxerui/interaction/hover/magnetic.h>
 #include <huxerui/interaction/hover/spotlight.h>
 // gesture
+#include <huxerui/interaction/gesture/compareslider.h>
 #include <huxerui/interaction/gesture/dismissible.h>
 #include <huxerui/interaction/gesture/dragspring.h>
 #include <huxerui/interaction/gesture/inertialdrag.h>

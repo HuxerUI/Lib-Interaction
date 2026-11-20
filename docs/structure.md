@@ -8,10 +8,10 @@ HuxerUI core:
   geometry/session infrastructure. Never exposed in `include/`.
 - **Layer 1 (Headless primitives, Controllers & Pipe)**: `InteractiveSurface`, `Hoverable`, builder-based `HoldRepeat` /
   `Copyable` / `Popover` / `PredictiveBack` / `StickyHeaderArea` / `ScrollParallax` / `ScrollReveal` / `ScrollToTop` /
-  `SnapDrag` / `SwipeDeck` / `DropZone` / `FileDropZone` / `Dismissible`, `HoldRepeatController`, `SwipeController`,
-  `SwipeDeckController`, `PanZoomController`, `HoverCardController`, `PopoverController`, `ScrollHideController`,
-  `ScrollSpyController`, `ScrollToTopController`, `StickyHeaderController`, `SnapDragController`,
-  `RovingFocusController`, `PredictiveBackController`, `MarqueeSelectController`, `ReorderHandle`,
+  `CompareSlider` / `SnapDrag` / `SwipeDeck` / `DropZone` / `FileDropZone` / `Dismissible`, `HoldRepeatController`,
+  `CompareSliderController`, `SwipeController`, `SwipeDeckController`, `PanZoomController`, `HoverCardController`,
+  `PopoverController`, `ScrollHideController`, `ScrollSpyController`, `ScrollToTopController`, `StickyHeaderController`,
+  `SnapDragController`, `RovingFocusController`, `PredictiveBackController`, `MarqueeSelectController`, `ReorderHandle`,
   `ScrollToTopTrigger`, and `ViewAdaptor` (`operator|`).
 - **Layer 2 (Styled presets, Retained modifiers & `visual/`)**: Ready-to-use composed widgets, retained
   `NodeExtension` paint/scroll/hover/focus/semantics modifiers, and non-interactive visual effects under `visual/`.
@@ -27,9 +27,10 @@ include/huxerui/
                                       # LongPressable, HoldProgressRing, MultiClickable, DoubleClickable,
                                       # ContextMenuArea, SecondaryClickable, Ripple
     hover/                            # Hoverable, HoverLift, HoverHighlight, HoverShadow, Spotlight, Magnetic
-    gesture/                          # DragSpring, InertialDrag, SnapDrag, MarqueeSelectArea/Item, PanZoom, PinchZoom,
-                                      # PanZoomController, SnapDragController, SwipeActions, SwipeController, SwipeDeck,
-                                      # SwipeDeckController, Dismissible, PressDragHandle, ResizeHandle
+    gesture/                          # CompareSlider, CompareSliderController, DragSpring, InertialDrag, SnapDrag,
+                                      # MarqueeSelectArea/Item, PanZoom, PinchZoom, PanZoomController, SnapDragController,
+                                      # SwipeActions, SwipeController, SwipeDeck, SwipeDeckController, Dismissible,
+                                      # PressDragHandle, ResizeHandle
     reorder/                          # Reorderable, ReorderableGrid, ReorderHandle
     dragdrop/                         # Draggable, DropZone (exact & predicate-filtered), FileDropZone
     overlay/                          # HoverCard, HoverCardController, Popover, PopoverController

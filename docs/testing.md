@@ -22,9 +22,11 @@ CTest and compiled with `-Wall -Wextra -Wpedantic` (or `/W4` on MSVC).
   `HoldProgressRing`, `DoubleClickable`, `MultiClickable`, `ContextMenuArea`, `SecondaryClickable`, `Ripple`.
 - `hover_overlay_test.cpp`: `Hoverable`, `HoverLift`, `HoverShadow`, `Magnetic`, `Spotlight`, `HoverHighlight`,
   `HoverCard` + `HoverCardController`, `Popover` + `PopoverController`.
-- `gesture_test.cpp`: `PinchZoom`, `PanZoom`, `InertialDrag`, `SnapDrag` (`Corners`, `HorizontalEdges`, `Custom`,
-  animated/instant controller jumps), `MarqueeSelectArea`/`MarqueeSelectItem`, `SwipeActions` + `SwipeActionContext`,
-  `SwipeDeck` (`Swipe()`, `Rewind()`, `Reset()`, empty state), `Dismissible` (custom background builder),
+- `gesture_test.cpp`: `CompareSlider` (horizontal/vertical split, unsquished `before` clip geometry, custom handle,
+  double-click reset, controller `SetProgress`/`Reset`, keyboard steps, `drag_anywhere = false`), `PinchZoom`,
+  `PanZoom`, `InertialDrag`, `SnapDrag` (`Corners`, `HorizontalEdges`, `Custom`, animated/instant controller jumps),
+  `MarqueeSelectArea`/`MarqueeSelectItem`, `SwipeActions` + `SwipeActionContext`, `SwipeDeck` (`Swipe()`, `Rewind()`,
+  `Reset()`, empty state), `Dismissible` (custom background builder),
   `PressDragHandle`, `ResizeHandle`.
 - `reorder_dragdrop_test.cpp`: vertical/horizontal `Reorderable`, `ReorderableGrid`, `Draggable<T>`, headless &
   predicate-filtered `DropZone<T>`, `FileDropZone`.

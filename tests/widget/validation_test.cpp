@@ -448,4 +448,33 @@ void CheckValidation() {
       [] { (void)ScrollToTop(Text("x"), Text("top"), {.reveal_motion = {.initial_scale = 0.0F}}); });
   Throws<std::invalid_argument>(
       [] { (void)ScrollToTop(Text("x"), Text("top"), {.reveal_motion = {.delay = -0.1}}); });
+
+  // CompareSlider validation.
+  (void)CompareSlider(Text("b"), Text("a"));
+  (void)CompareSlider(Text("b"), Text("a"), [](CompareSliderSnapshot) { return Text("h"); });
+  Throws<std::invalid_argument>([] { (void)UseCompareSliderController(-0.1F); });
+  Throws<std::invalid_argument>([] { (void)UseCompareSliderController(1.2F); });
+  Throws<std::invalid_argument>(
+      [] { (void)UseCompareSliderController(std::numeric_limits<float>::quiet_NaN()); });
+  Throws<std::invalid_argument>(
+      [] { (void)CompareSlider(Text("b"), Text("a"), std::function<View(CompareSliderSnapshot)>{}); });
+  Throws<std::invalid_argument>([] { (void)CompareSlider(Text("b"), Text("a"), {.min_progress = -0.1F}); });
+  Throws<std::invalid_argument>([] { (void)CompareSlider(Text("b"), Text("a"), {.max_progress = 1.2F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)CompareSlider(Text("b"), Text("a"), {.initial_progress = 0.5F, .min_progress = 0.6F, .max_progress = 0.4F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)CompareSlider(Text("b"), Text("a"), {.initial_progress = 0.1F, .min_progress = 0.2F, .max_progress = 0.8F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)CompareSlider(Text("b"), Text("a"), {.handle_hit_extent = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)CompareSlider(Text("b"), Text("a"), {.keyboard_step = 0.0F}); });
+  Throws<std::invalid_argument>([] { (void)CompareSlider(Text("b"), Text("a"), {.keyboard_step = 1.1F}); });
+  Throws<std::invalid_argument>([] { (void)CompareSlider(Text("b"), Text("a"), {.divider_thickness = -1.0F}); });
+  Throws<std::invalid_argument>([] { (void)CompareSlider(Text("b"), Text("a"), {.handle_size = -1.0F}); });
+  Throws<std::invalid_argument>(
+      [] { (void)CompareSlider(Text("b"), Text("a"), {.motion = TweenSpec{.duration = -0.1}}); });
+  Throws<std::invalid_argument>(
+      [] { (void)CompareSlider(Text("b"), Text("a"), {.motion = SpringSpec{.stiffness = 0.0F}}); });
+  Throws<std::invalid_argument>([] {
+    (void)CompareSlider(Text("b"), Text("a"), {.motion = SpringSpec{.stiffness = 200.0F, .damping_ratio = 0.0F}});
+  });
 }

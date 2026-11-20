@@ -48,6 +48,9 @@ static_assert(std::equality_comparable<MagneticStyle>);
 static_assert(std::equality_comparable<HoverShadowStyle>);
 static_assert(std::equality_comparable<MarqueeSelectStyle>);
 static_assert(std::equality_comparable<MarqueeSelectController>);
+static_assert(std::equality_comparable<CompareSliderSnapshot>);
+static_assert(std::equality_comparable<CompareSliderStyle>);
+static_assert(std::equality_comparable<CompareSliderController>);
 static_assert(std::equality_comparable<SnapMode>);
 static_assert(std::equality_comparable<SnapDragSnapshot>);
 static_assert(std::equality_comparable<SnapDragStyle>);
@@ -102,6 +105,10 @@ int main() {
   if(!(ScrollToTopContext{} == ScrollToTopContext{})) return 1;
   if(!(ScrollToTopStyle{} == ScrollToTopStyle{})) return 1;
   if(!(ScrollToTopController{} == ScrollToTopController{}) || static_cast<bool>(ScrollToTopController{})) return 1;
+  if(!(CompareSliderSnapshot{} == CompareSliderSnapshot{})) return 1;
+  if(!(CompareSliderStyle{} == CompareSliderStyle{})) return 1;
+  if(!(CompareSliderController{} == CompareSliderController{}) || static_cast<bool>(CompareSliderController{}))
+    return 1;
   if(!(SnapDragController{} == SnapDragController{}) || static_cast<bool>(SnapDragController{})) return 1;
   if(!(SnapDragStyle{} == SnapDragStyle{})) return 1;
   if(!(SwipeDeckController{} == SwipeDeckController{}) || static_cast<bool>(SwipeDeckController{})) return 1;
@@ -157,6 +164,8 @@ int main() {
   (void)RollingNumber(42);
   (void)DragSpring(Text("drag"));
   (void)InertialDrag(Text("inertia"));
+  (void)CompareSlider(Text("before"), Text("after"));
+  (void)CompareSlider(Text("before"), Text("after"), [](CompareSliderSnapshot) { return Text("h"); });
   (void)SnapDrag([](SnapDragSnapshot) { return Text("sd"); });
   (void)PanZoom(Text("panzoom"));
   (void)PinchZoom(Text("pinch"));
