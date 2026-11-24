@@ -67,6 +67,7 @@ View HoverCard(View content, std::function<View(PopupContext)> card, HoverCardSt
   return Scope([content = std::move(content), card = std::move(card), style,
                 on_open_changed = std::move(on_open_changed)]() -> View {
     PopupHandle popup = UsePopup();
+    auto popup_target = UseViewHandle();
     TaskScope tasks = UseTaskScope();
     auto layer = UseState<LayerId>(0);
     auto generation = UseState<std::uint64_t>(0);
@@ -92,7 +93,7 @@ View HoverCard(View content, std::function<View(PopupContext)> card, HoverCardSt
       notify_open(false);
     };
 
-    auto show = [popup, card, style, layer, generation, hide, notify_open]() {
+    auto show = [popup, popup_target, card, style, layer, generation, hide, notify_open]() {
       generation = generation.Get() + 1U;
       if(layer.Get() != 0 && popup.Update(layer.Get(), card)) {
         notify_open(true);
@@ -109,7 +110,7 @@ View HoverCard(View content, std::function<View(PopupContext)> card, HoverCardSt
           .retain_anchor_focus = style.retain_anchor_focus,
           .on_dismiss_request = hide,
       };
-      layer = popup.Show(card, std::move(options));
+      layer = popup.Show(popup_target, card, std::move(options));
       notify_open(layer.Get() != 0);
     };
 
@@ -119,7 +120,7 @@ View HoverCard(View content, std::function<View(PopupContext)> card, HoverCardSt
     }
 
     View anchor = content;
-    anchor = std::move(anchor).With(popup.Anchor());
+    anchor = std::move(anchor).With(popup_target);
     anchor = std::move(anchor)
                  .On<ViewEvents::Hover>([generation, tasks, style, show, hide](const HoverEvent& event) {
                    if(event.type == HoverEventType::Enter) {

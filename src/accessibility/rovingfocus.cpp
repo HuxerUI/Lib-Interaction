@@ -15,7 +15,7 @@ namespace huxerui::interaction {
 namespace detail {
 
 struct RovingFocusEntry {
-  FocusRequester requester;
+  ViewHandle requester;
   std::uint64_t token = 0;
 };
 
@@ -228,7 +228,7 @@ View RovingFocusGroup(View content, RovingFocusStyle style, std::function<void(s
 View RovingFocusItem(View content, std::size_t index, RovingFocusItemStyle style) {
   return Scope([content = std::move(content), index, style]() -> View {
     const auto& env = UseEnvironment<RovingFocusEnvironment>();
-    FocusRequester requester = UseFocusRequester();
+    ViewHandle requester = UseViewHandle();
     auto token_holder = UseState(std::make_shared<RovingTokenHolder>()).Get();
     if(env.state) {
       if(token_holder->token == 0) {
@@ -255,7 +255,7 @@ View RovingFocusItem(View content, std::size_t index, RovingFocusItemStyle style
     if(style.focusable) {
       item = std::move(item).With(Focusable{true});
     }
-    item = std::move(item).With(FocusTarget{requester});
+    item = std::move(item).With(requester);
     if(env.state) {
       item = std::move(item).With(RovingFocusObserver{env.state, index});
     }

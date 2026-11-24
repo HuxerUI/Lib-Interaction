@@ -1,5 +1,10 @@
 # Build trees generated in this checkout
 /.huxerui/
+/.mcpp/
+/target/
+/mcpp.lock
+compile_commands.json
+gcm.cache/
 /dist/
 /build/
 /build-*/
