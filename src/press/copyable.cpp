@@ -34,7 +34,7 @@ View Copyable(std::function<View(bool copied)> builder, std::string text,
     TaskScope tasks = UseTaskScope();
     auto copied = UseState(false);
     auto generation = UseState<std::uint64_t>(0);
-    const bool available = clipboard && clipboard->IsAvailable();
+    const bool available = clipboard && clipboard->SupportsSynchronousText();
 
     View surface = builder(copied.Get());
     surface = std::move(surface).OnClick([clipboard, tasks, copied, generation, text, style, on_copied] {

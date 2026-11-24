@@ -77,6 +77,7 @@ View Popover(std::function<View(PopoverTriggerContext)> trigger, std::function<V
   return Scope([trigger = std::move(trigger), content = std::move(content), style,
                 on_open_changed = std::move(on_open_changed)]() -> View {
     PopupHandle popup = UsePopup();
+    auto popup_target = UseViewHandle();
     TaskScope tasks = UseTaskScope();
     auto session = UseState(std::make_shared<PopoverSession>()).Get();
     auto local_open = UseState(false);
@@ -133,7 +134,7 @@ View Popover(std::function<View(PopoverTriggerContext)> trigger, std::function<V
       notify_open(false);
     };
 
-    auto show = [popup, build_popup, style, session, hide, notify_open]() {
+    auto show = [popup, popup_target, build_popup, style, session, hide, notify_open]() {
       if(session->active_layer != 0 && popup.Update(session->active_layer, build_popup)) {
         notify_open(true);
         return;
@@ -149,7 +150,7 @@ View Popover(std::function<View(PopoverTriggerContext)> trigger, std::function<V
           .retain_anchor_focus = style.retain_anchor_focus,
           .on_dismiss_request = hide,
       };
-      const LayerId next_id = popup.Show(build_popup, std::move(options));
+      const LayerId next_id = popup.Show(popup_target, build_popup, std::move(options));
       session->active_layer = next_id;
       notify_open(next_id != 0);
     };
@@ -173,7 +174,7 @@ View Popover(std::function<View(PopoverTriggerContext)> trigger, std::function<V
         .hide = hide,
         .toggle = toggle,
     });
-    return std::move(anchor).With(popup.Anchor());
+    return std::move(anchor).With(popup_target);
   });
 }
 
