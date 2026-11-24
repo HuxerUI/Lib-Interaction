@@ -1,0 +1,27 @@
+[package]
+namespace   = "huxerui"
+name        = "interaction"
+version     = "0.2.0"
+standard    = "c++23"
+description = "Interactive primitives, controllers, feedback modifiers, and visual motion effects for HuxerUI"
+license     = "MIT"
+repo        = "https://github.com/HuxerUI/Lib-Interaction"
+
+[package.metadata.huxerui]
+library   = "HuxerUI::Interaction"
+name      = "interaction"
+id        = "org.huxerui.interaction"
+namespace = "huxerui::interaction"
+
+[dependencies]
+huxerui.huxerui = "0.5.5"
+
+[targets.huxerui_interaction]
+kind = "lib"
+
+[lib]
+path = "modules/interaction.cppm"
+
+[build]
+sources      = []
+include_dirs = ["include"]
